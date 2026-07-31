@@ -18,6 +18,10 @@
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.10" />
+    <!-- DPAPI unter Windows (auf Linux ist der Namespace via Fallback in
+         SecretProtection ohnehin nicht aktiv, aber das Paket muss referenziert
+         sein, damit der Compiler auf allen Plattformen die Symbole kennt). -->
+    <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="9.0.10" />
 
     <!-- Logging — CHECK -->
     <PackageVersion Include="NLog" Version="6.1.4" />

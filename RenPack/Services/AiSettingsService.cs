@@ -7,8 +7,9 @@ namespace RenPack.Services;
 /// Lädt und speichert die KI-Einstellungen unter
 /// <c>$XDG_CONFIG_HOME/RenPack/settings.json</c> (Linux) bzw.
 /// <c>%APPDATA%/RenPack/settings.json</c> (Windows). Atomares Schreiben via
-/// <c>.tmp</c>+<see cref="File.Move"/>, damit ein Absturz mitten im Schreiben
-/// die alte Datei nicht zerstört.
+/// <c>.tmp</c>+<see cref="File.Move"/>. API-Keys werden über
+/// <see cref="SecretProtection"/> vor dem Persistieren verschlüsselt und
+/// beim Laden entschlüsselt — die JSON-Datei enthält niemals Klartext-Keys.
 /// </summary>
 public sealed class AiSettingsService
 {
@@ -38,6 +39,24 @@ public sealed class AiSettingsService
         Save(settings);
     }
 
+    // ---- Persistenz-DTO ----------------------------------------------------
+    //
+    // Auf Disk liegt eine eigene Struktur, in der die Keys als "v1:base64..."
+    // gespeichert sind. Beim Laden/Speichern konvertieren wir zwischen DTO
+    // und dem Runtime-Record AiSettings hin und her.
+
+    private sealed record PersistedConfig(string Endpoint, string Model, string? ApiKeyProtected);
+
+    private sealed record PersistedSettings(
+        AiProviderType Provider,
+        string TargetLanguage,
+        PersistedConfig Ollama,
+        PersistedConfig Anthropic,
+        PersistedConfig OpenAi,
+        PersistedConfig Gemini,
+        PersistedConfig Mistral,
+        PersistedConfig OpenAiCompatible);
+
     private AiSettings Load()
     {
         try
@@ -48,8 +67,8 @@ public sealed class AiSettingsService
                 return AiSettings.Default;
             }
             using var stream = File.OpenRead(_configPath);
-            var loaded = JsonSerializer.Deserialize<AiSettings>(stream, JsonOptions);
-            return loaded ?? AiSettings.Default;
+            var dto = JsonSerializer.Deserialize<PersistedSettings>(stream, JsonOptions);
+            return dto is null ? AiSettings.Default : FromPersisted(dto);
         }
         catch (Exception ex)
         {
@@ -63,9 +82,10 @@ public sealed class AiSettingsService
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_configPath)!);
+            var dto = ToPersisted(settings);
             var tmp = _configPath + ".tmp";
             using (var stream = File.Create(tmp))
-                JsonSerializer.Serialize(stream, settings, JsonOptions);
+                JsonSerializer.Serialize(stream, dto, JsonOptions);
             File.Move(tmp, _configPath, overwrite: true);
             Log.Info("KI-Konfiguration gespeichert: {path}", _configPath);
         }
@@ -73,6 +93,38 @@ public sealed class AiSettingsService
         {
             Log.Error(ex, "KI-Konfiguration konnte nicht gespeichert werden");
         }
+    }
+
+    private static PersistedSettings ToPersisted(AiSettings s) => new(
+        Provider: s.Provider,
+        TargetLanguage: s.TargetLanguage,
+        Ollama:            ToPersisted(s.Ollama),
+        Anthropic:         ToPersisted(s.Anthropic),
+        OpenAi:            ToPersisted(s.OpenAi),
+        Gemini:            ToPersisted(s.Gemini),
+        Mistral:           ToPersisted(s.Mistral),
+        OpenAiCompatible:  ToPersisted(s.OpenAiCompatible));
+
+    private static AiSettings FromPersisted(PersistedSettings p) => new(
+        Provider: p.Provider,
+        TargetLanguage: string.IsNullOrEmpty(p.TargetLanguage) ? AiSettings.Default.TargetLanguage : p.TargetLanguage,
+        Ollama:            FromPersisted(p.Ollama,           AiProviderType.Ollama),
+        Anthropic:         FromPersisted(p.Anthropic,        AiProviderType.Anthropic),
+        OpenAi:            FromPersisted(p.OpenAi,           AiProviderType.OpenAi),
+        Gemini:            FromPersisted(p.Gemini,           AiProviderType.Gemini),
+        Mistral:           FromPersisted(p.Mistral,          AiProviderType.Mistral),
+        OpenAiCompatible:  FromPersisted(p.OpenAiCompatible, AiProviderType.OpenAiCompatible));
+
+    private static PersistedConfig ToPersisted(AiProviderConfig c) =>
+        new(c.Endpoint, c.Model, SecretProtection.Protect(c.ApiKey));
+
+    private static AiProviderConfig FromPersisted(PersistedConfig? c, AiProviderType fallbackType)
+    {
+        if (c is null) return AiDefaults.Config(fallbackType);
+        return new AiProviderConfig(
+            Endpoint: string.IsNullOrEmpty(c.Endpoint) ? AiDefaults.Endpoint(fallbackType) : c.Endpoint,
+            Model: string.IsNullOrEmpty(c.Model) ? AiDefaults.Model(fallbackType) : c.Model,
+            ApiKey: SecretProtection.Unprotect(c.ApiKeyProtected));
     }
 
     private static string DefaultConfigPath()

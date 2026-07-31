@@ -5,10 +5,10 @@
         xmlns:views="using:RenPack.Views"
         xmlns:controls="using:RenPack.Controls"
         xmlns:vm="using:RenPack.ViewModels"
-        mc:Ignorable="d" d:DesignWidth="520" d:DesignHeight="480"
+        mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="640"
         x:Class="RenPack.Views.SettingsWindow"
         x:DataType="vm:SettingsWindowViewModel"
-        Width="520" Height="490" MinWidth="440" MinHeight="360"
+        Width="640" Height="680" MinWidth="520" MinHeight="480"
         Title="RenPack — Einstellungen"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource KrosteBackgroundBrush}">
@@ -22,54 +22,160 @@
 
         <!-- Buttons unten -->
         <Border DockPanel.Dock="Bottom" Background="{DynamicResource KrosteTitleBarBrush}" Padding="12,10">
-            <Grid ColumnDefinitions="*,Auto,Auto">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
                 <TextBlock Grid.Column="0" Text="{Binding StatusText}"
                            Foreground="{DynamicResource KrosteGoldBrush}"
                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                <Button Grid.Column="1" Content="Abbrechen" Margin="0,0,8,0"
+                <Button Grid.Column="1" Content="Verbindung testen" Margin="0,0,8,0"
+                        Command="{Binding TestConnectionCommand}" />
+                <Button Grid.Column="2" Content="Abbrechen" Margin="0,0,8,0"
                         Command="{Binding CancelCommand}" />
-                <Button Grid.Column="2" Classes="accent" Content="Speichern"
+                <Button Grid.Column="3" Classes="accent" Content="Speichern"
                         Command="{Binding SaveCommand}" />
             </Grid>
         </Border>
 
-        <StackPanel Margin="20" Spacing="14">
-            <TextBlock Text="KI-Übersetzung" FontSize="16" FontWeight="Bold"
-                       Foreground="{DynamicResource KrosteGoldBrush}" />
-            <TextBlock Foreground="#B7BEC7" TextWrapping="Wrap"
-                       Text="Übersetzt die Variablennamen im Save-Editor in eine
-                       verständliche Beschreibung. Die Namen selbst bleiben
-                       unverändert (sie sind der Splice-Anker beim Speichern)." />
+        <ScrollViewer>
+            <StackPanel Margin="20" Spacing="14">
+                <TextBlock Text="KI-Übersetzung" FontSize="16" FontWeight="Bold"
+                           Foreground="{DynamicResource KrosteGoldBrush}" />
+                <TextBlock Foreground="#B7BEC7" TextWrapping="Wrap"
+                           Text="Übersetzt die Variablennamen im Save-Editor in deine Zielsprache.
+                           Der Variablenname selbst bleibt unverändert (er ist der Splice-Anker beim Speichern)." />
 
-            <StackPanel Spacing="6">
-                <TextBlock Text="Anbieter" Foreground="#B7BEC7" />
-                <ComboBox ItemsSource="{Binding Providers}" SelectedItem="{Binding SelectedProvider}"
-                          HorizontalAlignment="Stretch" />
-            </StackPanel>
-
-            <StackPanel Spacing="6" IsVisible="{Binding IsOllama}">
-                <TextBlock Text="Ollama-Endpunkt" Foreground="#B7BEC7" />
-                <TextBox Text="{Binding OllamaEndpoint}" PlaceholderText="http://localhost:11434" />
-
-                <TextBlock Text="Modell" Foreground="#B7BEC7" Margin="0,6,0,0" />
-                <Grid ColumnDefinitions="*,Auto,Auto">
-                    <AutoCompleteBox Grid.Column="0" Text="{Binding OllamaModel, Mode=TwoWay}"
-                                     ItemsSource="{Binding AvailableModels}" />
-                    <Button Grid.Column="1" Content="Modelle laden" Margin="8,0,0,0"
-                            Command="{Binding RefreshModelsCommand}" />
-                    <Button Grid.Column="2" Content="Verbindung testen" Margin="8,0,0,0"
-                            Command="{Binding TestConnectionCommand}" />
+                <!-- Anbieter + Zielsprache -->
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <StackPanel Grid.Column="0" Spacing="6">
+                        <TextBlock Text="Anbieter" Foreground="#B7BEC7" />
+                        <ComboBox ItemsSource="{Binding Providers}" SelectedItem="{Binding SelectedProvider}"
+                                  HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="6">
+                        <TextBlock Text="Zielsprache" Foreground="#B7BEC7" />
+                        <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding TargetLanguage}"
+                                  HorizontalAlignment="Stretch" />
+                    </StackPanel>
                 </Grid>
-                <TextBlock Foreground="#8A93A0" FontSize="11" TextWrapping="Wrap"
-                           Text="Vorschlag: gemma3:1b (schnell, klein) oder qwen2.5:3b (bessere Qualität).
-                           Modelle vorher im Terminal ziehen: ollama pull gemma3:1b" />
-            </StackPanel>
 
-            <StackPanel Spacing="6">
-                <TextBlock Text="Zielsprache" Foreground="#B7BEC7" />
-                <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding TargetLanguage}"
-                          HorizontalAlignment="Stretch" />
+                <!-- OLLAMA -->
+                <Border Padding="14" CornerRadius="6" Background="{DynamicResource KrosteSurfaceBrush}"
+                        IsVisible="{Binding IsOllama}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Ollama (lokal)" FontWeight="Bold"
+                                   Foreground="{DynamicResource KrosteGoldBrush}" />
+                        <TextBlock Foreground="#8A93A0" FontSize="11" TextWrapping="Wrap"
+                                   Text="Datenschutzfreundlich, kein API-Key. Ollama lokal starten (ollama serve),
+                                   dann Modelle direkt aus der App laden." />
+                        <TextBlock Text="Endpunkt" Foreground="#B7BEC7" Margin="0,6,0,0" />
+                        <TextBox Text="{Binding OllamaEndpoint}" PlaceholderText="http://localhost:11434" />
+                        <TextBlock Text="Modell" Foreground="#B7BEC7" Margin="0,6,0,0" />
+                        <Grid ColumnDefinitions="*,Auto,Auto">
+                            <AutoCompleteBox Grid.Column="0" Text="{Binding OllamaModel, Mode=TwoWay}"
+                                             ItemsSource="{Binding AvailableOllamaModels}" />
+                            <Button Grid.Column="1" Content="Modelle laden" Margin="8,0,0,0"
+                                    Command="{Binding RefreshOllamaModelsCommand}" />
+                            <Button Grid.Column="2" Content="⬇ Modell laden" Margin="8,0,0,0"
+                                    Command="{Binding PullOllamaModelCommand}"
+                                    ToolTip.Tip="Das eingetragene Modell direkt aus der App herunterladen (Fortschritt in neuem Fenster)" />
+                        </Grid>
+                        <TextBlock Foreground="#8A93A0" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"
+                                   Text="Vorschläge: gemma3:1b (schnell, ~815 MB) · qwen2.5:3b (bessere Qualität, ~1.9 GB) · mistral:7b (~4.1 GB)" />
+                    </StackPanel>
+                </Border>
+
+                <!-- ANTHROPIC -->
+                <Border Padding="14" CornerRadius="6" Background="{DynamicResource KrosteSurfaceBrush}"
+                        IsVisible="{Binding IsAnthropic}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Anthropic Claude" FontWeight="Bold"
+                                   Foreground="{DynamicResource KrosteGoldBrush}" />
+                        <TextBlock Text="API-Key" Foreground="#B7BEC7" />
+                        <TextBox Text="{Binding AnthropicApiKey}" PasswordChar="•"
+                                 PlaceholderText="sk-ant-…" />
+                        <TextBlock Text="Modell" Foreground="#B7BEC7" Margin="0,6,0,0" />
+                        <AutoCompleteBox Text="{Binding AnthropicModel, Mode=TwoWay}"
+                                         ItemsSource="{Binding AnthropicModels}" />
+                        <TextBlock Text="Endpunkt (nur ändern, wenn eigener Proxy)" Foreground="#8A93A0"
+                                   FontSize="11" Margin="0,6,0,0" />
+                        <TextBox Text="{Binding AnthropicEndpoint}"
+                                 PlaceholderText="https://api.anthropic.com/v1" />
+                    </StackPanel>
+                </Border>
+
+                <!-- OPENAI -->
+                <Border Padding="14" CornerRadius="6" Background="{DynamicResource KrosteSurfaceBrush}"
+                        IsVisible="{Binding IsOpenAi}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="OpenAI ChatGPT" FontWeight="Bold"
+                                   Foreground="{DynamicResource KrosteGoldBrush}" />
+                        <TextBlock Text="API-Key" Foreground="#B7BEC7" />
+                        <TextBox Text="{Binding OpenAiApiKey}" PasswordChar="•"
+                                 PlaceholderText="sk-…" />
+                        <TextBlock Text="Modell" Foreground="#B7BEC7" Margin="0,6,0,0" />
+                        <AutoCompleteBox Text="{Binding OpenAiModel, Mode=TwoWay}"
+                                         ItemsSource="{Binding OpenAiModels}" />
+                        <TextBlock Text="Endpunkt" Foreground="#8A93A0" FontSize="11" Margin="0,6,0,0" />
+                        <TextBox Text="{Binding OpenAiEndpoint}"
+                                 PlaceholderText="https://api.openai.com/v1" />
+                    </StackPanel>
+                </Border>
+
+                <!-- GEMINI -->
+                <Border Padding="14" CornerRadius="6" Background="{DynamicResource KrosteSurfaceBrush}"
+                        IsVisible="{Binding IsGemini}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Google Gemini" FontWeight="Bold"
+                                   Foreground="{DynamicResource KrosteGoldBrush}" />
+                        <TextBlock Text="API-Key" Foreground="#B7BEC7" />
+                        <TextBox Text="{Binding GeminiApiKey}" PasswordChar="•"
+                                 PlaceholderText="AIza…" />
+                        <TextBlock Text="Modell" Foreground="#B7BEC7" Margin="0,6,0,0" />
+                        <AutoCompleteBox Text="{Binding GeminiModel, Mode=TwoWay}"
+                                         ItemsSource="{Binding GeminiModels}" />
+                        <TextBlock Text="Endpunkt" Foreground="#8A93A0" FontSize="11" Margin="0,6,0,0" />
+                        <TextBox Text="{Binding GeminiEndpoint}"
+                                 PlaceholderText="https://generativelanguage.googleapis.com/v1beta" />
+                    </StackPanel>
+                </Border>
+
+                <!-- MISTRAL -->
+                <Border Padding="14" CornerRadius="6" Background="{DynamicResource KrosteSurfaceBrush}"
+                        IsVisible="{Binding IsMistral}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Mistral" FontWeight="Bold"
+                                   Foreground="{DynamicResource KrosteGoldBrush}" />
+                        <TextBlock Text="API-Key" Foreground="#B7BEC7" />
+                        <TextBox Text="{Binding MistralApiKey}" PasswordChar="•"
+                                 PlaceholderText="…" />
+                        <TextBlock Text="Modell" Foreground="#B7BEC7" Margin="0,6,0,0" />
+                        <AutoCompleteBox Text="{Binding MistralModel, Mode=TwoWay}"
+                                         ItemsSource="{Binding MistralModels}" />
+                        <TextBlock Text="Endpunkt" Foreground="#8A93A0" FontSize="11" Margin="0,6,0,0" />
+                        <TextBox Text="{Binding MistralEndpoint}"
+                                 PlaceholderText="https://api.mistral.ai/v1" />
+                    </StackPanel>
+                </Border>
+
+                <!-- OpenAI-kompatibel (generisch: Groq, OpenRouter, LM Studio, …) -->
+                <Border Padding="14" CornerRadius="6" Background="{DynamicResource KrosteSurfaceBrush}"
+                        IsVisible="{Binding IsOpenAiCompatible}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="OpenAI-kompatibel (Groq, OpenRouter, LM Studio, …)"
+                                   FontWeight="Bold" Foreground="{DynamicResource KrosteGoldBrush}" />
+                        <TextBlock Foreground="#8A93A0" FontSize="11" TextWrapping="Wrap"
+                                   Text="Für alle Anbieter, die die OpenAI-Chat-Completions-API sprechen." />
+                        <TextBlock Text="Base-URL" Foreground="#B7BEC7" Margin="0,6,0,0" />
+                        <TextBox Text="{Binding OpenAiCompatibleEndpoint}"
+                                 PlaceholderText="http://localhost:8080/v1" />
+                        <TextBlock Text="Modell" Foreground="#B7BEC7" Margin="0,6,0,0" />
+                        <TextBox Text="{Binding OpenAiCompatibleModel}"
+                                 PlaceholderText="z. B. mixtral-8x7b, deepseek-r1, …" />
+                        <TextBlock Text="API-Key (optional bei lokalen Servern)" Foreground="#B7BEC7"
+                                   Margin="0,6,0,0" />
+                        <TextBox Text="{Binding OpenAiCompatibleApiKey}" PasswordChar="•" />
+                    </StackPanel>
+                </Border>
             </StackPanel>
-        </StackPanel>
+        </ScrollViewer>
     </DockPanel>
 </views:ChromeWindow>

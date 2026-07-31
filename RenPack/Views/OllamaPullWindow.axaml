@@ -1,0 +1,42 @@
+<views:ChromeWindow xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="using:RenPack.Views"
+        xmlns:controls="using:RenPack.Controls"
+        xmlns:vm="using:RenPack.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="520" d:DesignHeight="220"
+        x:Class="RenPack.Views.OllamaPullWindow"
+        x:DataType="vm:OllamaPullViewModel"
+        Width="520" Height="240" MinWidth="420" MinHeight="200"
+        Title="Ollama-Modell laden"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource KrosteBackgroundBrush}">
+
+    <Design.DataContext>
+        <vm:OllamaPullViewModel />
+    </Design.DataContext>
+
+    <DockPanel>
+        <controls:TitleBar DockPanel.Dock="Top" Title="Ollama-Modell laden" />
+
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource KrosteTitleBarBrush}" Padding="12,10">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button Content="Abbrechen" Command="{Binding CancelCommand}" />
+                <Button Classes="accent" Content="Schließen" Command="{Binding CloseCommand}" />
+            </StackPanel>
+        </Border>
+
+        <StackPanel Margin="20" Spacing="14">
+            <TextBlock FontSize="14" Foreground="{DynamicResource KrosteGoldBrush}"
+                       Text="{Binding ModelName, StringFormat='Lade Modell: {0}'}" />
+
+            <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressValue}"
+                         IsIndeterminate="{Binding !HasProgress}"
+                         Foreground="{DynamicResource KrosteGoldBrush}"
+                         Height="18" />
+
+            <TextBlock Text="{Binding StatusText}" Foreground="#B7BEC7" TextWrapping="Wrap" />
+        </StackPanel>
+    </DockPanel>
+</views:ChromeWindow>

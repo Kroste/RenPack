@@ -44,8 +44,9 @@ public partial class App : Application
         services.AddSingleton<IRenpySaveService, RenpySaveService>();
         services.AddSingleton<UpdateService>();
 
-        // KI-Services (v0.4a)
+        // KI-Services (v0.4b — Multi-Provider)
         services.AddSingleton<AiSettingsService>();
+        services.AddSingleton<AiProviderFactory>();
         services.AddSingleton<TranslationService>();
         services.AddHttpClient(); // AddSingleton<IHttpClientFactory>
 
@@ -53,6 +54,7 @@ public partial class App : Application
         services.AddTransient<MainWindowViewModel>();
         services.AddTransient<SaveWindowViewModel>();
         services.AddTransient<SettingsWindowViewModel>();
+        // OllamaPullViewModel wird ad-hoc mit Modellnamen erzeugt, kein DI-Eintrag.
 
         return services.BuildServiceProvider();
     }

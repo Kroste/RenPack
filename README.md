@@ -15,7 +15,7 @@ Ren'Py-Archive (.rpa) entpacken und packen — Desktop-App für Windows und Linu
 - **Packen:** aus einem Ordner ein neues Archiv im Format **RPA-3.0** erstellen (das Standardformat, das Ren'Py selbst liest).
 - **Formate:** liest **RPA-2.0**, **RPA-3.0** und **RPA-3.2** (inkl. XOR-Verschleierung); schreibt RPA-3.0/RPA-2.0/RPA-3.2.
 - **Save-Editor (neu in v0.3):** Ren'Py-Save-Dateien (`.save`) öffnen, Screenshot + Metadaten (Slot-Name, Zeit, Ren'Py-Version) anzeigen und **alle Variablen editieren** — Doppelklick oder F2 auf einer Zeile ändert den Wert (unterstützt einfache Typen: int, float, str, bool, None). Änderungen bekommen einen Gold-Marker (●); „💾 Speichern" überschreibt das Original, „💾 Speichern unter …" schreibt eine Kopie, „↩ Verwerfen" macht alle Änderungen rückgängig. Der Rollback-Log und alle unbekannten Ren'Py-Klassen bleiben dabei byte-identisch — Ren'Py lädt die geänderte Save-Datei genauso wie das Original.
-- **KI-Übersetzung (neu in v0.4a):** Der Save-Editor kann Variablennamen (die oft nur Abkürzungen oder englisch sind) per KI in deine Zielsprache übersetzen und in einer eigenen Spalte anzeigen. Der Original-Name bleibt unverändert (er ist der Anker für's Speichern). In v0.4a nur lokales **Ollama** (kein API-Key, kein Cloud-Abfluss); Anthropic/OpenAI/Gemini folgen.
+- **KI-Übersetzung (v0.4a/b):** Der Save-Editor kann Variablennamen (die oft nur Abkürzungen oder englisch sind) per KI in deine Zielsprache übersetzen und in einer eigenen Spalte anzeigen. Der Original-Name bleibt unverändert (er ist der Anker für's Speichern). Unterstützt: **Ollama** (lokal, kein API-Key), **Anthropic Claude**, **OpenAI ChatGPT**, **Google Gemini**, **Mistral** und beliebige **OpenAI-kompatible** Endpoints (Groq, OpenRouter, LM Studio, …). API-Keys werden verschlüsselt gespeichert (Windows: DPAPI; Linux/macOS: AES mit Maschinen-Binding). Ollama-Modelle lassen sich direkt aus der App herunterladen (Fortschrittsanzeige).
 - **Fortschritt & Log:** Fortschrittsanzeige beim Ent-/Packen, umfassendes Log mit automatischer Maskierung von Passwörtern/Tokens.
 - 🔄 **Update-Check:** Prüft GitHub-Releases (proxy-fähig) und meldet neue Versionen.
 
@@ -77,24 +77,34 @@ Dictionaries editieren. Kommt in einer späteren Version.
 Für Archiv-Operationen ist RenPack bewusst einstellungsarm — beim Packen wird das
 Format RPA-3.0 mit dem üblichen Standard-Key verwendet.
 
-**KI-Übersetzung** (Zahnrad-Button „⚙ Einstellungen" in der Toolbar): Anbieter
-(Ollama), Endpunkt (Default `http://localhost:11434`), Modell (z. B. `gemma3:1b`
-oder `qwen2.5:3b`) und Zielsprache. Voraussetzung ist ein lokal laufendes Ollama:
+**KI-Übersetzung** (Zahnrad-Button „⚙ Einstellungen" in der Toolbar): Wähle den
+Anbieter und trage die nötigen Zugangsdaten ein.
 
-```bash
-# Ollama installieren: https://ollama.com
-ollama serve                 # in einem Terminal
-ollama pull gemma3:1b        # in einem anderen Terminal (einmalig)
-```
+- **Ollama** (lokal, empfohlen): Endpunkt (Default `http://localhost:11434`),
+  Modell. Voraussetzung ist ein lokal laufender Ollama-Server:
+  ```bash
+  # https://ollama.com
+  ollama serve
+  ```
+  Modelle kannst du entweder im Terminal (`ollama pull gemma3:1b`) oder
+  **direkt aus RenPack** herunterladen — der Button „⬇ Modell laden" öffnet
+  ein Fortschritts-Fenster.
+- **Anthropic Claude / OpenAI ChatGPT / Google Gemini / Mistral**: API-Key
+  eintragen, Modell aus der Vorschlagsliste wählen. Die Keys werden
+  verschlüsselt (Windows via DPAPI, Linux/macOS via AES mit Maschinen-Binding)
+  in `~/.config/RenPack/settings.json` bzw. `%APPDATA%\RenPack\settings.json`
+  gespeichert — die JSON-Datei enthält niemals Klartext-Keys.
+- **OpenAI-kompatibel**: Für alle anderen Anbieter, die die
+  OpenAI-Chat-Completions-API sprechen (Groq, OpenRouter, LM Studio, lokale
+  Server, …). Base-URL + Modell + optionaler Key.
 
-Danach im Einstellungen-Fenster „Modelle laden" klicken (holt die Liste vom
-laufenden Ollama), das gewünschte Modell wählen und speichern. Im Save-Editor
-zeigt der Button „🌐 Übersetzen" dann in der Spalte „Beschreibung" verständliche
-Erklärungen der Variablennamen. Die Übersetzungen sind rein Anzeige — die
-Original-Namen im Save-Datei bleiben unverändert.
+Zielsprache oben rechts wählen (Default aus System-Locale). „Verbindung testen"
+schickt eine echte Testübersetzung — sinnvoll um Modell + Key vor dem Speichern
+zu prüfen.
 
-Die Konfiguration liegt als JSON unter `~/.config/RenPack/settings.json` (Linux)
-bzw. `%APPDATA%\RenPack\settings.json` (Windows).
+Im Save-Editor zeigt der Button „🌐 Übersetzen" dann in der Spalte „Beschreibung"
+verständliche Erklärungen der Variablennamen. Die Übersetzungen sind rein
+Anzeige — die Original-Namen im Save bleiben unverändert.
 
 ## Logs & Fehlersuche
 

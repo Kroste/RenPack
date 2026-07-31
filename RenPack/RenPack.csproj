@@ -23,6 +23,7 @@
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" />
     <PackageReference Include="NLog" />
     <PackageReference Include="Razorvine.Pickle" />
   </ItemGroup>

@@ -16,25 +16,25 @@ public sealed partial class SaveWindowViewModel : ObservableObject
 
     private readonly IRenpySaveService _saveService;
     private readonly AiSettingsService? _aiSettings;
+    private readonly AiProviderFactory? _providerFactory;
     private readonly TranslationService? _translation;
-    private readonly IHttpClientFactory? _httpFactory;
     private readonly List<SaveVariableViewModel> _allVariables = [];
 
     /// <summary>Von der View gesetzt (Datei-Dialoge, Meldungen).</summary>
     public ISaveUi? Ui { get; set; }
 
     public SaveWindowViewModel(IRenpySaveService saveService, AiSettingsService aiSettings,
-        TranslationService translation, IHttpClientFactory httpFactory)
+        AiProviderFactory providerFactory, TranslationService translation)
     {
         _saveService = saveService;
         _aiSettings = aiSettings;
+        _providerFactory = providerFactory;
         _translation = translation;
-        _httpFactory = httpFactory;
     }
 
     // Designer-Konstruktor
     public SaveWindowViewModel() : this(new RenpySaveService(), new AiSettingsService(),
-        new TranslationService(), new SingleHttpClientFactory()) { }
+        new AiProviderFactory(new SingleHttpClientFactory()), new TranslationService()) { }
 
     public ObservableCollection<SaveVariableViewModel> Variables { get; } = [];
 
@@ -245,12 +245,14 @@ public sealed partial class SaveWindowViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanExecuteTranslate))]
     private async Task TranslateAsync()
     {
-        if (Ui is null || _translation is null || _aiSettings is null || _httpFactory is null) return;
+        if (Ui is null || _translation is null || _aiSettings is null || _providerFactory is null) return;
         var settings = _aiSettings.Current;
-        if (settings.Provider != AiProviderType.Ollama)
+        var provider = _providerFactory.Create(settings);
+        if (provider is null)
         {
             await Ui.ShowMessageAsync("KI nicht konfiguriert",
-                "Wähle in den Einstellungen einen KI-Anbieter (aktuell nur Ollama).");
+                "Wähle in den Einstellungen einen KI-Anbieter und trage die nötigen " +
+                "Zugangsdaten ein (bei Cloud-Providern den API-Key).");
             return;
         }
 
@@ -259,11 +261,9 @@ public sealed partial class SaveWindowViewModel : ObservableObject
         if (toTranslate.Count == 0) return;
 
         IsBusy = true;
-        StatusText = $"Übersetze {toTranslate.Count} Variablen via {settings.OllamaModel} …";
+        StatusText = $"Übersetze {toTranslate.Count} Variablen via {provider.Name} …";
         try
         {
-            var provider = new OllamaProvider(_httpFactory.CreateClient(),
-                settings.OllamaEndpoint, settings.OllamaModel);
             _translation.ResetCacheIfNeeded(provider.Name, settings.TargetLanguage);
             var progress = new Progress<(int done, int total)>(p =>
                 StatusText = $"Übersetzt {p.done}/{p.total} …");

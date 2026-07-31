@@ -1,4 +1,6 @@
 using System.Net.Http.Json;
+using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using NLog;
@@ -7,13 +9,10 @@ namespace RenPack.Services;
 
 /// <summary>
 /// KI-Provider gegen einen lokalen Ollama-Server (Default:
-/// http://localhost:11434). Nutzt <c>/api/chat</c> im JSON-Mode für
-/// strukturierte Übersetzungs-Antworten und <c>/api/tags</c> für die
-/// Modellliste.
-///
-/// Ollama muss lokal installiert sein und laufen (<c>ollama serve</c>). Das
-/// Modell muss vorher gepulled sein (<c>ollama pull gemma3:1b</c>) — ein
-/// integrierter Pull mit Fortschritt folgt in v0.4b.
+/// <c>http://localhost:11434</c>). Nutzt <c>/api/chat</c> mit <c>format="json"</c>
+/// für strukturierte Übersetzungs-Antworten, <c>/api/tags</c> für die lokal
+/// installierten Modelle und <c>/api/pull</c> (NDJSON-Streaming) zum
+/// Herunterladen neuer Modelle direkt aus der App.
 /// </summary>
 public sealed class OllamaProvider : IAiProvider
 {
@@ -26,11 +25,21 @@ public sealed class OllamaProvider : IAiProvider
     public OllamaProvider(HttpClient http, string endpoint, string model)
     {
         _http = http;
-        _endpoint = endpoint.TrimEnd('/');
+        _endpoint = NormalizeApiBase(endpoint);
         _model = model;
     }
 
     public string Name => $"Ollama ({_model})";
+
+    /// <summary>Manche Anleitungen lassen die Nutzer <c>/v1</c> ans Ende hängen
+    /// (OpenAI-kompatibles Interface). Für die nativen Ollama-Endpoints muss das
+    /// weg — Allpaca macht das genauso.</summary>
+    internal static string NormalizeApiBase(string endpoint)
+    {
+        var e = endpoint.TrimEnd('/');
+        if (e.EndsWith("/v1", StringComparison.Ordinal)) e = e[..^3];
+        return e;
+    }
 
     public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default)
     {
@@ -62,30 +71,17 @@ public sealed class OllamaProvider : IAiProvider
     }
 
     public async Task<IReadOnlyDictionary<string, string>> TranslateBatchAsync(
-        IReadOnlyList<string> variableNames,
-        string targetLanguage,
+        IReadOnlyList<string> variableNames, string targetLanguage,
         CancellationToken cancellationToken = default)
     {
         if (variableNames.Count == 0) return new Dictionary<string, string>();
 
-        // Ollama-Prompt: system + user, JSON-Mode für parsebares Ergebnis.
-        var systemPrompt =
-            $"Du übersetzt Ren'Py-Save-Variablennamen in {targetLanguage}. " +
-            "Diese Namen kommen aus Adult Visual Novels und beschreiben " +
-            "Spielzustand, Beziehungen, Events, Story-Flags. Antworte NUR mit " +
-            "gültigem JSON in der Form { \"name\": \"deutscheBeschreibung\", … }. " +
-            "Beschreibungen sind kurz (max 6 Wörter), sinnvoll und in " +
-            $"{targetLanguage}. Wenn ein Name nicht eindeutig übersetzbar ist, " +
-            "gib eine sinnvolle Vermutung.";
-
-        var namesJson = JsonSerializer.Serialize(variableNames);
-        var userPrompt =
-            $"Übersetze diese {variableNames.Count} Variablennamen. " +
-            $"Antworte NUR mit dem JSON-Objekt (ohne Markdown, ohne Erklärung): {namesJson}";
-
         var req = new ChatRequest(
             Model: _model,
-            Messages: [new ChatMessage("system", systemPrompt), new ChatMessage("user", userPrompt)],
+            Messages: [
+                new ChatMessage("system", PromptBuilder.System(targetLanguage)),
+                new ChatMessage("user", PromptBuilder.User(variableNames)),
+            ],
             Stream: false,
             Format: "json");
 
@@ -94,48 +90,44 @@ public sealed class OllamaProvider : IAiProvider
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadFromJsonAsync<ChatResponse>(cancellationToken)
             ?? throw new InvalidOperationException("Ollama-Antwort war leer.");
-        Log.Debug("Ollama {model}: {names} Namen in {ms} ms",
+        Log.Debug("Ollama {model}: {n} Namen in {ms} ms",
             _model, variableNames.Count, sw.ElapsedMilliseconds);
 
-        return ParseTranslations(body.Message?.Content ?? "", variableNames);
+        return PromptBuilder.ParseTranslations(body.Message?.Content ?? "");
     }
 
-    private static IReadOnlyDictionary<string, string> ParseTranslations(
-        string jsonPayload, IReadOnlyList<string> requestedNames)
+    /// <summary>Streamt die NDJSON-Events von <c>POST /api/pull</c>. Ein Event
+    /// pro Status-Wechsel (pulling manifest → downloading mit Byte-Fortschritt →
+    /// verifying → success). Cancel schließt die Verbindung sauber; der
+    /// Ollama-Server bricht den Server-seitigen Pull daraufhin ab.</summary>
+    public async IAsyncEnumerable<OllamaPullEvent> PullAsync(string modelName,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var result = new Dictionary<string, string>(requestedNames.Count, StringComparer.Ordinal);
-        if (string.IsNullOrWhiteSpace(jsonPayload)) return result;
-
-        // Ollama liefert im JSON-Mode meist reines JSON; manche Modelle wrappen
-        // trotzdem in Markdown-Codeblöcken — kurzer Cleanup.
-        string cleaned = jsonPayload.Trim();
-        if (cleaned.StartsWith("```"))
+        var url = $"{_endpoint}/api/pull";
+        var body = JsonSerializer.Serialize(new { name = modelName });
+        using var req = new HttpRequestMessage(HttpMethod.Post, url)
         {
-            int firstNewline = cleaned.IndexOf('\n');
-            if (firstNewline > 0) cleaned = cleaned[(firstNewline + 1)..];
-            int lastFence = cleaned.LastIndexOf("```", StringComparison.Ordinal);
-            if (lastFence > 0) cleaned = cleaned[..lastFence];
-            cleaned = cleaned.Trim();
+            Content = new StringContent(body, Encoding.UTF8, "application/json"),
+        };
+        using var resp = await _http.SendAsync(req,
+            HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        if (!resp.IsSuccessStatusCode)
+        {
+            yield return new OllamaPullEvent("error", null, null, null,
+                IsError: true, ErrorMessage: $"HTTP {(int)resp.StatusCode}: {resp.ReasonPhrase}");
+            yield break;
         }
 
-        try
+        using var stream = await resp.Content.ReadAsStreamAsync(cancellationToken);
+        using var reader = new StreamReader(stream);
+        while (true)
         {
-            using var doc = JsonDocument.Parse(cleaned);
-            foreach (var prop in doc.RootElement.EnumerateObject())
-            {
-                if (prop.Value.ValueKind == JsonValueKind.String)
-                {
-                    var v = prop.Value.GetString();
-                    if (!string.IsNullOrWhiteSpace(v)) result[prop.Name] = v.Trim();
-                }
-            }
+            cancellationToken.ThrowIfCancellationRequested();
+            var line = await reader.ReadLineAsync(cancellationToken);
+            if (line is null) break;
+            var evt = OllamaPullProgressParser.ParseLine(line);
+            if (evt is not null) yield return evt;
         }
-        catch (JsonException ex)
-        {
-            Log.Warn(ex, "Ollama-Antwort war kein gültiges JSON: {snippet}",
-                cleaned.Length > 200 ? cleaned[..200] + "…" : cleaned);
-        }
-        return result;
     }
 
     // ---- DTOs ---------------------------------------------------------------
