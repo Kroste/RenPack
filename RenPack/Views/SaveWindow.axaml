@@ -33,6 +33,10 @@
                         Command="{Binding SaveAsCommand}" />
                 <Button Content="↩ Verwerfen" Margin="0,0,8,0"
                         Command="{Binding RevertCommand}" />
+                <Rectangle Width="1" Margin="4,2" Fill="#33FFFFFF" />
+                <Button Content="🌐 Übersetzen" Margin="8,0,8,0"
+                        Command="{Binding TranslateCommand}"
+                        ToolTip.Tip="Variablennamen per KI in die Zielsprache übersetzen (Einstellungen prüfen)" />
                 <TextBlock Text="{Binding DirtySummary}" Margin="12,0,0,0"
                            VerticalAlignment="Center" Foreground="{DynamicResource KrosteGoldBrush}" />
                 <CheckBox Content="_interne (mit _)" Margin="24,0,0,0"
@@ -86,6 +90,8 @@
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Name" Width="*" IsReadOnly="True"
                             Binding="{Binding Name}" />
+                        <DataGridTextColumn Header="Beschreibung" Width="*" IsReadOnly="True"
+                            Binding="{Binding Description}" />
                         <DataGridTextColumn Header="Typ" Width="110" IsReadOnly="True"
                             Binding="{Binding TypeName}" />
                         <!-- Wert-Spalte: editierbar, wenn IsEditable=true.

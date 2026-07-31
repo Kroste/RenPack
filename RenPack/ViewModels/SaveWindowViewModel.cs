@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
+using System.Net.Http;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -14,18 +15,26 @@ public sealed partial class SaveWindowViewModel : ObservableObject
     private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
     private readonly IRenpySaveService _saveService;
+    private readonly AiSettingsService? _aiSettings;
+    private readonly TranslationService? _translation;
+    private readonly IHttpClientFactory? _httpFactory;
     private readonly List<SaveVariableViewModel> _allVariables = [];
 
     /// <summary>Von der View gesetzt (Datei-Dialoge, Meldungen).</summary>
     public ISaveUi? Ui { get; set; }
 
-    public SaveWindowViewModel(IRenpySaveService saveService)
+    public SaveWindowViewModel(IRenpySaveService saveService, AiSettingsService aiSettings,
+        TranslationService translation, IHttpClientFactory httpFactory)
     {
         _saveService = saveService;
+        _aiSettings = aiSettings;
+        _translation = translation;
+        _httpFactory = httpFactory;
     }
 
     // Designer-Konstruktor
-    public SaveWindowViewModel() : this(new RenpySaveService()) { }
+    public SaveWindowViewModel() : this(new RenpySaveService(), new AiSettingsService(),
+        new TranslationService(), new SingleHttpClientFactory()) { }
 
     public ObservableCollection<SaveVariableViewModel> Variables { get; } = [];
 
@@ -108,9 +117,14 @@ public sealed partial class SaveWindowViewModel : ObservableObject
             {
                 var vm = new SaveVariableViewModel(v);
                 vm.PropertyChanged += OnVariableChanged;
+                // Cache-Hits sofort füllen — dann steht die Übersetzung auch beim
+                // Neu-Öffnen einer weiteren Save-Datei desselben Spiels direkt da.
+                if (_translation is not null && _translation.TryGetCached(v.Name, out var cached))
+                    vm.Description = cached;
                 _allVariables.Add(vm);
             }
             DirtyCount = 0;
+            UpdateCanTranslate();
             ApplyFilter();
 
             StatusText = info.LogError is null
@@ -214,6 +228,67 @@ public sealed partial class SaveWindowViewModel : ObservableObject
             IsBusy = false;
         }
     }
+
+    // ---- KI-Übersetzung -----------------------------------------------------
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(TranslateCommand))]
+    private bool _canTranslate;
+
+    private void UpdateCanTranslate()
+    {
+        CanTranslate = _aiSettings is not null
+            && _aiSettings.Current.Provider != AiProviderType.None
+            && _allVariables.Count > 0;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExecuteTranslate))]
+    private async Task TranslateAsync()
+    {
+        if (Ui is null || _translation is null || _aiSettings is null || _httpFactory is null) return;
+        var settings = _aiSettings.Current;
+        if (settings.Provider != AiProviderType.Ollama)
+        {
+            await Ui.ShowMessageAsync("KI nicht konfiguriert",
+                "Wähle in den Einstellungen einen KI-Anbieter (aktuell nur Ollama).");
+            return;
+        }
+
+        // Nur die aktuell sichtbaren Variablen übersetzen (respektiert Filter + interne Sichtbarkeit).
+        var toTranslate = Variables.Select(v => v.Name).ToList();
+        if (toTranslate.Count == 0) return;
+
+        IsBusy = true;
+        StatusText = $"Übersetze {toTranslate.Count} Variablen via {settings.OllamaModel} …";
+        try
+        {
+            var provider = new OllamaProvider(_httpFactory.CreateClient(),
+                settings.OllamaEndpoint, settings.OllamaModel);
+            _translation.ResetCacheIfNeeded(provider.Name, settings.TargetLanguage);
+            var progress = new Progress<(int done, int total)>(p =>
+                StatusText = $"Übersetzt {p.done}/{p.total} …");
+            var result = await _translation.TranslateAsync(provider, toTranslate,
+                settings.TargetLanguage, progress);
+
+            foreach (var vm in _allVariables)
+                if (result.TryGetValue(vm.Name, out var t)) vm.Description = t;
+
+            StatusText = $"Übersetzung fertig: {result.Count} Beschreibungen.";
+            Log.Info("Übersetzung fertig: {count}/{req}", result.Count, toTranslate.Count);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Übersetzung fehlgeschlagen");
+            StatusText = "Übersetzung fehlgeschlagen.";
+            await Ui.ShowMessageAsync("Übersetzung fehlgeschlagen", ex.Message);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private bool CanExecuteTranslate() => !IsBusy && CanTranslate;
 
     // ---- Filter & Dirty-Tracking -------------------------------------------
 

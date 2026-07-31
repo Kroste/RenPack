@@ -15,6 +15,7 @@ Ren'Py-Archive (.rpa) entpacken und packen — Desktop-App für Windows und Linu
 - **Packen:** aus einem Ordner ein neues Archiv im Format **RPA-3.0** erstellen (das Standardformat, das Ren'Py selbst liest).
 - **Formate:** liest **RPA-2.0**, **RPA-3.0** und **RPA-3.2** (inkl. XOR-Verschleierung); schreibt RPA-3.0/RPA-2.0/RPA-3.2.
 - **Save-Editor (neu in v0.3):** Ren'Py-Save-Dateien (`.save`) öffnen, Screenshot + Metadaten (Slot-Name, Zeit, Ren'Py-Version) anzeigen und **alle Variablen editieren** — Doppelklick oder F2 auf einer Zeile ändert den Wert (unterstützt einfache Typen: int, float, str, bool, None). Änderungen bekommen einen Gold-Marker (●); „💾 Speichern" überschreibt das Original, „💾 Speichern unter …" schreibt eine Kopie, „↩ Verwerfen" macht alle Änderungen rückgängig. Der Rollback-Log und alle unbekannten Ren'Py-Klassen bleiben dabei byte-identisch — Ren'Py lädt die geänderte Save-Datei genauso wie das Original.
+- **KI-Übersetzung (neu in v0.4a):** Der Save-Editor kann Variablennamen (die oft nur Abkürzungen oder englisch sind) per KI in deine Zielsprache übersetzen und in einer eigenen Spalte anzeigen. Der Original-Name bleibt unverändert (er ist der Anker für's Speichern). In v0.4a nur lokales **Ollama** (kein API-Key, kein Cloud-Abfluss); Anthropic/OpenAI/Gemini folgen.
 - **Fortschritt & Log:** Fortschrittsanzeige beim Ent-/Packen, umfassendes Log mit automatischer Maskierung von Passwörtern/Tokens.
 - 🔄 **Update-Check:** Prüft GitHub-Releases (proxy-fähig) und meldet neue Versionen.
 
@@ -73,9 +74,27 @@ Dictionaries editieren. Kommt in einer späteren Version.
 
 ## Einstellungen
 
-RenPack ist bewusst einstellungsarm. Beim Packen wird das Format RPA-3.0 mit dem
-üblichen Standard-Key verwendet — das ist mit Ren'Py voll kompatibel. Es gibt keine
-Konfigurationsdatei; alle Aktionen laufen über die Dialoge.
+Für Archiv-Operationen ist RenPack bewusst einstellungsarm — beim Packen wird das
+Format RPA-3.0 mit dem üblichen Standard-Key verwendet.
+
+**KI-Übersetzung** (Zahnrad-Button „⚙ Einstellungen" in der Toolbar): Anbieter
+(Ollama), Endpunkt (Default `http://localhost:11434`), Modell (z. B. `gemma3:1b`
+oder `qwen2.5:3b`) und Zielsprache. Voraussetzung ist ein lokal laufendes Ollama:
+
+```bash
+# Ollama installieren: https://ollama.com
+ollama serve                 # in einem Terminal
+ollama pull gemma3:1b        # in einem anderen Terminal (einmalig)
+```
+
+Danach im Einstellungen-Fenster „Modelle laden" klicken (holt die Liste vom
+laufenden Ollama), das gewünschte Modell wählen und speichern. Im Save-Editor
+zeigt der Button „🌐 Übersetzen" dann in der Spalte „Beschreibung" verständliche
+Erklärungen der Variablennamen. Die Übersetzungen sind rein Anzeige — die
+Original-Namen im Save-Datei bleiben unverändert.
+
+Die Konfiguration liegt als JSON unter `~/.config/RenPack/settings.json` (Linux)
+bzw. `%APPDATA%\RenPack\settings.json` (Windows).
 
 ## Logs & Fehlersuche
 

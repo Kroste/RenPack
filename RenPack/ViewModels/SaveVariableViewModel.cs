@@ -33,6 +33,10 @@ public sealed partial class SaveVariableViewModel : ObservableObject
 
     public bool IsDirty => IsEditable && !string.Equals(EditableValue, _originalValue, StringComparison.Ordinal);
 
+    /// <summary>Menschenlesbare Beschreibung der Variable (aus KI-Übersetzung).
+    /// Leer, wenn (noch) keine Übersetzung vorliegt.</summary>
+    [ObservableProperty] private string _description = "";
+
     /// <summary>Konvertiert den Anzeige-Text in einen .NET-Wert passend zum Typ.
     /// Wirft <see cref="FormatException"/> bei ungültiger Eingabe.</summary>
     public object? ParseEditedValue() => TypeName switch

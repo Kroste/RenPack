@@ -35,7 +35,9 @@
                         Command="{Binding CreateArchiveCommand}" />
                 <Rectangle Width="1" Margin="4,2" Fill="#33FFFFFF" />
                 <Button x:Name="OpenSaveButton" Content="💾 Save öffnen …" Margin="8,0,8,0"
-                        ToolTip.Tip="Ren'Py-Save-Datei inspizieren (.save)" />
+                        ToolTip.Tip="Ren'Py-Save-Datei inspizieren und editieren (.save)" />
+                <Button x:Name="SettingsButton" Content="⚙ Einstellungen" Margin="0,0,8,0"
+                        ToolTip.Tip="KI-Anbieter, Modell und Zielsprache konfigurieren" />
                 <Rectangle Width="1" Margin="4,2" Fill="#33FFFFFF" />
                 <Button Content="⬇ Alles entpacken" Margin="8,0,8,0"
                         Command="{Binding ExtractAllCommand}" />

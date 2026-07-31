@@ -44,9 +44,15 @@ public partial class App : Application
         services.AddSingleton<IRenpySaveService, RenpySaveService>();
         services.AddSingleton<UpdateService>();
 
+        // KI-Services (v0.4a)
+        services.AddSingleton<AiSettingsService>();
+        services.AddSingleton<TranslationService>();
+        services.AddHttpClient(); // AddSingleton<IHttpClientFactory>
+
         // ViewModels
         services.AddTransient<MainWindowViewModel>();
         services.AddTransient<SaveWindowViewModel>();
+        services.AddTransient<SettingsWindowViewModel>();
 
         return services.BuildServiceProvider();
     }
