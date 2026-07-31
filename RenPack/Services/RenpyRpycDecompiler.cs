@@ -411,13 +411,39 @@ public sealed class RenpyRpycDecompiler
         EmitBlockNonEmpty(sb, node.GetValueOrDefault("block") as IEnumerable ?? Array.Empty<object>(), indent + 1);
     }
 
+    /// <summary>Emittiert <c>define</c>/<c>default</c>-Statements inklusive
+    /// Store-Prefix. Wichtig: Der Ren'Py-Compiler speichert im <c>store</c>-Feld
+    /// die volle Store-Bezeichnung — z. B. <c>"store"</c> (Default) oder
+    /// <c>"store.gui"</c>. Im Original-.rpy schreibt der User <c>define gui.foo</c>,
+    /// nicht <c>define foo</c>; wenn wir den Store-Prefix vergessen, landet die
+    /// Variable im falschen Namespace und spätere <c>gui.foo</c>-Zugriffe werfen
+    /// <c>AttributeError: 'StoreModule' object has no attribute 'foo'</c>.</summary>
     private static void EmitDefine(StringBuilder sb, ClassDict node, int indent, string keyword)
     {
-        string name = AsString(node.GetValueOrDefault("varname") ?? node.GetValueOrDefault("name"));
+        string varname = AsString(node.GetValueOrDefault("varname") ?? node.GetValueOrDefault("name"));
+        string store = AsString(node.GetValueOrDefault("store"));
         string code = AsString(node.GetValueOrDefault("code"));
-        string op = AsString(node.GetValueOrDefault("operator")); // "=" usw.
+        string op = AsString(node.GetValueOrDefault("operator")); // "=", "+=", …
         if (string.IsNullOrEmpty(op)) op = "=";
-        AppendIndented(sb, indent, $"{keyword} {name} {op} {code}".TrimEnd());
+
+        // "store"        → nur varname
+        // "store.gui"    → gui.varname
+        // "store.config" → config.varname
+        string qualified = varname;
+        if (!string.IsNullOrEmpty(store) && store != "store")
+        {
+            string prefix = store.StartsWith("store.", StringComparison.Ordinal)
+                ? store[6..] : store;
+            qualified = $"{prefix}.{varname}";
+        }
+
+        // Optional: Index-Zuweisung wie `define foo[0] = 42` — der Compiler
+        // packt den Index-Ausdruck in ein "index"-Feld.
+        var index = node.GetValueOrDefault("index");
+        if (index is not null && AsString(index) is { Length: > 0 } idxStr && idxStr != "None")
+            qualified += $"[{idxStr}]";
+
+        AppendIndented(sb, indent, $"{keyword} {qualified} {op} {code}".TrimEnd());
     }
 
     /// <summary>Transform-Deklaration auf Top-Level: <c>transform NAME:</c>

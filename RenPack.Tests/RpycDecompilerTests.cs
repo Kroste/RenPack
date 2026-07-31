@@ -110,6 +110,46 @@ public sealed class RpycDecompilerTests
     }
 
     [Fact]
+    public void Define_with_named_store_prefixes_variable()
+    {
+        // Ren'Py speichert im `store`-Feld "store.gui" für `define gui.foo = …`.
+        // Wenn wir das ignorieren, landet die Variable im falschen Namespace
+        // und spätere `gui.foo`-Zugriffe werfen AttributeError.
+        var def = Node("renpy.ast.Define",
+            ("varname", "button_text_font"),
+            ("store", "store.gui"),
+            ("code", "gui.interface_text_font"));
+        var text = _dec.Decompile(new object[] { def });
+        text.Should().Contain("define gui.button_text_font = gui.interface_text_font");
+        text.Should().NotContain("define button_text_font =");
+    }
+
+    [Fact]
+    public void Define_without_store_prefix_stays_bare()
+    {
+        // "store" (der Default-Store) → nur der Varname.
+        var def = Node("renpy.ast.Define",
+            ("varname", "money"),
+            ("store", "store"),
+            ("code", "100"));
+        var text = _dec.Decompile(new object[] { def });
+        text.Should().Contain("define money = 100");
+        text.Should().NotContain("store.money");
+    }
+
+    [Fact]
+    public void Default_with_named_store_prefixes_variable()
+    {
+        // Analog zu define — default gui.foo = bar
+        var def = Node("renpy.ast.Default",
+            ("varname", "player_name"),
+            ("store", "store.persistent"),
+            ("code", "\"Alice\""));
+        var text = _dec.Decompile(new object[] { def });
+        text.Should().Contain("default persistent.player_name = \"Alice\"");
+    }
+
+    [Fact]
     public void Scene_with_python_expression_uses_expression_keyword()
     {
         // imspec = (name=(), expression="renpy.random.choice([…])", tag=None, …)
