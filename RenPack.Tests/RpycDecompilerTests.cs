@@ -336,6 +336,41 @@ public sealed class RpycDecompilerTests
     }
 
     [Fact]
+    public void SlUse_with_block_emits_transclude_body()
+    {
+        // `use TARGET(args):` mit Block-Body — der Body wird via transclude im
+        // gerufenen Screen an dessen `transclude`-Stelle eingefügt. Wenn wir
+        // den Block verlieren, hat der gerufene Screen nichts zum Transcluden
+        // und die eigentliche Content wird nicht gerendert.
+        var child = new ClassDict("renpy.sl2.slast", "SLDisplayable");
+        child["name"] = "text"; child["positional"] = new ArrayList { "\"Save-Grid\"" };
+        child["keyword"] = new ArrayList(); child["children"] = new ArrayList();
+
+        var block = new ClassDict("renpy.sl2.slast", "SLBlock");
+        block["keyword"] = new ArrayList();
+        block["children"] = new ArrayList { child };
+
+        var use = new ClassDict("renpy.sl2.slast", "SLUse");
+        use["target"] = "game_menu";
+        use["block"] = block;
+        // Kein args → nackter Target-Name
+
+        var containerBlock = new ClassDict("renpy.sl2.slast", "SLBlock");
+        containerBlock["keyword"] = new ArrayList();
+        containerBlock["children"] = new ArrayList { use };
+        var slScreen = new ClassDict("renpy.sl2.slast", "SLScreen");
+        slScreen["name"] = "file_slots";
+        slScreen["keyword"] = new ArrayList();
+        slScreen["children"] = new ArrayList { containerBlock };
+
+        var astScreen = Node("renpy.ast.Screen", ("screen", slScreen));
+        var text = _dec.Decompile(new object[] { astScreen });
+        text.Should().Contain("use game_menu:");
+        text.Should().Contain("text \"Save-Grid\"");
+        text.Should().NotContain("SLUse mit Block");
+    }
+
+    [Fact]
     public void Translate_block_emits_translate_lang_identifier()
     {
         var translate = Node("renpy.ast.Translate",

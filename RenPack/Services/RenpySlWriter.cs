@@ -262,6 +262,14 @@ internal static class RenpySlWriter
         if (emitted == 0) AppendIndented(sb, indent + 1, "pass");
     }
 
+    /// <summary>Emittiert <c>use TARGET(args)</c> — mit Body-Block, wenn der
+    /// Aufruf einen hat. Der Block wird via <c>transclude</c> im gerufenen
+    /// Screen an dessen <c>transclude</c>-Stelle eingefügt.
+    ///
+    /// Real: <c>screen file_slots(title):</c> ruft <c>use game_menu(title):</c>
+    /// mit einem Block auf, der die Save-Slot-Widgets enthält. Wenn der
+    /// Block-Body verloren geht, hat der game_menu-Screen nichts zum
+    /// Transcluden — die Slots erscheinen nicht.</summary>
     private static void EmitUse(StringBuilder sb, ClassDict cd, int indent)
     {
         string target = AsString(cd.GetValueOrDefault("target"));
@@ -270,15 +278,17 @@ internal static class RenpySlWriter
         string line = $"use {target}{args}";
         if (id is not null && AsAtl(id) is { Length: > 0 } idStr && idStr != "None")
             line += $" id {idStr}";
-        AppendIndented(sb, indent, line);
-        // Optional block bei nested use (selten)
-        if (cd.GetValueOrDefault("block") is ClassDict block)
+
+        // Block-Body: SLBlock mit Widget-Kindern, die per transclude landen.
+        if (cd.GetValueOrDefault("block") is ClassDict block
+            && block.ClassName == "renpy.sl2.slast.SLBlock")
         {
-            // Ren'Py-Syntax für `use X:` mit block ist speziell — für v0.4c
-            // erst mal als Kommentar markieren, damit der Ren'Py-Parser nicht
-            // unerwartet zickt.
-            AppendIndented(sb, indent + 1, "# <SLUse mit Block — teilweise unterstützt>");
-            var _ = block;
+            AppendIndented(sb, indent, line + ":");
+            EmitBlock(sb, block, indent + 1);
+        }
+        else
+        {
+            AppendIndented(sb, indent, line);
         }
     }
 
