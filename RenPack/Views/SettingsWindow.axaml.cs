@@ -36,8 +36,13 @@ public partial class SettingsWindow : ChromeWindow, ISettingsUi
             var pullWin = new OllamaPullWindow { DataContext = pullVm };
             await pullWin.ShowDialog(this);
             // Nach dem Pull die Modell-Liste im Settings-Fenster refreshen.
+            // WICHTIG: KEIN Task.Run drumherum — der RelayCommand triggert intern
+            // CanExecuteChanged, was Avalonia-Controls antasten will; auf einem
+            // Background-Thread ergibt das InvalidOperationException ("calling
+            // thread cannot access this object"). Wir sind nach ShowDialog wieder
+            // auf dem UI-Thread, ExecuteAsync läuft direkt hier.
             if (DataContext is SettingsWindowViewModel vm)
-                await Task.Run(() => vm.RefreshOllamaModelsCommand.Execute(null));
+                await vm.RefreshOllamaModelsCommand.ExecuteAsync(null);
         }
         catch (Exception ex)
         {
