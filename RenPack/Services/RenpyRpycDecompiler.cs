@@ -308,9 +308,27 @@ public sealed class RenpyRpycDecompiler
             ? string.Join(" ", en.Cast<object?>().Select(AsString))
             : AsString(imgname);
         string code = AsString(node.GetValueOrDefault("code"));
-        AppendIndented(sb, indent, string.IsNullOrEmpty(code)
-            ? $"image {name}"
-            : $"image {name} = {code}");
+
+        if (!string.IsNullOrEmpty(code))
+        {
+            AppendIndented(sb, indent, $"image {name} = {code}");
+            return;
+        }
+
+        // Kein code → Ren'Py-ATL-Block-Syntax: `image name:` mit ATL-Statements
+        // im Body. Volle ATL-Sprache (linear, ease, xpos, parallel, choice …)
+        // ist Roadmap v0.5. Aktuell emittieren wir einen Platzhalter-Body mit
+        // pass, damit Ren'Py wenigstens parsen kann — die Bewegungslogik geht
+        // dabei verloren; für die brauchst du unrpyc.
+        AppendIndented(sb, indent, $"image {name}:");
+        var atl = node.GetValueOrDefault("atl");
+        int atlCount = atl is ClassDict cd
+            && cd.GetValueOrDefault("statements") is IEnumerable stmts
+            ? stmts.Cast<object?>().Count()
+            : 0;
+        AppendIndented(sb, indent + 1,
+            $"# <ATL-Block mit {atlCount} Statement(s) — für volle ATL-Ausgabe unrpyc verwenden>");
+        AppendIndented(sb, indent + 1, "pass");
     }
 
     private static void EmitUserStatement(StringBuilder sb, ClassDict node, int indent)

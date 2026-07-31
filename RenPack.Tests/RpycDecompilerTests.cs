@@ -186,6 +186,23 @@ public sealed class RpycDecompilerTests
     }
 
     [Fact]
+    public void Image_with_atl_block_emits_placeholder_body_so_renpy_parses()
+    {
+        // `image name` ohne = ist nur valide, wenn ein Body folgt (ATL-Block).
+        // Wir haben (noch) keinen ATL-Writer — ohne Body scheitert Ren'Py mit
+        // "expected '=' not found". Fallback: leerer Body mit pass + Kommentar.
+        var atl = new ClassDict("renpy.atl", "RawBlock");
+        atl["statements"] = new ArrayList { "dummy1", "dummy2" };
+        var img = Node("renpy.ast.Image",
+            ("imgname", new object[] { "flash_effect" }),
+            ("atl", atl));
+        var text = _dec.Decompile(new object[] { img });
+        text.Should().Contain("image flash_effect:");
+        text.Should().Contain("# <ATL-Block");
+        text.Should().Contain("pass");
+    }
+
+    [Fact]
     public void Image_node_emits_image_statement()
     {
         var pyExpr = new ClassDict("renpy.astsupport", "PyExpr");
