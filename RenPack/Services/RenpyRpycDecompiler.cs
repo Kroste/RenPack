@@ -29,8 +29,74 @@ public sealed class RenpyRpycDecompiler
         sb.AppendLine("# Decompiled by RenPack — Basic-Decompiler ohne vollständige Ren'Py-Sprachdeckung.");
         sb.AppendLine("# Für Screens, ATL und komplexe Init-Blöcke bitte weiterhin unrpyc verwenden.");
         sb.AppendLine();
+
+        // Vor dem Emit: Transform-Aufrufe mit Argumenten sammeln. Ren'Py
+        // speichert die Transform-Parameter nicht im rpyc — wenn ein Screen
+        // "at flying_transform(msg[…])" ruft und der Transform bei uns ohne
+        // Parameter emittiert wird, interpretiert Ren'Py das Argument als
+        // Child-Displayable → "Not a displayable: 0". Wir merken uns die
+        // Namen und ergänzen bei der Transform-Deklaration einen
+        // (*args, **kwargs)-Fallback-Parameter, damit der Aufruf durchgeht.
+        _transformsWithArgCall = CollectTransformsCalledWithArgs(statements);
+
         EmitBlock(sb, statements, indent: 0);
         return sb.ToString();
+    }
+
+    private HashSet<string> _transformsWithArgCall = new(StringComparer.Ordinal);
+
+    private static HashSet<string> CollectTransformsCalledWithArgs(IEnumerable statements)
+    {
+        var result = new HashSet<string>(StringComparer.Ordinal);
+        var seen = new HashSet<object>(ReferenceEqualityComparer.Instance);
+        var callPattern = new System.Text.RegularExpressions.Regex(
+            @"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\(",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        void Walk(object? o)
+        {
+            if (o is null || (o.GetType().IsClass && !seen.Add(o))) return;
+            if (o is ClassDict cd)
+            {
+                // "at"-Keyword in SLDisplayable: der Wert ist ein PyExpr wie
+                // "flying_transform(msg['slot_index'])" oder "[t1(x), t2]".
+                if (cd.ClassName == "renpy.sl2.slast.SLDisplayable"
+                    && cd.TryGetValue("keyword", out var kws) && kws is IEnumerable kwEnum)
+                {
+                    foreach (var kv in kwEnum)
+                    {
+                        if (kv is object[] arr && arr.Length >= 2
+                            && AsString(arr[0]) == "at")
+                        {
+                            var expr = ExtractPyExprString(arr[1]);
+                            foreach (var m in callPattern.Matches(expr).Cast<System.Text.RegularExpressions.Match>())
+                                result.Add(m.Groups[1].Value);
+                            // Auch Muster wie "[a(x), b(y)]" — grep über die Klammern.
+                            foreach (System.Text.RegularExpressions.Match m in
+                                System.Text.RegularExpressions.Regex.Matches(expr, @"([A-Za-z_][A-Za-z0-9_]*)\s*\("))
+                                result.Add(m.Groups[1].Value);
+                        }
+                    }
+                }
+
+                foreach (var v in cd.Values) Walk(v);
+            }
+            else if (o is IEnumerable en && o is not string)
+                foreach (var v in en) Walk(v);
+        }
+        Walk(statements);
+        return result;
+    }
+
+    private static string ExtractPyExprString(object? v)
+    {
+        if (v is string s) return s;
+        if (v is ClassDict cd)
+        {
+            if (cd.TryGetValue("__args__", out var av) && av is object[] { Length: > 0 } args
+                && args[0] is string first) return first;
+        }
+        return v?.ToString() ?? "";
     }
 
     // ---- Block-Emit --------------------------------------------------------
@@ -530,12 +596,21 @@ public sealed class RenpyRpycDecompiler
 
     /// <summary>Transform-Deklaration auf Top-Level: <c>transform NAME:</c>
     /// gefolgt von einem ATL-Block. Wie ein Named-Image-mit-ATL, nur
-    /// wiederverwendbar per <c>at NAME</c> auf beliebigen Displayables.</summary>
-    private static void EmitTransform(StringBuilder sb, ClassDict node, int indent)
+    /// wiederverwendbar per <c>at NAME</c> auf beliebigen Displayables.
+    ///
+    /// Sonderfall: Ren'Py speichert die Transform-Parameter nicht in der
+    /// .rpyc. Wenn ein Aufrufer <c>at NAME(arg)</c> nutzt und wir keinen
+    /// Parameter emittieren, wraps Ren'Py das Argument als Child-
+    /// Displayable — bei Zahl-Werten kracht das mit "Not a displayable: 0".
+    /// Falls beim Pre-Pass ein solcher Aufruf gefunden wurde, ergänzen wir
+    /// einen <c>(*args, **kwargs)</c>-Fallback-Parameter, der Ren'Py's
+    /// Aufruf-Semantik zufriedenstellt (das eigentliche Binding an einen
+    /// benannten Parameter ist nicht rekonstruierbar).</summary>
+    private void EmitTransform(StringBuilder sb, ClassDict node, int indent)
     {
         string name = AsString(node.GetValueOrDefault("varname") ?? node.GetValueOrDefault("name"));
-        // Optional: parameters (Signature) — nutzen wir wenn vorhanden.
-        AppendIndented(sb, indent, $"transform {name}:");
+        string paramSuffix = _transformsWithArgCall.Contains(name) ? "(*args, **kwargs)" : "";
+        AppendIndented(sb, indent, $"transform {name}{paramSuffix}:");
         RenpyAtlWriter.EmitBlockBody(sb, node.GetValueOrDefault("atl"), indent + 1);
     }
 

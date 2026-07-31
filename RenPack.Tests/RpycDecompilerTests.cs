@@ -651,6 +651,49 @@ public sealed class RpycDecompilerTests
     }
 
     [Fact]
+    public void Transform_gets_args_kwargs_fallback_when_called_with_arg_in_at_clause()
+    {
+        // Ren'Py speichert Transform-Parameter nicht in der rpyc. Wenn ein
+        // Screen "at TRANSFORM(arg)" ruft und wir keine Parameter emittieren,
+        // wird das Argument als Child-Displayable interpretiert
+        // → "Not a displayable: 0". Heuristischer Fallback: bei gefundenem
+        // Aufruf ergänzen wir (*args, **kwargs), damit Ren'Py das Argument
+        // als Parameter bindet statt als Child.
+        var atlBlock = new ClassDict("renpy.atl", "RawBlock");
+        atlBlock["statements"] = new ArrayList();
+        var transform = Node("renpy.ast.Transform", ("varname", "myTransform"), ("atl", atlBlock));
+
+        // Ein SLDisplayable, das den Transform mit einem Argument aufruft.
+        var addNode = new ClassDict("renpy.sl2.slast", "SLDisplayable");
+        addNode["name"] = "add"; addNode["positional"] = new ArrayList { "Text(\"x\")" };
+        addNode["keyword"] = new ArrayList
+        {
+            new object[] { "at", "myTransform(msg[\"slot_index\"])" },
+        };
+        addNode["children"] = new ArrayList();
+        var block = new ClassDict("renpy.sl2.slast", "SLBlock");
+        block["keyword"] = new ArrayList(); block["children"] = new ArrayList { addNode };
+        var slScreen = new ClassDict("renpy.sl2.slast", "SLScreen");
+        slScreen["name"] = "s"; slScreen["keyword"] = new ArrayList();
+        slScreen["children"] = new ArrayList { block };
+        var astScreen = Node("renpy.ast.Screen", ("screen", slScreen));
+
+        var text = _dec.Decompile(new object[] { transform, astScreen });
+        text.Should().Contain("transform myTransform(*args, **kwargs):");
+    }
+
+    [Fact]
+    public void Transform_without_argument_call_stays_bare()
+    {
+        var atlBlock = new ClassDict("renpy.atl", "RawBlock");
+        atlBlock["statements"] = new ArrayList();
+        var transform = Node("renpy.ast.Transform", ("varname", "unused"), ("atl", atlBlock));
+        var text = _dec.Decompile(new object[] { transform });
+        text.Should().Contain("transform unused:");
+        text.Should().NotContain("unused(*args");
+    }
+
+    [Fact]
     public void Transform_declaration_uses_atl_writer_for_body()
     {
         var pauseStmt = new ClassDict("renpy.atl", "RawMultipurpose");
