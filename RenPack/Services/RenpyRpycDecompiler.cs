@@ -46,9 +46,10 @@ public sealed class RenpyRpycDecompiler
     ///     wird als nacktes <c>define …</c>/<c>default …</c> ohne Wrapper
     ///     ausgegeben (spart pro define einen ganzen init-Block).</item>
     /// </list></summary>
-    private void EmitBlock(StringBuilder sb, IEnumerable statements, int indent)
+    private int EmitBlock(StringBuilder sb, IEnumerable statements, int indent)
     {
         var list = statements as IList<object?> ?? statements.Cast<object?>().ToList();
+        int emitted = 0;
         for (int i = 0; i < list.Count; i++)
         {
             var stmt = list[i];
@@ -63,18 +64,11 @@ public sealed class RenpyRpycDecompiler
             if (node.ClassName == "renpy.ast.Init" && TryUnwrapSingletonInit(node, out var single))
             {
                 EmitNode(sb, single, indent);
+                emitted++;
                 continue;
             }
 
-            // Nach Call: Auto-Sync-Sequenz behandeln. Der Ren'Py-Compiler
-            // emittiert nach jedem `call` ein `Label(_call_X)` als Return-
-            // Adresse, ggf. gefolgt von einem `Pass()`. Zwei Varianten:
-            // 1. Label-Name == "_call_<target>": Standard-Auto-Sync, komplett
-            //    weglassen (User schrieb nur `call target`).
-            // 2. Label-Name beginnt mit "_call_" aber ist NICHT gleich
-            //    "_call_<target>": Der User hat `call target from <name>`
-            //    verwendet — wir hängen das `from` an den bereits emittierten
-            //    Call-Aufruf an, statt das Label auszugeben.
+            // Nach Call: Auto-Sync-Sequenz behandeln (siehe Kommentar oben).
             string? fromClause = null;
             if (node.ClassName == "renpy.ast.Call" && i + 1 < list.Count &&
                 list[i + 1] is ClassDict maybeLabel && maybeLabel.ClassName == "renpy.ast.Label")
@@ -98,8 +92,33 @@ public sealed class RenpyRpycDecompiler
             }
 
             EmitNode(sb, node, indent, fromClause);
+            if (!IsUnsupported(node)) emitted++;
         }
+        return emitted;
     }
+
+    /// <summary>Emittiert einen Block und garantiert, dass er nicht leer ist —
+    /// wenn keine echten Statements dabei sind (nur Kommentare oder gar nichts),
+    /// wird ein <c>pass</c> ergänzt, damit Ren'Py den Block akzeptiert.
+    /// Sonst würde der Ren'Py-Parser mit "init statement expects a non-empty
+    /// block" abbrechen.</summary>
+    private void EmitBlockNonEmpty(StringBuilder sb, IEnumerable statements, int indent)
+    {
+        int emitted = EmitBlock(sb, statements, indent);
+        if (emitted == 0) AppendIndented(sb, indent, "pass");
+    }
+
+    private static readonly HashSet<string> KnownNodeClasses = new(StringComparer.Ordinal)
+    {
+        "renpy.ast.Label", "renpy.ast.Say", "renpy.ast.Menu", "renpy.ast.If",
+        "renpy.ast.Jump", "renpy.ast.Call", "renpy.ast.Return", "renpy.ast.Show",
+        "renpy.ast.Scene", "renpy.ast.Hide", "renpy.ast.With", "renpy.ast.Python",
+        "renpy.ast.EarlyPython", "renpy.ast.Init", "renpy.ast.Pass",
+        "renpy.ast.Define", "renpy.ast.Default", "renpy.ast.UserStatement",
+        "renpy.ast.Image",
+    };
+
+    private static bool IsUnsupported(ClassDict node) => !KnownNodeClasses.Contains(node.ClassName);
 
     private static bool TryUnwrapSingletonInit(ClassDict init, out ClassDict child)
     {
@@ -147,6 +166,7 @@ public sealed class RenpyRpycDecompiler
             case "renpy.ast.Define": EmitDefine(sb, node, indent, "define"); break;
             case "renpy.ast.Default": EmitDefine(sb, node, indent, "default"); break;
             case "renpy.ast.UserStatement": EmitUserStatement(sb, node, indent); break;
+            case "renpy.ast.Image": EmitImage(sb, node, indent); break;
             default:
                 AppendIndented(sb, indent, $"# <unsupported: {node.ClassName}>");
                 break;
@@ -159,8 +179,7 @@ public sealed class RenpyRpycDecompiler
     {
         string name = AsString(node.GetValueOrDefault("name") ?? node.GetValueOrDefault("_name"));
         AppendIndented(sb, indent, $"label {name}:");
-        if (node.GetValueOrDefault("block") is IEnumerable block)
-            EmitBlock(sb, block, indent + 1);
+        EmitBlockNonEmpty(sb, node.GetValueOrDefault("block") as IEnumerable ?? Array.Empty<object>(), indent + 1);
     }
 
     private static void EmitSay(StringBuilder sb, ClassDict node, int indent)
@@ -186,8 +205,7 @@ public sealed class RenpyRpycDecompiler
             string condition = AsString(arr[1]);
             string suffix = condition is "True" or "" ? "" : $" if {condition}";
             AppendIndented(sb, indent + 1, $"\"{EscapeString(caption)}\"{suffix}:");
-            if (arr[2] is IEnumerable block) EmitBlock(sb, block, indent + 2);
-            else AppendIndented(sb, indent + 2, "pass");
+            EmitBlockNonEmpty(sb, arr[2] as IEnumerable ?? Array.Empty<object>(), indent + 2);
         }
     }
 
@@ -203,8 +221,7 @@ public sealed class RenpyRpycDecompiler
                 ? $"if {cond}:"
                 : cond is "True" or "" ? "else:" : $"elif {cond}:";
             AppendIndented(sb, indent, head);
-            if (arr[1] is IEnumerable block) EmitBlock(sb, block, indent + 1);
-            else AppendIndented(sb, indent + 1, "pass");
+            EmitBlockNonEmpty(sb, arr[1] as IEnumerable ?? Array.Empty<object>(), indent + 1);
             first = false;
         }
     }
@@ -271,8 +288,7 @@ public sealed class RenpyRpycDecompiler
     {
         int priority = node.GetValueOrDefault("priority") is int p ? p : 0;
         AppendIndented(sb, indent, $"init {priority}:");
-        if (node.GetValueOrDefault("block") is IEnumerable block)
-            EmitBlock(sb, block, indent + 1);
+        EmitBlockNonEmpty(sb, node.GetValueOrDefault("block") as IEnumerable ?? Array.Empty<object>(), indent + 1);
     }
 
     private static void EmitDefine(StringBuilder sb, ClassDict node, int indent, string keyword)
@@ -282,6 +298,19 @@ public sealed class RenpyRpycDecompiler
         string op = AsString(node.GetValueOrDefault("operator")); // "=" usw.
         if (string.IsNullOrEmpty(op)) op = "=";
         AppendIndented(sb, indent, $"{keyword} {name} {op} {code}".TrimEnd());
+    }
+
+    private static void EmitImage(StringBuilder sb, ClassDict node, int indent)
+    {
+        // imgname ist ein Tupel wie ("day1_wakeup",) oder ("hero", "happy").
+        var imgname = node.GetValueOrDefault("imgname");
+        string name = imgname is IEnumerable en
+            ? string.Join(" ", en.Cast<object?>().Select(AsString))
+            : AsString(imgname);
+        string code = AsString(node.GetValueOrDefault("code"));
+        AppendIndented(sb, indent, string.IsNullOrEmpty(code)
+            ? $"image {name}"
+            : $"image {name} = {code}");
     }
 
     private static void EmitUserStatement(StringBuilder sb, ClassDict node, int indent)

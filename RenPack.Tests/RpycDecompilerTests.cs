@@ -163,6 +163,41 @@ public sealed class RpycDecompilerTests
     }
 
     [Fact]
+    public void Empty_init_block_gets_pass_so_renpy_parser_accepts_it()
+    {
+        // Init mit Block, in dem nur unbekannte Nodes stehen — Ren'Py sieht das
+        // sonst als leer und wirft "init statement expects a non-empty block".
+        var init = Node("renpy.ast.Init", ("priority", 500),
+            ("block", new ArrayList { Node("renpy.ast.SomethingUnknown") }));
+        var text = _dec.Decompile(new object[] { init });
+        text.Should().Contain("init 500:");
+        text.Should().Contain("    # <unsupported:");
+        text.Should().Contain("    pass"); // Fallback für Ren'Py-Parser
+    }
+
+    [Fact]
+    public void Empty_label_block_gets_pass()
+    {
+        var label = Node("renpy.ast.Label", ("_name", "empty_label"),
+            ("block", new ArrayList()));
+        var text = _dec.Decompile(new object[] { label });
+        text.Should().Contain("label empty_label:");
+        text.Should().Contain("    pass");
+    }
+
+    [Fact]
+    public void Image_node_emits_image_statement()
+    {
+        var pyExpr = new ClassDict("renpy.astsupport", "PyExpr");
+        pyExpr["__args__"] = new object[] { "\"images/hero.png\"" };
+        var img = Node("renpy.ast.Image",
+            ("imgname", new object[] { "hero" }),
+            ("code", pyExpr));
+        var text = _dec.Decompile(new object[] { img });
+        text.Should().Contain("image hero = \"images/hero.png\"");
+    }
+
+    [Fact]
     public void Init_with_multiple_statements_keeps_init_wrapper()
     {
         var init = Node("renpy.ast.Init",
