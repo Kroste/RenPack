@@ -1,9 +1,8 @@
 using System.Collections;
 using System.Globalization;
 using System.IO.Compression;
-using System.Text;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using NLog;
 using Razorvine.Pickle;
 using Razorvine.Pickle.Objects;
@@ -16,19 +15,25 @@ namespace RenPack.Services;
 ///
 /// Aufbau eines Saves:
 ///   ZIP-Container mit Einträgen:
-///     - "log"         zlib-komprimiertes Pickle (protocol 2) von (roots, log)
-///                     — roots = Dict aller Store-Namespaces, log = RollbackLog
+///     - "log"         Pickle (protocol 2–5) von (roots, log). In neueren Ren'Py-
+///                     Versionen NICHT mehr zlib-komprimiert (0x80 = Pickle-Proto);
+///                     alte Saves sind zlib (0x78).
 ///     - "json"        JSON-Metadaten (save_name, save_time, renpy_version …)
 ///     - "screenshot.png"  PNG-Vorschau
 ///     - "signatures"  (optional) HMAC-Signaturen
+///     - "renpy_version" ASCII-Version
+///     - "extra_info"  (optional)
+///
+/// Der <c>roots</c>-Dict enthält direkt die vollqualifizierten Store-Variablen
+/// (Keys wie <c>store.money</c>, <c>store._menu</c>, <c>persistent.foo</c>) — kein
+/// verschachtelter Namespace-Wrapper.
 /// </summary>
-public sealed partial class RenpySaveService : IRenpySaveService
+public sealed class RenpySaveService : IRenpySaveService
 {
     private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+    private static int _initDone;
 
-    private static int _constructorsRegistered;
-
-    public RenpySaveService() => EnsureConstructorsRegistered();
+    public RenpySaveService() => EnsureInitialized();
 
     public SaveInfo Read(string savePath)
     {
@@ -76,8 +81,8 @@ public sealed partial class RenpySaveService : IRenpySaveService
 
             return new SaveMetadata(
                 SaveName: raw.TryGetValue("_save_name", out var n) ? n?.ToString() : null,
-                SaveTime: TryReadUnix(raw, "_save_time"),
-                RenpyVersion: raw.TryGetValue("_renpy_version", out var v) ? v?.ToString() : null,
+                SaveTime: TryReadUnix(raw, "_save_time") ?? TryReadUnix(raw, "_ctime"),
+                RenpyVersion: FormatVersion(raw),
                 GameName: raw.TryGetValue("_game_name", out var g) ? g?.ToString() : null,
                 Raw: raw);
         }
@@ -87,6 +92,15 @@ public sealed partial class RenpySaveService : IRenpySaveService
             return new SaveMetadata(null, null, null, null,
                 new Dictionary<string, object?>());
         }
+    }
+
+    private static string? FormatVersion(IDictionary<string, object?> raw)
+    {
+        if (!raw.TryGetValue("_renpy_version", out var v) || v is null) return null;
+        // Ren'Py 8 speichert die Version als List [major, minor, patch, build].
+        if (v is IEnumerable<object?> list && v is not string)
+            return string.Join(".", list.Select(x => x?.ToString() ?? ""));
+        return v.ToString();
     }
 
     private static DateTimeOffset? TryReadUnix(IDictionary<string, object?> raw, string key)
@@ -119,125 +133,66 @@ public sealed partial class RenpySaveService : IRenpySaveService
         byte[] logBytes = ReadEntryBytes(zip, "log")
             ?? throw new InvalidDataException("Save enthält keinen 'log'-Eintrag.");
 
-        // Ren'Py komprimiert den Log meist mit zlib; ältere Saves haben rohes
-        // Pickle. Diskriminator: zlib beginnt mit 0x78, Pickle-Proto-2 mit 0x80.
+        // Ältere Ren'Py-Versionen zlib-komprimieren den Log (beginnt mit 0x78),
+        // neuere schreiben rohes Pickle (0x80 = Protocol-Marker).
         byte[] pickle = logBytes.Length > 0 && logBytes[0] == 0x78
             ? ZlibDecompress(logBytes) : logBytes;
 
-        return LoadWithFallback(pickle);
+        using var u = new Unpickler();
+        return u.loads(pickle);
     }
-
-    /// <summary>Unpickle mit iterativem Fallback: unbekannte Klassen werden bei
-    /// Bedarf als Passthrough registriert und erneut versucht. Verhindert, dass
-    /// eine einzelne unbekannte Ren'Py-Klasse den ganzen Save-Reader lahmlegt.</summary>
-    private static object? LoadWithFallback(byte[] pickle)
-    {
-        for (int attempt = 0; attempt < 50; attempt++)
-        {
-            try
-            {
-                using var u = new Unpickler();
-                return u.loads(pickle);
-            }
-            catch (PickleException ex)
-            {
-                // Fehlermeldung: "expected zero arguments for construction of ClassDict (for mod.Class)."
-                var m = UnknownClassPattern().Match(ex.Message);
-                if (!m.Success) throw;
-
-                string module = m.Groups["mod"].Value;
-                string name = m.Groups["cls"].Value;
-                Log.Debug("Registriere Passthrough für unbekannte Klasse {mod}.{cls}", module, name);
-                Unpickler.registerConstructor(module, name, new PassthroughConstructor(module, name));
-            }
-        }
-        throw new PickleException("Unpickle abgebrochen: zu viele unbekannte Klassen (>50).");
-    }
-
-    [GeneratedRegex(@"for construction of ClassDict \(for (?<mod>[^.]+)\.(?<cls>[^)]+)\)")]
-    private static partial Regex UnknownClassPattern();
 
     // ---- Store-Extraktion --------------------------------------------------
 
-    /// <summary>Sucht im entpickleten Log das <c>store</c>-Dict des zuletzt
-    /// gespeicherten Zustands und dreht seine Einträge in Anzeige-Variablen um.
-    /// Struktur-Referenz Ren'Py 8.x: Top-Level ist ein Tupel <c>(roots, log)</c>,
-    /// <c>roots</c> ist ein Dict mit Store-Namespaces (Key <c>"store"</c> ist der
-    /// Haupt-Store). Fallback: rekursive Suche nach dem größten flachen Dict.</summary>
+    /// <summary>Sucht die Store-Variablen im entpickleten Log. Ren'Py 8.x:
+    /// Top-Level ist ein Tupel <c>(roots, log)</c>, <c>roots</c> ist ein Dict
+    /// mit voll qualifizierten Keys (<c>store.foo</c>, <c>persistent.bar</c>).
+    /// Ältere Formate mit verschachteltem Namespace-Wrapper werden ebenfalls
+    /// unterstützt.</summary>
     private static IReadOnlyList<SaveVariable> ExtractVariables(object? logRoot)
     {
-        IDictionary? store = FindStore(logRoot);
-        if (store is null) return [];
+        if (logRoot is not object?[] { Length: >= 1 } arr) return [];
+        if (arr[0] is not IDictionary roots) return [];
 
-        var result = new List<SaveVariable>(store.Count);
-        foreach (DictionaryEntry de in store)
+        // Fall 1 (Ren'Py 8.x): roots enthält "store.foo"-Keys direkt.
+        var flat = new List<SaveVariable>();
+        bool hasQualifiedKeys = false;
+        foreach (DictionaryEntry de in roots)
+        {
+            if (de.Key is not string key) continue;
+            if (key.StartsWith("store.", StringComparison.Ordinal))
+            {
+                hasQualifiedKeys = true;
+                string name = key["store.".Length..];
+                flat.Add(new SaveVariable(name, TypeDisplayName(de.Value),
+                    ValueDisplay(de.Value), name.StartsWith('_')));
+            }
+        }
+        if (hasQualifiedKeys)
+        {
+            flat.Sort(static (a, b) => string.CompareOrdinal(a.Name, b.Name));
+            return flat;
+        }
+
+        // Fall 2 (ältere Formate): roots["store"] ist selbst ein Dict.
+        if (roots.Contains("store") && roots["store"] is IDictionary storeDict)
+            return DictToVariables(storeDict);
+
+        // Fall 3: roots IST direkt der Store (sehr alte Formate).
+        return DictToVariables(roots);
+    }
+
+    private static IReadOnlyList<SaveVariable> DictToVariables(IDictionary d)
+    {
+        var result = new List<SaveVariable>(d.Count);
+        foreach (DictionaryEntry de in d)
         {
             string key = de.Key?.ToString() ?? "";
-            result.Add(new SaveVariable(
-                Name: key,
-                TypeName: TypeDisplayName(de.Value),
-                Value: ValueDisplay(de.Value),
-                IsInternal: key.StartsWith('_')));
+            result.Add(new SaveVariable(key, TypeDisplayName(de.Value),
+                ValueDisplay(de.Value), key.StartsWith('_')));
         }
         result.Sort(static (a, b) => string.CompareOrdinal(a.Name, b.Name));
         return result;
-    }
-
-    private static IDictionary? FindStore(object? root)
-    {
-        // Ren'Py 8.x Top-Level: (roots, log). roots ist ein Dict, "store" ist der Schlüssel.
-        if (root is object?[] { Length: >= 1 } arr && arr[0] is IDictionary roots)
-        {
-            if (roots.Contains("store") && roots["store"] is IDictionary rootsStore)
-                return rootsStore;
-            // Ältere Ren'Py-Versionen: roots IST direkt der Store.
-            if (LooksLikeStore(roots)) return roots;
-        }
-
-        // Fallback: rekursiv nach dem plausibelsten Dict suchen.
-        return FindLargestStoreLike(root, new HashSet<object>(ReferenceEqualityComparer.Instance));
-    }
-
-    private static IDictionary? FindLargestStoreLike(object? obj, HashSet<object> seen)
-    {
-        if (obj is null || !seen.Add(obj)) return null;
-
-        IDictionary? best = obj is IDictionary d && LooksLikeStore(d) ? d : null;
-
-        switch (obj)
-        {
-            case IDictionary dict:
-                foreach (var v in dict.Values)
-                {
-                    var found = FindLargestStoreLike(v, seen);
-                    if (found is not null && (best is null || found.Count > best.Count)) best = found;
-                }
-                break;
-            case IEnumerable list when obj is not string:
-                foreach (var v in list)
-                {
-                    var found = FindLargestStoreLike(v, seen);
-                    if (found is not null && (best is null || found.Count > best.Count)) best = found;
-                }
-                break;
-        }
-        return best;
-    }
-
-    /// <summary>Heuristik: Ein Store-Dict hat String-Keys und enthält typische
-    /// Ren'Py-Kennungen (<c>_menu</c>, <c>_return</c>, <c>_args</c>, …).</summary>
-    private static bool LooksLikeStore(IDictionary dict)
-    {
-        if (dict.Count < 3) return false;
-        int stringKeys = 0, renpyMarkers = 0;
-        foreach (var k in dict.Keys)
-        {
-            if (k is not string s) continue;
-            stringKeys++;
-            if (s is "_menu" or "_return" or "_args" or "_kwargs" or "_scope"
-                or "_history_list" or "nvl_list" or "_last_say_who") renpyMarkers++;
-        }
-        return stringKeys == dict.Count && renpyMarkers >= 1;
     }
 
     private static string TypeDisplayName(object? v) => v switch
@@ -301,36 +256,146 @@ public sealed partial class RenpySaveService : IRenpySaveService
         return output.ToArray();
     }
 
-    // ---- Bekannte Ren'Py-Constructors registrieren --------------------------
+    // ---- Razorvine.Pickle-Erweiterung: Catch-all für unbekannte Klassen ----
 
-    /// <summary>Registriert Passthrough-Constructors für Ren'Py-Container, die per
-    /// __reduce__ mit Args serialisiert werden. Idempotent (statisch, aber
-    /// registerConstructor überschreibt existierende Einträge stumm).</summary>
-    private static void EnsureConstructorsRegistered()
+    /// <summary>Statischer Einmal-Setup: patcht die interne
+    /// <c>Unpickler.objectConstructors</c>-Map mit einem <see cref="CatchAllDict"/>-
+    /// Wrapper, sodass jede unbekannte Klasse einen tolerantten Passthrough-
+    /// Constructor bekommt (statt <see cref="PickleException"/>). Registriert
+    /// zusätzlich echte Container für <c>RevertableDict/List/Set</c>, weil diese
+    /// per <c>__reduce__</c>+APPENDS/SETITEMS aufgebaut werden.
+    ///
+    /// Das readonly-Statik-Feld wird per <see cref="UnsafeAccessor"/> ersetzt
+    /// (.NET 8+); anders geht es nicht ohne Razorvine zu forken.</summary>
+    private static void EnsureInitialized()
     {
-        if (Interlocked.Exchange(ref _constructorsRegistered, 1) == 1) return;
+        if (Interlocked.Exchange(ref _initDone, 1) == 1) return;
 
-        // RevertableDict/List/Set gibt es in zwei Modulpfaden (Ren'Py 7 vs. 8).
+        ref var slot = ref Accessors.ObjectConstructors();
+        slot = new CatchAllDict(slot);
+
         foreach (string mod in new[] { "renpy.revertable", "renpy.python" })
         {
-            Unpickler.registerConstructor(mod, "RevertableDict", new PassthroughConstructor(mod, "RevertableDict"));
-            Unpickler.registerConstructor(mod, "RevertableList", new PassthroughConstructor(mod, "RevertableList"));
-            Unpickler.registerConstructor(mod, "RevertableSet",  new PassthroughConstructor(mod, "RevertableSet"));
-            Unpickler.registerConstructor(mod, "RevertableObject", new PassthroughConstructor(mod, "RevertableObject"));
+            Unpickler.registerConstructor(mod, "RevertableDict", new RevertableDictCtor());
+            Unpickler.registerConstructor(mod, "RevertableList", new RevertableListCtor());
+            Unpickler.registerConstructor(mod, "RevertableSet",  new RevertableListCtor());
         }
     }
 
-    /// <summary>Passthrough-Constructor: erzeugt eine <see cref="ClassDict"/>-artige
-    /// Struktur ohne die Constructor-Argumente zu verlieren. Ein nachfolgendes
-    /// BUILD (setstate) füllt das Dict weiter; die Args landen unter dem Key
-    /// "__args__" für spätere Auswertung.</summary>
-    private sealed class PassthroughConstructor(string module, string name) : IObjectConstructor
+    private static class Accessors
+    {
+        [UnsafeAccessor(UnsafeAccessorKind.StaticField, Name = "objectConstructors")]
+        public static extern ref IDictionary<string, IObjectConstructor> ObjectConstructors(Unpickler? _ = null);
+    }
+
+    /// <summary>Wrapper-Dictionary: liefert für unbekannte Keys immer einen
+    /// <see cref="OpaqueCtor"/> statt PickleException. Die Namensauflösung
+    /// erfolgt beim <see cref="TryGetValue"/>-Aufruf aus dem
+    /// "module.classname"-Key.</summary>
+    private sealed class CatchAllDict(IDictionary<string, IObjectConstructor> inner)
+        : IDictionary<string, IObjectConstructor>
+    {
+        public IObjectConstructor this[string key]
+        {
+            get => inner.TryGetValue(key, out var v) ? v : MakeOpaque(key);
+            set => inner[key] = value;
+        }
+        public ICollection<string> Keys => inner.Keys;
+        public ICollection<IObjectConstructor> Values => inner.Values;
+        public int Count => inner.Count;
+        public bool IsReadOnly => inner.IsReadOnly;
+        public void Add(string k, IObjectConstructor v) => inner.Add(k, v);
+        public void Add(KeyValuePair<string, IObjectConstructor> item) => inner.Add(item);
+        public void Clear() => inner.Clear();
+        public bool Contains(KeyValuePair<string, IObjectConstructor> item) => inner.Contains(item);
+        public bool ContainsKey(string key) => true;
+        public void CopyTo(KeyValuePair<string, IObjectConstructor>[] a, int i) => inner.CopyTo(a, i);
+        public IEnumerator<KeyValuePair<string, IObjectConstructor>> GetEnumerator() => inner.GetEnumerator();
+        public bool Remove(string key) => inner.Remove(key);
+        public bool Remove(KeyValuePair<string, IObjectConstructor> item) => inner.Remove(item);
+        public bool TryGetValue(string key, out IObjectConstructor value)
+        {
+            if (inner.TryGetValue(key, out value!)) return true;
+            value = MakeOpaque(key);
+            return true;
+        }
+        IEnumerator IEnumerable.GetEnumerator() => inner.GetEnumerator();
+
+        private static IObjectConstructor MakeOpaque(string qualifiedKey)
+        {
+            int dot = qualifiedKey.LastIndexOf('.');
+            var mod = dot > 0 ? qualifiedKey[..dot] : "";
+            var cls = dot > 0 ? qualifiedKey[(dot + 1)..] : qualifiedKey;
+            return new OpaqueCtor(mod, cls);
+        }
+    }
+
+    /// <summary>Constructor für unbekannte Klassen: erzeugt ein
+    /// <see cref="RenpyOpaqueDict"/> mit multi-signature <c>__setstate__</c>.</summary>
+    private sealed class OpaqueCtor(string module, string name) : IObjectConstructor
+    {
+        public object construct(object[] args) => new RenpyOpaqueDict(module, name, args);
+    }
+
+    /// <summary><see cref="ClassDict"/>-Ableger, der SOWOHL <c>Hashtable</c>- als auch
+    /// <c>object[]</c>- und <c>object</c>-States entgegennimmt. Nötig, weil viele
+    /// Ren'Py-Klassen ihren State als Tuple statt Dict serialisieren und der
+    /// Standard-<see cref="ClassDict"/> dann per Reflection kein passendes
+    /// <c>__setstate__</c> findet.</summary>
+    private sealed class RenpyOpaqueDict : ClassDict
+    {
+        public RenpyOpaqueDict(string module, string name, object[] args) : base(module, name)
+        {
+            if (args.Length > 0) this["__args__"] = args;
+        }
+        public new void __setstate__(Hashtable state) => base.__setstate__(state);
+        public void __setstate__(object[] state) { this["__state__"] = state; }
+        public void __setstate__(object state) { this["__state__"] = state; }
+    }
+
+    private sealed class RevertableDictCtor : IObjectConstructor
     {
         public object construct(object[] args)
         {
-            var cd = new ClassDict(module, name);
-            if (args.Length > 0) cd["__args__"] = args;
-            return cd;
+            var d = new OpaqueHashtable();
+            // RevertableDict.__reduce_ex__ liefert typischerweise (list_of_items,).
+            if (args.Length >= 1 && args[0] is IList items)
+                foreach (var item in items)
+                    if (item is object[] { Length: 2 } pair && pair[0] is not null)
+                        d[pair[0]] = pair[1];
+            return d;
         }
+    }
+
+    private sealed class RevertableListCtor : IObjectConstructor
+    {
+        public object construct(object[] args)
+        {
+            var l = new OpaqueArrayList();
+            if (args.Length >= 1 && args[0] is IEnumerable src && args[0] is not string)
+                foreach (var i in src) l.Add(i);
+            return l;
+        }
+    }
+
+    /// <summary><see cref="Hashtable"/>-Ableger mit tolerantem <c>__setstate__</c>
+    /// (Hashtable/object[]/object) — sonst schluckt Razorvine bei BUILD.</summary>
+    private sealed class OpaqueHashtable : Hashtable
+    {
+        public void __setstate__(Hashtable state)
+        {
+            foreach (DictionaryEntry de in state) this[de.Key] = de.Value;
+        }
+        public void __setstate__(object[] state) { }
+        public void __setstate__(object state) { }
+    }
+
+    /// <summary><see cref="ArrayList"/>-Ableger mit tolerantem <c>__setstate__</c>
+    /// (analog <see cref="OpaqueHashtable"/>).</summary>
+    private sealed class OpaqueArrayList : ArrayList
+    {
+        public void __setstate__(Hashtable state) { }
+        public void __setstate__(object[] state) { }
+        public void __setstate__(object state) { }
     }
 }

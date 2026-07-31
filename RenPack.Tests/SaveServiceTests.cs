@@ -64,6 +64,57 @@ public sealed class SaveServiceTests : IDisposable
             z.writestr('screenshot.png', png)
         """;
 
+    // Ren'Py-8-Format: roots ist ein Dict mit VOLLQUALIFIZIERTEN Keys ("store.money",
+    // "persistent.foo"), kein verschachtelter Namespace-Wrapper. Zusätzlich mit
+    // unbekannten "Ren'Py-Klassen" gespickt (Fake-Modules via sys.modules), damit
+    // der Catch-all-Constructor mitgeprüft wird.
+    private const string PyBuildSaveRenpy8 = """
+        import sys, os, types, pickle, json, zipfile
+
+        outpath = sys.argv[1]
+
+        # Fake-Module registrieren, damit pickle die "Klassen" serialisieren darf.
+        for mod in ('renpy', 'renpy.rollback', 'renpy.display', 'renpy.pyanalysis'):
+            sys.modules[mod] = types.ModuleType(mod)
+
+        class RollbackLog:
+            __module__ = 'renpy.rollback'
+            def __init__(self):
+                self.log = []
+                self.identifier = 'test-1'
+            # Tuple-State — hier bricht Standard-ClassDict.
+            def __reduce_ex__(self, proto):
+                return (RollbackLog, (), (self.log, self.identifier))
+        sys.modules['renpy.rollback'].RollbackLog = RollbackLog
+
+        class Displayable:
+            __module__ = 'renpy.display'
+            def __reduce_ex__(self, proto):
+                return (Displayable, ())
+        sys.modules['renpy.display'].Displayable = Displayable
+
+        roots = {
+            'store.money': 5000,
+            'store.player_name': 'Bob',
+            'store.has_key': True,
+            'store._menu': None,
+            'store._history_list': [],
+            'store.strange_obj': Displayable(),
+            'persistent._daily_check': 42,
+        }
+        log_root = (roots, RollbackLog())
+        # Neuere Ren'Py-Versionen komprimieren den log NICHT mehr.
+        log_bytes = pickle.dumps(log_root, protocol=5)
+
+        with zipfile.ZipFile(outpath, 'w', zipfile.ZIP_DEFLATED) as z:
+            z.writestr('log', log_bytes)
+            z.writestr('json', json.dumps({
+                '_save_name': 'Real-Format',
+                '_renpy_version': [8, 4, 1, 25072401],
+                '_ctime': 1778676757,
+            }))
+        """;
+
     // Save mit RevertableDict/List (per __reduce__ mit Args). Testet, dass der
     // Passthrough-Constructor die unbekannten Klassen abfängt. Trick: sys.modules
     // wird mit Fake-Modulen bestückt, sonst weigert sich pickle beim dumps.
@@ -158,6 +209,32 @@ public sealed class SaveServiceTests : IDisposable
         info.Variables.Should().Contain(v => v.Name == "has_key" && v.Value == "True" && v.TypeName == "bool");
         info.Variables.Should().Contain(v => v.Name == "hp" && v.TypeName == "float");
         info.Variables.Should().Contain(v => v.Name == "_menu" && v.IsInternal);
+    }
+
+    [Fact]
+    public void Reads_renpy8_flat_roots_format_and_tolerates_unknown_classes()
+    {
+        var py = PythonExe();
+        if (py is null) { Assert.Skip("python3 nicht verfügbar"); return; }
+
+        var savePath = Path.Combine(_tmp, "flat.save");
+        RunPython(py, PyBuildSaveRenpy8, savePath);
+
+        var info = _svc.Read(savePath);
+
+        info.LogError.Should().BeNull("Catch-all-Constructor sollte unbekannte Ren'Py-Klassen abfangen");
+        info.Metadata.SaveName.Should().Be("Real-Format");
+        info.Metadata.RenpyVersion.Should().Be("8.4.1.25072401");
+        info.Metadata.SaveTime.Should().NotBeNull();
+
+        // Vollqualifizierte Keys wurden zerlegt: "store.money" → Name "money".
+        info.Variables.Should().Contain(v => v.Name == "money" && v.Value == "5000");
+        info.Variables.Should().Contain(v => v.Name == "player_name" && v.Value == "Bob");
+        info.Variables.Should().Contain(v => v.Name == "has_key" && v.Value == "True");
+        info.Variables.Should().Contain(v => v.Name == "strange_obj" && v.TypeName == "Displayable");
+        info.Variables.Should().Contain(v => v.Name == "_menu" && v.IsInternal);
+        // persistent.*-Keys sind KEIN Store-Namespace und werden ausgelassen.
+        info.Variables.Should().NotContain(v => v.Name == "_daily_check");
     }
 
     [Fact]
