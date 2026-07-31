@@ -147,6 +147,81 @@ public sealed class RpycDecompilerTests
     }
 
     [Fact]
+    public void Init_with_single_define_is_flattened_to_bare_statement()
+    {
+        // Ren'Py-Compiler-Ausgabe: define wird immer in Init(0, [Define]) verpackt.
+        // Wir wollen im Output einfach `define x = ...` sehen, keine Init-Zeile.
+        var init = Node("renpy.ast.Init",
+            ("priority", 0),
+            ("block", new ArrayList
+            {
+                Node("renpy.ast.Define", ("varname", "money"), ("code", "100")),
+            }));
+        var text = _dec.Decompile(new object[] { init });
+        text.Should().Contain("define money = 100");
+        text.Should().NotContain("init 0:");
+    }
+
+    [Fact]
+    public void Init_with_multiple_statements_keeps_init_wrapper()
+    {
+        var init = Node("renpy.ast.Init",
+            ("priority", 0),
+            ("block", new ArrayList
+            {
+                Node("renpy.ast.Define", ("varname", "a"), ("code", "1")),
+                Node("renpy.ast.Define", ("varname", "b"), ("code", "2")),
+            }));
+        var text = _dec.Decompile(new object[] { init });
+        text.Should().Contain("init 0:");
+        text.Should().Contain("    define a = 1");
+        text.Should().Contain("    define b = 2");
+    }
+
+    [Fact]
+    public void Init_with_nonzero_priority_keeps_init_wrapper()
+    {
+        var init = Node("renpy.ast.Init",
+            ("priority", -2),
+            ("block", new ArrayList { Node("renpy.ast.Define", ("varname", "x"), ("code", "1")) }));
+        var text = _dec.Decompile(new object[] { init });
+        text.Should().Contain("init -2:");
+    }
+
+    [Fact]
+    public void Call_followed_by_auto_sync_label_omits_the_label()
+    {
+        // Ren'Py-Compiler fügt nach `call X` ein `Label(_call_X)` + `Pass` ein.
+        // Beide sollen weg — im Output nur `call X`.
+        var script = new object[]
+        {
+            Node("renpy.ast.Call", ("label", "target")),
+            Node("renpy.ast.Label", ("_name", "_call_target")),
+            Node("renpy.ast.Pass"),
+            Node("renpy.ast.Say", ("what", "danach")),
+        };
+        var text = _dec.Decompile(script);
+        text.Should().Contain("call target");
+        text.Should().NotContain("_call_target");
+        text.Should().Contain("\"danach\"");
+    }
+
+    [Fact]
+    public void Call_with_from_clause_label_emits_from_syntax()
+    {
+        // Wenn der User `call X from Y` geschrieben hat, generiert der Compiler
+        // `Label(_call_Y)` (nicht `_call_X`). Wir hängen `from _call_Y` an den Call.
+        var script = new object[]
+        {
+            Node("renpy.ast.Call", ("label", "target")),
+            Node("renpy.ast.Label", ("_name", "_call_custom_name")),
+            Node("renpy.ast.Pass"),
+        };
+        var text = _dec.Decompile(script);
+        text.Should().Contain("call target from _call_custom_name");
+    }
+
+    [Fact]
     public void Pyexpr_wrapper_is_unwrapped_to_source_string()
     {
         var expr = new ClassDict("renpy.astsupport", "PyExpr");

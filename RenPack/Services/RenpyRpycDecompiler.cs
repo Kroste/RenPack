@@ -35,18 +35,97 @@ public sealed class RenpyRpycDecompiler
 
     // ---- Block-Emit --------------------------------------------------------
 
+    /// <summary>Emittiert einen Statement-Block mit Sonderregeln für Ren'Py-
+    /// Compiler-Artefakte:
+    /// <list type="bullet">
+    ///   <item><b>Auto-Sync-Label nach Call</b>: der Ren'Py-Compiler fügt nach
+    ///     jedem <c>call X</c> intern ein <c>Label(_call_X)</c> mit einem
+    ///     <c>Pass</c>-Kind ein — die Rücksprungadresse. Im Original-.rpy steht
+    ///     das nicht. Wir überspringen es beim Emittieren.</item>
+    ///   <item><b>Init-Vereinfachung</b>: ein <c>Init(prio=0, [Define/Default])</c>
+    ///     wird als nacktes <c>define …</c>/<c>default …</c> ohne Wrapper
+    ///     ausgegeben (spart pro define einen ganzen init-Block).</item>
+    /// </list></summary>
     private void EmitBlock(StringBuilder sb, IEnumerable statements, int indent)
     {
-        foreach (var stmt in statements)
+        var list = statements as IList<object?> ?? statements.Cast<object?>().ToList();
+        for (int i = 0; i < list.Count; i++)
         {
-            if (stmt is ClassDict node)
-                EmitNode(sb, node, indent);
-            else if (stmt is not null)
-                AppendIndented(sb, indent, $"# <unbekannt: {stmt.GetType().Name}>");
+            var stmt = list[i];
+            if (stmt is not ClassDict node)
+            {
+                if (stmt is not null)
+                    AppendIndented(sb, indent, $"# <unbekannt: {stmt.GetType().Name}>");
+                continue;
+            }
+
+            // Init(0, [einzelnes Define/Default]) → nacktes Statement
+            if (node.ClassName == "renpy.ast.Init" && TryUnwrapSingletonInit(node, out var single))
+            {
+                EmitNode(sb, single, indent);
+                continue;
+            }
+
+            // Nach Call: Auto-Sync-Sequenz behandeln. Der Ren'Py-Compiler
+            // emittiert nach jedem `call` ein `Label(_call_X)` als Return-
+            // Adresse, ggf. gefolgt von einem `Pass()`. Zwei Varianten:
+            // 1. Label-Name == "_call_<target>": Standard-Auto-Sync, komplett
+            //    weglassen (User schrieb nur `call target`).
+            // 2. Label-Name beginnt mit "_call_" aber ist NICHT gleich
+            //    "_call_<target>": Der User hat `call target from <name>`
+            //    verwendet — wir hängen das `from` an den bereits emittierten
+            //    Call-Aufruf an, statt das Label auszugeben.
+            string? fromClause = null;
+            if (node.ClassName == "renpy.ast.Call" && i + 1 < list.Count &&
+                list[i + 1] is ClassDict maybeLabel && maybeLabel.ClassName == "renpy.ast.Label")
+            {
+                string labelName = AsString(maybeLabel.GetValueOrDefault("name")
+                    ?? maybeLabel.GetValueOrDefault("_name"));
+                string target = GetCallTarget(node);
+                if (labelName == $"_call_{target}")
+                {
+                    i++;
+                    if (i + 1 < list.Count && list[i + 1] is ClassDict p1
+                        && p1.ClassName == "renpy.ast.Pass") i++;
+                }
+                else if (labelName.StartsWith("_call_", StringComparison.Ordinal))
+                {
+                    fromClause = labelName;
+                    i++;
+                    if (i + 1 < list.Count && list[i + 1] is ClassDict p2
+                        && p2.ClassName == "renpy.ast.Pass") i++;
+                }
+            }
+
+            EmitNode(sb, node, indent, fromClause);
         }
     }
 
-    private void EmitNode(StringBuilder sb, ClassDict node, int indent)
+    private static bool TryUnwrapSingletonInit(ClassDict init, out ClassDict child)
+    {
+        child = null!;
+        int prio = init.GetValueOrDefault("priority") is int p ? p : 0;
+        if (prio != 0) return false;
+        if (init.GetValueOrDefault("block") is not IEnumerable block) return false;
+        var kids = block.Cast<object?>().ToList();
+        if (kids.Count != 1) return false;
+        if (kids[0] is not ClassDict k) return false;
+        if (k.ClassName is not ("renpy.ast.Define" or "renpy.ast.Default")) return false;
+        child = k;
+        return true;
+    }
+
+    private static bool IsCallSyncLabel(ClassDict node, string callTarget)
+    {
+        if (node.ClassName != "renpy.ast.Label") return false;
+        string labelName = AsString(node.GetValueOrDefault("name") ?? node.GetValueOrDefault("_name"));
+        return labelName == $"_call_{callTarget}";
+    }
+
+    private static string GetCallTarget(ClassDict callNode) =>
+        AsString(callNode.GetValueOrDefault("label"));
+
+    private void EmitNode(StringBuilder sb, ClassDict node, int indent, string? fromLabel = null)
     {
         switch (node.ClassName)
         {
@@ -55,7 +134,7 @@ public sealed class RenpyRpycDecompiler
             case "renpy.ast.Menu": EmitMenu(sb, node, indent); break;
             case "renpy.ast.If": EmitIf(sb, node, indent); break;
             case "renpy.ast.Jump": EmitJump(sb, node, indent); break;
-            case "renpy.ast.Call": EmitCall(sb, node, indent); break;
+            case "renpy.ast.Call": EmitCall(sb, node, indent, fromLabel); break;
             case "renpy.ast.Return": EmitReturn(sb, node, indent); break;
             case "renpy.ast.Show": EmitShowHideScene(sb, node, indent, "show"); break;
             case "renpy.ast.Scene": EmitShowHideScene(sb, node, indent, "scene"); break;
@@ -137,11 +216,13 @@ public sealed class RenpyRpycDecompiler
         AppendIndented(sb, indent, expr ? $"jump expression {target}" : $"jump {target}");
     }
 
-    private static void EmitCall(StringBuilder sb, ClassDict node, int indent)
+    private static void EmitCall(StringBuilder sb, ClassDict node, int indent, string? fromLabel = null)
     {
         string target = AsString(node.GetValueOrDefault("label"));
         bool expr = node.GetValueOrDefault("expression") is bool b && b;
-        AppendIndented(sb, indent, expr ? $"call expression {target}" : $"call {target}");
+        string head = expr ? $"call expression {target}" : $"call {target}";
+        if (!string.IsNullOrEmpty(fromLabel)) head += $" from {fromLabel}";
+        AppendIndented(sb, indent, head);
     }
 
     private static void EmitReturn(StringBuilder sb, ClassDict node, int indent)
