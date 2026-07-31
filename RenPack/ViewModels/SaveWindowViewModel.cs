@@ -56,7 +56,18 @@ public sealed partial class SaveWindowViewModel : ObservableObject
 
     [ObservableProperty] private Bitmap? _screenshot;
     [ObservableProperty] private string _statusText = "Kein Save geladen.";
-    [ObservableProperty] private bool _isBusy;
+
+    // WICHTIG: _isBusy muss ALLE Commands notifiy'en, deren CanExecute-Methode
+    // !IsBusy prüft. Sonst bleibt der Button nach LoadSaveAsync grau, weil der
+    // finally-Block IsBusy=false setzt aber niemand mehr CanExecute neu abfragt.
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(TranslateCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveAsCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RevertCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenSaveCommand))]
+    private bool _isBusy;
+
     [ObservableProperty] private bool _showInternal;
 
     [ObservableProperty]
