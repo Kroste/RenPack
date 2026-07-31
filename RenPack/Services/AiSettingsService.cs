@@ -33,10 +33,18 @@ public sealed class AiSettingsService
 
     public AiSettings Current => _current;
 
+    /// <summary>Wird nach jedem <see cref="Update"/> gefeuert. ViewModels, die
+    /// gebundene Command-CanExecute-Werte aus den Settings ableiten, abonnieren
+    /// und rufen <c>NotifyCanExecuteChanged</c> auf — sonst bleibt der Zustand
+    /// stale, wenn der Nutzer den Provider erst nach dem Öffnen des Feature-
+    /// Fensters konfiguriert.</summary>
+    public event EventHandler? SettingsChanged;
+
     public void Update(AiSettings settings)
     {
         _current = settings;
         Save(settings);
+        SettingsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     // ---- Persistenz-DTO ----------------------------------------------------

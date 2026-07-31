@@ -30,7 +30,14 @@ public sealed partial class SaveWindowViewModel : ObservableObject
         _aiSettings = aiSettings;
         _providerFactory = providerFactory;
         _translation = translation;
+        // Wenn der Nutzer die KI-Einstellungen nach dem Öffnen des Save-Fensters
+        // konfiguriert, muss der Übersetzen-Button neu bewertet werden. Sonst
+        // bleibt er grau, obwohl KI jetzt läuft.
+        _aiSettings.SettingsChanged += OnAiSettingsChanged;
     }
+
+    private void OnAiSettingsChanged(object? sender, EventArgs e)
+        => TranslateCommand.NotifyCanExecuteChanged();
 
     // Designer-Konstruktor
     public SaveWindowViewModel() : this(new RenpySaveService(), new AiSettingsService(),
@@ -124,7 +131,8 @@ public sealed partial class SaveWindowViewModel : ObservableObject
                 _allVariables.Add(vm);
             }
             DirtyCount = 0;
-            UpdateCanTranslate();
+            // Variablen-Count ist Teil der Enable-Bedingung; neu bewerten.
+            TranslateCommand.NotifyCanExecuteChanged();
             ApplyFilter();
 
             StatusText = info.LogError is null
@@ -231,17 +239,6 @@ public sealed partial class SaveWindowViewModel : ObservableObject
 
     // ---- KI-Übersetzung -----------------------------------------------------
 
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(TranslateCommand))]
-    private bool _canTranslate;
-
-    private void UpdateCanTranslate()
-    {
-        CanTranslate = _aiSettings is not null
-            && _aiSettings.Current.Provider != AiProviderType.None
-            && _allVariables.Count > 0;
-    }
-
     [RelayCommand(CanExecute = nameof(CanExecuteTranslate))]
     private async Task TranslateAsync()
     {
@@ -288,7 +285,14 @@ public sealed partial class SaveWindowViewModel : ObservableObject
         }
     }
 
-    private bool CanExecuteTranslate() => !IsBusy && CanTranslate;
+    /// <summary>Direkt aus den aktuellen Settings ableiten — nichts cachen. Beim
+    /// Provider-Wechsel triggert das Event <see cref="AiSettingsService.SettingsChanged"/>
+    /// ein <c>NotifyCanExecuteChanged</c>, dann wird die Methode neu ausgewertet.</summary>
+    private bool CanExecuteTranslate() =>
+        !IsBusy
+        && _aiSettings is not null
+        && _aiSettings.Current.Provider != AiProviderType.None
+        && _allVariables.Count > 0;
 
     // ---- Filter & Dirty-Tracking -------------------------------------------
 
