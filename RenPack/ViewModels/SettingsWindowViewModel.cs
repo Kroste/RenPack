@@ -100,29 +100,53 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     public bool IsOpenAiCompatible => SelectedProvider == AiProviderType.OpenAiCompatible;
 
     // --- Per-Provider Felder -----
+    //
+    // Modellauswahl-Muster (nach Magnat-Vorbild): pro Provider gibt es ZWEI Ein-
+    // gabemöglichkeiten. Die ComboBox listet die aktuell verfügbaren Modelle
+    // (bei Ollama: installiert via /api/tags; bei Cloud-Providern: kuratierte
+    // Liste). Die TextBox darunter ist immer editierbar für Fälle, wo das
+    // gewünschte Modell nicht in der Liste steht. Beim ComboBox-Select wird der
+    // Wert in die Text-Property übernommen (Text ist die "Wahrheit").
 
     [ObservableProperty] private string _ollamaEndpoint;
     [ObservableProperty] private string _ollamaModel;
+    [ObservableProperty] private string? _selectedInstalledOllamaModel;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PullRecommendedModelCommand))]
+    private OllamaCuratedModel? _selectedRecommendedModel;
 
     [ObservableProperty] private string _anthropicEndpoint;
     [ObservableProperty] private string _anthropicModel;
+    [ObservableProperty] private string? _selectedAnthropicModel;
     [ObservableProperty] private string _anthropicApiKey;
 
     [ObservableProperty] private string _openAiEndpoint;
     [ObservableProperty] private string _openAiModel;
+    [ObservableProperty] private string? _selectedOpenAiModel;
     [ObservableProperty] private string _openAiApiKey;
 
     [ObservableProperty] private string _geminiEndpoint;
     [ObservableProperty] private string _geminiModel;
+    [ObservableProperty] private string? _selectedGeminiModel;
     [ObservableProperty] private string _geminiApiKey;
 
     [ObservableProperty] private string _mistralEndpoint;
     [ObservableProperty] private string _mistralModel;
+    [ObservableProperty] private string? _selectedMistralModel;
     [ObservableProperty] private string _mistralApiKey;
 
     [ObservableProperty] private string _openAiCompatibleEndpoint;
     [ObservableProperty] private string _openAiCompatibleModel;
     [ObservableProperty] private string _openAiCompatibleApiKey;
+
+    // ComboBox-Select propagiert in die Text-Property, die die eigentliche
+    // Wahrheit ist (wird beim Speichern gelesen). Der Nutzer kann jederzeit
+    // manuell überschreiben.
+    partial void OnSelectedInstalledOllamaModelChanged(string? value) { if (!string.IsNullOrEmpty(value)) OllamaModel = value; }
+    partial void OnSelectedAnthropicModelChanged(string? value)       { if (!string.IsNullOrEmpty(value)) AnthropicModel = value; }
+    partial void OnSelectedOpenAiModelChanged(string? value)          { if (!string.IsNullOrEmpty(value)) OpenAiModel = value; }
+    partial void OnSelectedGeminiModelChanged(string? value)          { if (!string.IsNullOrEmpty(value)) GeminiModel = value; }
+    partial void OnSelectedMistralModelChanged(string? value)         { if (!string.IsNullOrEmpty(value)) MistralModel = value; }
 
     // --- Ollama Aktionen -----
 
@@ -164,6 +188,17 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         }
         RequestOllamaPull?.Invoke(OllamaModel);
     }
+
+    /// <summary>Zieht das aktuell in der Empfehlungs-ComboBox ausgewählte Modell.
+    /// Enabled nur, wenn dort etwas gewählt ist (Magnat-Muster: eine ComboBox
+    /// mit reichem DataTemplate + ein "Herunterladen"-Button daneben).</summary>
+    [RelayCommand(CanExecute = nameof(CanPullRecommended))]
+    private void PullRecommendedModel()
+    {
+        if (SelectedRecommendedModel is null) return;
+        RequestOllamaPull?.Invoke(SelectedRecommendedModel.Name);
+    }
+    private bool CanPullRecommended() => !IsBusy && SelectedRecommendedModel is not null;
 
     // --- Test & Speichern -----
 

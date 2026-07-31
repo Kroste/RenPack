@@ -5,10 +5,11 @@
         xmlns:views="using:RenPack.Views"
         xmlns:controls="using:RenPack.Controls"
         xmlns:vm="using:RenPack.ViewModels"
+        xmlns:svc="using:RenPack.Services"
         mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="640"
         x:Class="RenPack.Views.SettingsWindow"
         x:DataType="vm:SettingsWindowViewModel"
-        Width="640" Height="680" MinWidth="520" MinHeight="480"
+        Width="640" Height="720" MinWidth="520" MinHeight="480"
         Title="RenPack — Einstellungen"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource KrosteBackgroundBrush}">
@@ -66,20 +67,57 @@
                         <TextBlock Foreground="#8A93A0" FontSize="11" TextWrapping="Wrap"
                                    Text="Datenschutzfreundlich, kein API-Key. Ollama lokal starten (ollama serve),
                                    dann Modelle direkt aus der App laden." />
+
                         <TextBlock Text="Endpunkt" Foreground="#B7BEC7" Margin="0,6,0,0" />
                         <TextBox Text="{Binding OllamaEndpoint}" PlaceholderText="http://localhost:11434" />
-                        <TextBlock Text="Modell" Foreground="#B7BEC7" Margin="0,6,0,0" />
-                        <Grid ColumnDefinitions="*,Auto,Auto">
-                            <AutoCompleteBox Grid.Column="0" Text="{Binding OllamaModel, Mode=TwoWay}"
-                                             ItemsSource="{Binding AvailableOllamaModels}" />
-                            <Button Grid.Column="1" Content="Modelle laden" Margin="8,0,0,0"
+
+                        <!-- Modell: installierte per ComboBox + manuelle TextBox darunter (Magnat-Muster) -->
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,10,0,0">
+                            <TextBlock Grid.Column="0" Text="Modell (installiert)"
+                                       Foreground="#B7BEC7" VerticalAlignment="Bottom" />
+                            <Button Grid.Column="1" Content="↺ Aktualisieren" Padding="10,3"
                                     Command="{Binding RefreshOllamaModelsCommand}" />
-                            <Button Grid.Column="2" Content="⬇ Modell laden" Margin="8,0,0,0"
-                                    Command="{Binding PullOllamaModelCommand}"
-                                    ToolTip.Tip="Das eingetragene Modell direkt aus der App herunterladen (Fortschritt in neuem Fenster)" />
                         </Grid>
-                        <TextBlock Foreground="#8A93A0" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"
-                                   Text="Vorschläge: gemma3:1b (schnell, ~815 MB) · qwen2.5:3b (bessere Qualität, ~1.9 GB) · mistral:7b (~4.1 GB)" />
+                        <ComboBox ItemsSource="{Binding AvailableOllamaModels}"
+                                  SelectedItem="{Binding SelectedInstalledOllamaModel}"
+                                  PlaceholderText="Ollama starten und ↺ klicken …"
+                                  HorizontalAlignment="Stretch" />
+                        <TextBlock Text="Oder Modell-Namen manuell eintragen:" Foreground="#8A93A0"
+                                   FontSize="11" Margin="0,6,0,0" />
+                        <TextBox Text="{Binding OllamaModel}" PlaceholderText="z. B. gemma3:1b" />
+
+                        <!-- Empfohlene Modelle mit Größe + Beschreibung -->
+                        <TextBlock Text="Modell herunterladen" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource KrosteGoldBrush}" Margin="0,14,0,0" />
+                        <Grid ColumnDefinitions="*,Auto">
+                            <ComboBox Grid.Column="0"
+                                      ItemsSource="{Binding CuratedOllamaModels}"
+                                      SelectedItem="{Binding SelectedRecommendedModel}"
+                                      PlaceholderText="Empfohlenes Modell wählen …"
+                                      HorizontalAlignment="Stretch" Margin="0,0,8,0">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="svc:OllamaCuratedModel">
+                                        <Grid ColumnDefinitions="150,80,*" Margin="2,4">
+                                            <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource KrosteGoldBrush}" />
+                                            <TextBlock Grid.Column="1" Text="{Binding ApproxSize}"
+                                                       Foreground="#8A93A0" FontSize="11"
+                                                       VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="2" Text="{Binding Description}"
+                                                       Foreground="#B7BEC7" FontSize="11"
+                                                       VerticalAlignment="Center" TextWrapping="Wrap" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <Button Grid.Column="1" Content="⬇ Herunterladen" Padding="12,6"
+                                    Command="{Binding PullRecommendedModelCommand}"
+                                    IsEnabled="{Binding SelectedRecommendedModel, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                    FontWeight="SemiBold" />
+                        </Grid>
+                        <TextBlock Foreground="#8A93A0" FontSize="11" TextWrapping="Wrap"
+                                   Text="Alle Vorschläge sind klein genug für unauffälliges lokales Übersetzen." />
                     </StackPanel>
                 </Border>
 
@@ -93,8 +131,13 @@
                         <TextBox Text="{Binding AnthropicApiKey}" PasswordChar="•"
                                  PlaceholderText="sk-ant-…" />
                         <TextBlock Text="Modell" Foreground="#B7BEC7" Margin="0,6,0,0" />
-                        <AutoCompleteBox Text="{Binding AnthropicModel, Mode=TwoWay}"
-                                         ItemsSource="{Binding AnthropicModels}" />
+                        <ComboBox ItemsSource="{Binding AnthropicModels}"
+                                  SelectedItem="{Binding SelectedAnthropicModel}"
+                                  PlaceholderText="Empfohlenes Modell wählen …"
+                                  HorizontalAlignment="Stretch" />
+                        <TextBlock Text="Oder Modell-Namen manuell eintragen:" Foreground="#8A93A0"
+                                   FontSize="11" Margin="0,4,0,0" />
+                        <TextBox Text="{Binding AnthropicModel}" PlaceholderText="claude-…" />
                         <TextBlock Text="Endpunkt (nur ändern, wenn eigener Proxy)" Foreground="#8A93A0"
                                    FontSize="11" Margin="0,6,0,0" />
                         <TextBox Text="{Binding AnthropicEndpoint}"
@@ -112,8 +155,13 @@
                         <TextBox Text="{Binding OpenAiApiKey}" PasswordChar="•"
                                  PlaceholderText="sk-…" />
                         <TextBlock Text="Modell" Foreground="#B7BEC7" Margin="0,6,0,0" />
-                        <AutoCompleteBox Text="{Binding OpenAiModel, Mode=TwoWay}"
-                                         ItemsSource="{Binding OpenAiModels}" />
+                        <ComboBox ItemsSource="{Binding OpenAiModels}"
+                                  SelectedItem="{Binding SelectedOpenAiModel}"
+                                  PlaceholderText="Empfohlenes Modell wählen …"
+                                  HorizontalAlignment="Stretch" />
+                        <TextBlock Text="Oder Modell-Namen manuell eintragen:" Foreground="#8A93A0"
+                                   FontSize="11" Margin="0,4,0,0" />
+                        <TextBox Text="{Binding OpenAiModel}" PlaceholderText="gpt-…" />
                         <TextBlock Text="Endpunkt" Foreground="#8A93A0" FontSize="11" Margin="0,6,0,0" />
                         <TextBox Text="{Binding OpenAiEndpoint}"
                                  PlaceholderText="https://api.openai.com/v1" />
@@ -130,8 +178,13 @@
                         <TextBox Text="{Binding GeminiApiKey}" PasswordChar="•"
                                  PlaceholderText="AIza…" />
                         <TextBlock Text="Modell" Foreground="#B7BEC7" Margin="0,6,0,0" />
-                        <AutoCompleteBox Text="{Binding GeminiModel, Mode=TwoWay}"
-                                         ItemsSource="{Binding GeminiModels}" />
+                        <ComboBox ItemsSource="{Binding GeminiModels}"
+                                  SelectedItem="{Binding SelectedGeminiModel}"
+                                  PlaceholderText="Empfohlenes Modell wählen …"
+                                  HorizontalAlignment="Stretch" />
+                        <TextBlock Text="Oder Modell-Namen manuell eintragen:" Foreground="#8A93A0"
+                                   FontSize="11" Margin="0,4,0,0" />
+                        <TextBox Text="{Binding GeminiModel}" PlaceholderText="gemini-…" />
                         <TextBlock Text="Endpunkt" Foreground="#8A93A0" FontSize="11" Margin="0,6,0,0" />
                         <TextBox Text="{Binding GeminiEndpoint}"
                                  PlaceholderText="https://generativelanguage.googleapis.com/v1beta" />
@@ -148,8 +201,13 @@
                         <TextBox Text="{Binding MistralApiKey}" PasswordChar="•"
                                  PlaceholderText="…" />
                         <TextBlock Text="Modell" Foreground="#B7BEC7" Margin="0,6,0,0" />
-                        <AutoCompleteBox Text="{Binding MistralModel, Mode=TwoWay}"
-                                         ItemsSource="{Binding MistralModels}" />
+                        <ComboBox ItemsSource="{Binding MistralModels}"
+                                  SelectedItem="{Binding SelectedMistralModel}"
+                                  PlaceholderText="Empfohlenes Modell wählen …"
+                                  HorizontalAlignment="Stretch" />
+                        <TextBlock Text="Oder Modell-Namen manuell eintragen:" Foreground="#8A93A0"
+                                   FontSize="11" Margin="0,4,0,0" />
+                        <TextBox Text="{Binding MistralModel}" PlaceholderText="mistral-…" />
                         <TextBlock Text="Endpunkt" Foreground="#8A93A0" FontSize="11" Margin="0,6,0,0" />
                         <TextBox Text="{Binding MistralEndpoint}"
                                  PlaceholderText="https://api.mistral.ai/v1" />
