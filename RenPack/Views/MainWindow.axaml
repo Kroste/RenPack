@@ -1,0 +1,95 @@
+<views:ChromeWindow xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="using:RenPack.Views"
+        xmlns:controls="using:RenPack.Controls"
+        xmlns:chrome="using:Avalonia.Controls.Chrome"
+        xmlns:vm="using:RenPack.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
+        x:Class="RenPack.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Width="900" Height="620" MinWidth="640" MinHeight="420"
+        Title="RenPack"
+        DragDrop.AllowDrop="True"
+        Background="{DynamicResource KrosteBackgroundBrush}">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel />
+    </Design.DataContext>
+
+    <DockPanel>
+        <controls:TitleBar DockPanel.Dock="Top" Title="RenPack — Ren'Py-Archive">
+            <controls:TitleBar.RightContent>
+                <Button x:Name="AboutButton" Classes="chrome" Content="ⓘ" ToolTip.Tip="Über RenPack"
+                        chrome:WindowDecorationProperties.ElementRole="User" />
+            </controls:TitleBar.RightContent>
+        </controls:TitleBar>
+
+        <!-- Toolbar -->
+        <Border DockPanel.Dock="Top" Background="{DynamicResource KrosteTitleBarBrush}" Padding="12,8">
+            <WrapPanel Orientation="Horizontal">
+                <Button Classes="accent" Content="📂 Archiv öffnen" Margin="0,0,8,0"
+                        Command="{Binding OpenArchiveCommand}" />
+                <Button Content="📦 Ordner packen …" Margin="0,0,8,0"
+                        Command="{Binding CreateArchiveCommand}" />
+                <Rectangle Width="1" Margin="4,2" Fill="#33FFFFFF" />
+                <Button Content="⬇ Alles entpacken" Margin="8,0,8,0"
+                        Command="{Binding ExtractAllCommand}" />
+                <Button Content="⬇ Auswahl entpacken" Margin="0,0,8,0"
+                        Command="{Binding ExtractSelectedCommand}" />
+            </WrapPanel>
+        </Border>
+
+        <!-- Statuszeile unten -->
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource KrosteTitleBarBrush}" Padding="12,6">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Text="{Binding StatusText}" Foreground="#B7BEC7"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <ProgressBar Grid.Column="1" Width="180" Height="8" VerticalAlignment="Center"
+                             Minimum="0" Maximum="1" Value="{Binding Progress}"
+                             IsIndeterminate="{Binding ProgressIndeterminate}"
+                             IsVisible="{Binding IsBusy}"
+                             Foreground="{DynamicResource KrosteGoldBrush}" />
+            </Grid>
+        </Border>
+
+        <!-- Filter + Auswahl -->
+        <Border DockPanel.Dock="Top" Padding="12,8">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                <TextBox Grid.Column="0" PlaceholderText="Filtern nach Dateiname …"
+                         Text="{Binding FilterText}" />
+                <TextBlock Grid.Column="1" Text="{Binding SelectedSummary}" Margin="12,0"
+                           VerticalAlignment="Center" Foreground="{DynamicResource KrosteGoldBrush}" />
+                <Button Grid.Column="2" Content="Alle" Margin="0,0,6,0"
+                        Command="{Binding SelectAllCommand}" />
+                <Button Grid.Column="3" Content="Keine"
+                        Command="{Binding DeselectAllCommand}" />
+            </Grid>
+        </Border>
+
+        <!-- Archiv-Info -->
+        <TextBlock DockPanel.Dock="Top" Text="{Binding ArchiveSummary}" Margin="12,0,12,6"
+                   Foreground="#8A93A0" FontSize="12" />
+
+        <!-- Dateiliste -->
+        <Border Margin="12,0,12,12" CornerRadius="6" ClipToBounds="True"
+                Background="{DynamicResource KrosteSurfaceBrush}">
+            <DataGrid ItemsSource="{Binding Entries}"
+                      IsReadOnly="False"
+                      CanUserReorderColumns="True"
+                      CanUserSortColumns="True"
+                      GridLinesVisibility="Horizontal"
+                      Background="Transparent">
+                <DataGrid.Columns>
+                    <DataGridCheckBoxColumn Header="✓" Width="40"
+                        Binding="{Binding IsSelected}" />
+                    <DataGridTextColumn Header="Datei" Width="*" IsReadOnly="True"
+                        Binding="{Binding Path}" />
+                    <DataGridTextColumn Header="Größe" Width="110" IsReadOnly="True"
+                        Binding="{Binding SizeDisplay}" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+    </DockPanel>
+</views:ChromeWindow>

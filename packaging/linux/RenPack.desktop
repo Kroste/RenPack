@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=RenPack
+Comment=Ren'Py-Archive (.rpa) entpacken und packen
+Exec=RenPack
+Icon=RenPack
+Type=Application
+Categories=Utility;
+Terminal=false

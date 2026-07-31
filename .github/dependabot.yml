@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: "/"
+    schedule:
+      interval: weekly
+    ignore:
+      # v8 steht unter kommerzieller Xceed-Lizenz — niemals anheben
+      - dependency-name: FluentAssertions
+        versions: [">=8.0.0"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly

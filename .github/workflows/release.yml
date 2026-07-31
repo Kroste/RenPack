@@ -1,0 +1,120 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Muster aus Amtsschimmel (bewaehrt): native Builds pro OS mit Tests,
+# Linux zusaetzlich als AppImage, Release-Job sammelt die Artefakte ein.
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # MinVer braucht die Historie inkl. Tags
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: Directory.Packages.props
+
+      - name: Version ermitteln
+        id: ver
+        shell: bash
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "v=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "v=0.0.0-dev.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Test
+        run: dotnet test RenPack.Tests/RenPack.Tests.csproj -c Release
+
+      - name: Publish (win-x64)
+        run: >
+          dotnet publish RenPack/RenPack.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true
+          -p:Version=${{ steps.ver.outputs.v }}
+          -o publish/win-x64
+
+      - name: ZIP packen
+        shell: pwsh
+        run: Compress-Archive -Path publish/win-x64/* -DestinationPath "RenPack-${{ steps.ver.outputs.v }}-win-x64.zip"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows
+          path: RenPack-*-win-x64.zip
+          retention-days: 7
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: Directory.Packages.props
+
+      - name: Version ermitteln
+        id: ver
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "v=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "v=0.0.0-dev.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Test
+        run: dotnet test RenPack.Tests/RenPack.Tests.csproj -c Release
+
+      - name: Publish (linux-x64)
+        run: >
+          dotnet publish RenPack/RenPack.csproj
+          -c Release -r linux-x64 --self-contained true
+          -p:PublishSingleFile=true
+          -p:Version=${{ steps.ver.outputs.v }}
+          -o publish/linux-x64
+
+      - name: Tarball packen
+        run: tar -czf "RenPack-${{ steps.ver.outputs.v }}-linux-x64.tar.gz" -C publish/linux-x64 .
+
+      - name: AppImage bauen
+        run: bash packaging/linux/build-appimage.sh "${{ steps.ver.outputs.v }}" publish/linux-x64
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux
+          path: |
+            RenPack-*-linux-x64.tar.gz
+            RenPack-*-x86_64.AppImage
+          retention-days: 7
+
+  release:
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    # Beim manuellen Start (workflow_dispatch ohne Tag) ueberspringen.
+    if: github.ref_type == 'tag'
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+
+      - name: GitHub-Release anlegen/aktualisieren
+        uses: softprops/action-gh-release@v3
+        with:
+          files: dist/**/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true

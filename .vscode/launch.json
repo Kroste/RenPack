@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "RenPack (Debug)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/RenPack/bin/Debug/net10.0/RenPack.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/RenPack",
+      "console": "internalConsole",
+      "stopAtEntry": false,
+      "env": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    },
+    {
+      "name": "RenPack (Attach)",
+      "type": "coreclr",
+      "request": "attach"
+    }
+  ]
+}

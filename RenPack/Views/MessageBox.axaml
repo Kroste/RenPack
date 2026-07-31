@@ -1,0 +1,20 @@
+<views:ChromeWindow xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="using:RenPack.Views"
+        xmlns:controls="using:RenPack.Controls"
+        x:Class="RenPack.Views.MessageBox"
+        Width="440" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Background="{DynamicResource KrosteBackgroundBrush}">
+    <DockPanel>
+        <controls:TitleBar x:Name="Bar" DockPanel.Dock="Top" Title="RenPack" />
+        <StackPanel Margin="20" Spacing="18">
+            <TextBlock x:Name="MessageText" TextWrapping="Wrap" Foreground="#E6E9ED" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+                <Button x:Name="CancelButton" Content="Abbrechen" IsVisible="False" />
+                <Button x:Name="OkButton" Classes="accent" Content="OK" IsDefault="True" />
+            </StackPanel>
+        </StackPanel>
+    </DockPanel>
+</views:ChromeWindow>

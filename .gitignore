@@ -1,0 +1,8 @@
+bin/
+obj/
+publish/
+*.user
+.vs/
+.idea/
+# Lokaler NuGet-Offline-Feed (Arbeitslaptop) — nie einchecken
+NuGet-Local/

@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="RenPack/RenPack.csproj" />
+  <Project Path="RenPack.Tests/RenPack.Tests.csproj" />
+</Solution>
