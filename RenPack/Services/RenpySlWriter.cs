@@ -324,30 +324,78 @@ internal static class RenpySlWriter
         return count;
     }
 
-    /// <summary>Formatiert Screen-Parameter (aus <c>renpy.parameter.Signature</c>
-    /// oder <c>ParameterInfo</c>). Für v0.4c minimal — die vollständige Ausgabe
-    /// von Ren'Py-Parameter-Syntax mit Defaults/Positional-Only/*args/**kwargs
-    /// wäre eine eigene Baustelle. Wir erkennen die häufige Form: Signature mit
-    /// <c>parameters</c>-Feld voller <c>Parameter</c>-Objekte.</summary>
+    /// <summary>Formatiert Screen-Parameter (aus <c>renpy.parameter.Signature</c>).
+    /// Wichtig: Wenn ein Screen Parameter hat und wir sie nicht mit ausgeben,
+    /// dekompilieren wir <c>screen file_slots(title):</c> zu <c>screen file_slots:</c>
+    /// — der Aufrufer <c>use file_slots(_("Load"))</c> kracht dann mit
+    /// "Screen file_slots does not take positional arguments".
+    ///
+    /// Ren'Py 8: <c>Signature.parameters</c> ist eine <c>OrderedDict</c>
+    /// {name → <c>Parameter</c>}, das nach Razorvine als <see cref="IDictionary"/>
+    /// (Hashtable) rauskommt. Der Parameter-Name IST der Dict-Key; das
+    /// Parameter-Objekt hat optional <c>default</c>, <c>kind</c> (POSITIONAL_ONLY,
+    /// KEYWORD_ONLY, VAR_POSITIONAL="*args", VAR_KEYWORD="**kwargs").</summary>
     private static string FormatParameters(object? parameters)
     {
         if (parameters is not ClassDict cd) return "";
-        // Ren'Py 8: renpy.parameter.Signature mit __args__ = (Parameters,) oder
-        // ParameterInfo mit "parameters"-Feld. Wir versuchen beides.
-        if (cd.GetValueOrDefault("parameters") is IEnumerable list)
+
+        var parts = new List<string>();
+
+        if (cd.GetValueOrDefault("parameters") is IDictionary paramDict)
         {
-            var parts = new List<string>();
+            // OrderedDict {name: Parameter}
+            foreach (DictionaryEntry entry in paramDict)
+            {
+                string pname = AsString(entry.Key);
+                if (string.IsNullOrEmpty(pname)) continue;
+                string prefix = "";
+                string suffix = "";
+                if (entry.Value is ClassDict pd)
+                {
+                    // kind bei *args/**kwargs — Ren'Py verwendet die Standard-
+                    // Python-Konstanten VAR_POSITIONAL / VAR_KEYWORD.
+                    string kind = AsString(pd.GetValueOrDefault("kind"));
+                    if (kind.Contains("VAR_POSITIONAL")) prefix = "*";
+                    else if (kind.Contains("VAR_KEYWORD")) prefix = "**";
+
+                    var def = pd.GetValueOrDefault("default");
+                    // Ren'Py-Sentinel für "kein Default" heißt Parameter.empty
+                    // und kommt hier meist als String "<empty>" oder ClassDict
+                    // mit Klassenname "…Parameter.empty" raus. Wir prüfen strikt
+                    // auf null und leeren String.
+                    if (def is not null && def is not ClassDict)
+                    {
+                        string defStr = AsAtl(def);
+                        if (!string.IsNullOrEmpty(defStr) && defStr != "None")
+                            suffix = "=" + defStr;
+                    }
+                }
+                parts.Add($"{prefix}{pname}{suffix}");
+            }
+        }
+        else if (cd.GetValueOrDefault("parameters") is IEnumerable list)
+        {
+            // Ältere ParameterInfo-Form: Liste von (name, default)-Tupeln
             foreach (var p in list)
             {
-                if (p is not ClassDict pd) continue;
-                string pname = AsString(pd.GetValueOrDefault("name"));
-                var def = pd.GetValueOrDefault("default");
-                string defStr = def is null ? "" : "=" + AsAtl(def);
-                if (!string.IsNullOrEmpty(pname)) parts.Add(pname + defStr);
+                if (p is object[] arr && arr.Length >= 1)
+                {
+                    string pname = AsString(arr[0]);
+                    string suffix = arr.Length >= 2 && arr[1] is not null
+                        ? "=" + AsAtl(arr[1]) : "";
+                    if (!string.IsNullOrEmpty(pname)) parts.Add(pname + suffix);
+                }
+                else if (p is ClassDict pd)
+                {
+                    string pname = AsString(pd.GetValueOrDefault("name"));
+                    var def = pd.GetValueOrDefault("default");
+                    string defStr = def is null ? "" : "=" + AsAtl(def);
+                    if (!string.IsNullOrEmpty(pname)) parts.Add(pname + defStr);
+                }
             }
-            if (parts.Count > 0) return "(" + string.Join(", ", parts) + ")";
         }
-        return "";
+
+        return parts.Count > 0 ? "(" + string.Join(", ", parts) + ")" : "";
     }
 
     /// <summary>Formatiert Call-Arguments (für <c>use</c>).</summary>

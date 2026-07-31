@@ -336,6 +336,65 @@ public sealed class RpycDecompilerTests
     }
 
     [Fact]
+    public void Screen_parameters_are_emitted_from_signature_dict()
+    {
+        // Ren'Py speichert Screen-Parameter als Signature.parameters =
+        // OrderedDict {name: Parameter}. Der User schrieb
+        // "screen file_slots(title):", der Compiler machte {"title": Parameter}
+        // draus. Wenn wir das ignorieren, verliert der Screen seinen Parameter
+        // und "use file_slots(_(\"Load\"))" kracht mit "does not take positional
+        // arguments".
+        var params_ = new Hashtable
+        {
+            ["title"] = new ClassDict("renpy.parameter", "Parameter"),
+        };
+        var sig = new ClassDict("renpy.parameter", "Signature");
+        sig["parameters"] = params_;
+
+        var slScreen = new ClassDict("renpy.sl2.slast", "SLScreen");
+        slScreen["name"] = "file_slots";
+        slScreen["parameters"] = sig;
+        slScreen["keyword"] = new ArrayList();
+        slScreen["children"] = new ArrayList();
+
+        var astScreen = Node("renpy.ast.Screen", ("screen", slScreen));
+        var text = _dec.Decompile(new object[] { astScreen });
+        text.Should().Contain("screen file_slots(title):");
+    }
+
+    [Fact]
+    public void Screen_var_args_and_var_kwargs_get_star_prefixes()
+    {
+        var argsParam = new ClassDict("renpy.parameter", "Parameter");
+        argsParam["kind"] = "Parameter.VAR_POSITIONAL";
+        var kwargsParam = new ClassDict("renpy.parameter", "Parameter");
+        kwargsParam["kind"] = "Parameter.VAR_KEYWORD";
+        var titleParam = new ClassDict("renpy.parameter", "Parameter");
+        titleParam["default"] = "\"Default\"";
+
+        var params_ = new Hashtable
+        {
+            ["title"] = titleParam,
+            ["args"] = argsParam,
+            ["kwargs"] = kwargsParam,
+        };
+        var sig = new ClassDict("renpy.parameter", "Signature");
+        sig["parameters"] = params_;
+
+        var slScreen = new ClassDict("renpy.sl2.slast", "SLScreen");
+        slScreen["name"] = "flex";
+        slScreen["parameters"] = sig;
+        slScreen["keyword"] = new ArrayList();
+        slScreen["children"] = new ArrayList();
+
+        var astScreen = Node("renpy.ast.Screen", ("screen", slScreen));
+        var text = _dec.Decompile(new object[] { astScreen });
+        text.Should().Contain("title=\"Default\"");
+        text.Should().Contain("*args");
+        text.Should().Contain("**kwargs");
+    }
+
+    [Fact]
     public void Screen_with_widgets_and_conditionals_is_emitted_as_screen_language()
     {
         // Ein realistischer Mini-Screen: ein Frame mit vbox, text, textbutton
