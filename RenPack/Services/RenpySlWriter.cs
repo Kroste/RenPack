@@ -178,8 +178,30 @@ internal static class RenpySlWriter
             return;
         }
 
-        // Kompakt-Zeile für Widgets nur mit Keywords (Ren'Py erlaubt das
-        // inline), aber die klassische Form ist besser lesbar bei mehreren.
+        // WICHTIG: Wenn ein Widget KEINE Kinder hat aber Keywords, MUSS die
+        // Inline-Form verwendet werden. Grund: bei Body-Form interpretiert
+        // Ren'Py Zeilen wie `at TRANSFORM(child)` als ATL-Statement, das
+        // TRANSFORM(child) aufruft und `child` als Displayable behandelt —
+        // damit kracht z. B. `at flying_transform(msg["slot_index"])` mit
+        // "Not a displayable: 0". Bei Inline-Form (`add ... at ...`) ist
+        // `at` ein Widget-Attribut und der Wert wird korrekt als Transform-
+        // Wrapper angewendet.
+        if (!hasChildren && hasKeywords)
+        {
+            var head = string.IsNullOrEmpty(posArgs) ? name : $"{name} {posArgs}";
+            var kwParts = new List<string>();
+            foreach (var kv in keyword!)
+            {
+                if (kv is not object[] arr || arr.Length < 2) continue;
+                string kname = AsString(arr[0]);
+                string kval = AsAtl(arr[1]);
+                kwParts.Add($"{kname} {kval}");
+            }
+            AppendIndented(sb, indent, kwParts.Count > 0
+                ? head + " " + string.Join(" ", kwParts) : head);
+            return;
+        }
+
         AppendIndented(sb, indent, string.IsNullOrEmpty(posArgs)
             ? $"{name}:"
             : $"{name} {posArgs}:");

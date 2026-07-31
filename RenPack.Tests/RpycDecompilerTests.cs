@@ -336,6 +336,39 @@ public sealed class RpycDecompilerTests
     }
 
     [Fact]
+    public void SlDisplayable_without_children_emits_keywords_inline_not_as_body()
+    {
+        // Widget ohne Kinder aber mit Keywords: die Keywords müssen inline
+        // stehen, sonst interpretiert Ren'Py `at TRANSFORM(child)` als
+        // ATL-Block-Statement (child wird als Displayable behandelt) und
+        // wirft "Not a displayable: 0". Real in Boundaries_of_Morality:
+        //   add Text(msg["text"]):
+        //       at flying_transform(msg["slot_index"])
+        // → Not a displayable: 0. Muss inline sein:
+        //   add Text(msg["text"]) at flying_transform(msg["slot_index"])
+        var addNode = new ClassDict("renpy.sl2.slast", "SLDisplayable");
+        addNode["name"] = "add";
+        addNode["positional"] = new ArrayList { "Text(\"msg\")" };
+        addNode["keyword"] = new ArrayList
+        {
+            new object[] { "at", "flying_transform(0)" },
+        };
+        addNode["children"] = new ArrayList();
+
+        var block = new ClassDict("renpy.sl2.slast", "SLBlock");
+        block["keyword"] = new ArrayList();
+        block["children"] = new ArrayList { addNode };
+        var slScreen = new ClassDict("renpy.sl2.slast", "SLScreen");
+        slScreen["name"] = "test"; slScreen["keyword"] = new ArrayList();
+        slScreen["children"] = new ArrayList { block };
+        var astScreen = Node("renpy.ast.Screen", ("screen", slScreen));
+        var text = _dec.Decompile(new object[] { astScreen });
+
+        text.Should().Contain("add Text(\"msg\") at flying_transform(0)");
+        text.Should().NotContain("add Text(\"msg\"):");
+    }
+
+    [Fact]
     public void SlUse_with_block_emits_transclude_body()
     {
         // `use TARGET(args):` mit Block-Body — der Body wird via transclude im
@@ -558,8 +591,9 @@ public sealed class RpycDecompilerTests
         text.Should().Contain("modal True");
         text.Should().Contain("vbox:");
         text.Should().Contain("text \"Hello\"");
-        text.Should().Contain("textbutton \"Start\":");
-        text.Should().Contain("action Start()");
+        // Widgets ohne Kinder werden inline emittiert (siehe SLDisplayable-Regel),
+        // damit Ren'Py "at TRANSFORM(child)" nicht als ATL-Block missinterpretiert.
+        text.Should().Contain("textbutton \"Start\" action Start()");
         text.Should().Contain("if condition:");
     }
 
