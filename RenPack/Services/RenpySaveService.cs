@@ -380,6 +380,49 @@ public sealed class RenpySaveService : IRenpySaveService
             Unpickler.registerConstructor(mod, "RevertableList", new RevertableListCtor());
             Unpickler.registerConstructor(mod, "RevertableSet",  new RevertableListCtor());
         }
+
+        // OrderedDict: Insertion-Order muss erhalten bleiben (Signature.parameters
+        // ist ein OrderedDict — bei Verlust der Reihenfolge landet z. B. ein
+        // Screen-Parameter ohne Default hinter einem mit Default, was Ren'Py
+        // mit "non-default parameter X follows a default parameter" ablehnt).
+        // .NET Dictionary<K,V> behält seit .NET Core insertion order.
+        Unpickler.registerConstructor("collections", "OrderedDict", new OrderedDictCtor());
+    }
+
+    /// <summary>Constructor für <c>collections.OrderedDict</c>. Python-Pickle
+    /// speichert es typischerweise als <c>(OrderedDict, ([(k,v), (k,v), …],))</c>
+    /// (Args ist eine Liste von Key/Value-Tupeln); manche Pickles nutzen
+    /// stattdessen einen leeren Ctor plus SETITEMS im BUILD-Schritt. Wir
+    /// unterstützen beide Wege — der Rückgabe-Container ist ein
+    /// <see cref="OrderedDictContainer"/>, das <see cref="IDictionary"/>
+    /// implementiert und Insertion-Order behält.</summary>
+    private sealed class OrderedDictCtor : IObjectConstructor
+    {
+        public object construct(object[] args)
+        {
+            var d = new OrderedDictContainer();
+            if (args.Length >= 1 && args[0] is IEnumerable items)
+                foreach (var it in items)
+                    if (it is object[] { Length: 2 } pair) d[pair[0]!] = pair[1];
+            return d;
+        }
+    }
+
+    /// <summary><see cref="Dictionary{TKey,TValue}"/>-basierter Container, der
+    /// Insertion-Order beibehält und <see cref="IDictionary"/> (non-generic,
+    /// für Razorvine's SETITEMS-Handler) sowie <see cref="Hashtable"/>-
+    /// kompatible <c>__setstate__</c>-Signaturen implementiert.</summary>
+    private sealed class OrderedDictContainer : Dictionary<object, object?>, IDictionary
+    {
+        // Dictionary<object,object?> implementiert IDictionary bereits über
+        // explicit interface, aber wir brauchen die __setstate__-Handler,
+        // damit BUILD nicht in die Standard-Hashtable-Route fällt.
+        public void __setstate__(Hashtable state)
+        {
+            foreach (DictionaryEntry de in state) this[de.Key] = de.Value;
+        }
+        public void __setstate__(object[] state) { }
+        public void __setstate__(object state) { }
     }
 
     private static class Accessors

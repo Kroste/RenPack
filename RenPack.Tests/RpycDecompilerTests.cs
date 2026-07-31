@@ -363,6 +363,47 @@ public sealed class RpycDecompilerTests
     }
 
     [Fact]
+    public void Screen_parameters_from_hashtable_fallback_sorted_no_default_first()
+    {
+        // Bei Legacy-Hashtable (kein OrderedDict-Constructor) ist die Order weg.
+        // Wir sortieren als Fallback: no-default zuerst, damit Ren'Py's Regel
+        // "non-default parameter follows a default parameter" nicht auslöst.
+        var noDefault = new ClassDict("renpy.parameter", "Parameter");
+        noDefault["kind"] = 1; // POSITIONAL_OR_KEYWORD
+        var withDefault = new ClassDict("renpy.parameter", "Parameter");
+        withDefault["kind"] = 1;
+        withDefault["default"] = "0.5";
+
+        // Hashtable garantiert KEINE Insertion-Order — hier absichtlich
+        // "verkehrte" Reihenfolge einfügen, damit unser Sort greifen muss.
+        var params_ = new Hashtable
+        {
+            ["y"] = withDefault,     // hat default
+            ["x"] = withDefault,     // hat default
+            ["chat"] = noDefault,    // KEIN default — muss vorne stehen
+        };
+        var sig = new ClassDict("renpy.parameter", "Signature");
+        sig["parameters"] = params_;
+
+        var slScreen = new ClassDict("renpy.sl2.slast", "SLScreen");
+        slScreen["name"] = "phone_chat";
+        slScreen["parameters"] = sig;
+        slScreen["keyword"] = new ArrayList();
+        slScreen["children"] = new ArrayList();
+
+        var astScreen = Node("renpy.ast.Screen", ("screen", slScreen));
+        var text = _dec.Decompile(new object[] { astScreen });
+
+        // "chat" (no default) muss VOR "x=" oder "y=" stehen.
+        var line = text.Split('\n').First(l => l.Contains("screen phone_chat"));
+        int chatIdx = line.IndexOf("chat");
+        int xIdx = line.IndexOf("x=");
+        int yIdx = line.IndexOf("y=");
+        chatIdx.Should().BeLessThan(xIdx, "no-default 'chat' muss vor 'x=' stehen");
+        chatIdx.Should().BeLessThan(yIdx, "no-default 'chat' muss vor 'y=' stehen");
+    }
+
+    [Fact]
     public void Screen_var_args_and_var_kwargs_get_star_prefixes()
     {
         var argsParam = new ClassDict("renpy.parameter", "Parameter");

@@ -343,35 +343,71 @@ internal static class RenpySlWriter
 
         if (cd.GetValueOrDefault("parameters") is IDictionary paramDict)
         {
-            // OrderedDict {name: Parameter}
+            // OrderedDict {name: Parameter}. Ren'Py 8 nutzt Python's inspect.Parameter
+            // mit Kind-Konstanten (int): POSITIONAL_ONLY=0, POSITIONAL_OR_KEYWORD=1,
+            // VAR_POSITIONAL=2 (*args), KEYWORD_ONLY=3, VAR_KEYWORD=4 (**kwargs).
+            var raw = new List<(string prefix, string name, string suffix, int kind, bool hasDefault, int origIdx)>();
+            int idx = 0;
             foreach (DictionaryEntry entry in paramDict)
             {
                 string pname = AsString(entry.Key);
-                if (string.IsNullOrEmpty(pname)) continue;
+                if (string.IsNullOrEmpty(pname)) { idx++; continue; }
                 string prefix = "";
                 string suffix = "";
+                int kindInt = 1; // POSITIONAL_OR_KEYWORD default
+                bool hasDef = false;
                 if (entry.Value is ClassDict pd)
                 {
-                    // kind bei *args/**kwargs — Ren'Py verwendet die Standard-
-                    // Python-Konstanten VAR_POSITIONAL / VAR_KEYWORD.
-                    string kind = AsString(pd.GetValueOrDefault("kind"));
-                    if (kind.Contains("VAR_POSITIONAL")) prefix = "*";
-                    else if (kind.Contains("VAR_KEYWORD")) prefix = "**";
+                    var kindObj = pd.GetValueOrDefault("kind");
+                    if (kindObj is int ki) kindInt = ki;
+                    else if (AsString(kindObj) is { Length: > 0 } ks)
+                    {
+                        if (ks.Contains("VAR_POSITIONAL")) kindInt = 2;
+                        else if (ks.Contains("KEYWORD_ONLY")) kindInt = 3;
+                        else if (ks.Contains("VAR_KEYWORD")) kindInt = 4;
+                        else if (ks.Contains("POSITIONAL_ONLY")) kindInt = 0;
+                    }
+                    if (kindInt == 2) prefix = "*";
+                    else if (kindInt == 4) prefix = "**";
 
                     var def = pd.GetValueOrDefault("default");
-                    // Ren'Py-Sentinel für "kein Default" heißt Parameter.empty
-                    // und kommt hier meist als String "<empty>" oder ClassDict
-                    // mit Klassenname "…Parameter.empty" raus. Wir prüfen strikt
-                    // auf null und leeren String.
                     if (def is not null && def is not ClassDict)
                     {
                         string defStr = AsAtl(def);
-                        if (!string.IsNullOrEmpty(defStr) && defStr != "None")
+                        // Ren'Py speichert "kein Default" oft als leeren String.
+                        if (!string.IsNullOrEmpty(defStr))
+                        {
                             suffix = "=" + defStr;
+                            hasDef = true;
+                        }
                     }
                 }
-                parts.Add($"{prefix}{pname}{suffix}");
+                raw.Add((prefix, pname, suffix, kindInt, hasDef, idx++));
             }
+
+            // Bei einer echten OrderedDict-Instanz stimmt die Reihenfolge schon.
+            // Bei einer stinknormalen Hashtable (Legacy-Fallback, wenn der
+            // OrderedDict-Ctor nicht griff) verlieren wir sie — dann sortieren
+            // wir zumindest so, dass Python-Syntax-konform bleibt:
+            //   POSITIONAL_ONLY (0), POSITIONAL_OR_KEYWORD ohne Default,
+            //   POSITIONAL_OR_KEYWORD mit Default, VAR_POSITIONAL (*args),
+            //   KEYWORD_ONLY, VAR_KEYWORD (**kwargs).
+            // Sonst kracht Ren'Py mit "non-default parameter X follows a
+            // default parameter".
+            bool preservedOrder = paramDict is Dictionary<object, object?>;
+            if (!preservedOrder)
+            {
+                raw.Sort((a, b) =>
+                {
+                    int sa = SyntaxGroup(a.kind, a.hasDefault);
+                    int sb = SyntaxGroup(b.kind, b.hasDefault);
+                    if (sa != sb) return sa.CompareTo(sb);
+                    return a.origIdx.CompareTo(b.origIdx);
+                });
+            }
+
+            foreach (var (prefix, name, suffix, _, _, _) in raw)
+                parts.Add($"{prefix}{name}{suffix}");
         }
         else if (cd.GetValueOrDefault("parameters") is IEnumerable list)
         {
@@ -397,6 +433,18 @@ internal static class RenpySlWriter
 
         return parts.Count > 0 ? "(" + string.Join(", ", parts) + ")" : "";
     }
+
+    /// <summary>Python-Signatur-Sortier-Gruppe für Fallback-Ordering, falls
+    /// die Insertion-Order verloren gegangen ist.</summary>
+    private static int SyntaxGroup(int kind, bool hasDefault) => kind switch
+    {
+        0 => hasDefault ? 1 : 0,   // POSITIONAL_ONLY
+        1 => hasDefault ? 3 : 2,   // POSITIONAL_OR_KEYWORD
+        2 => 4,                    // VAR_POSITIONAL (*args)
+        3 => 5,                    // KEYWORD_ONLY
+        4 => 6,                    // VAR_KEYWORD (**kwargs)
+        _ => 7,
+    };
 
     /// <summary>Formatiert Call-Arguments (für <c>use</c>).</summary>
     private static string FormatArguments(object? args)
