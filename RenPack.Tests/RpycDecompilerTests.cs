@@ -186,20 +186,66 @@ public sealed class RpycDecompilerTests
     }
 
     [Fact]
-    public void Image_with_atl_block_emits_placeholder_body_so_renpy_parses()
+    public void Image_with_atl_block_emits_atl_statements()
     {
-        // `image name` ohne = ist nur valide, wenn ein Body folgt (ATL-Block).
-        // Wir haben (noch) keinen ATL-Writer — ohne Body scheitert Ren'Py mit
-        // "expected '=' not found". Fallback: leerer Body mit pass + Kommentar.
+        // Ein realistischer Blink-Effekt: initial-alpha, pause, ease in/out.
+        var pauseStmt = new ClassDict("renpy.atl", "RawMultipurpose");
+        pauseStmt["warper"] = "pause"; pauseStmt["duration"] = "0.3";
+        pauseStmt["expressions"] = new ArrayList(); pauseStmt["properties"] = new ArrayList();
+
+        var setAlpha = new ClassDict("renpy.atl", "RawMultipurpose");
+        setAlpha["warper"] = null; setAlpha["duration"] = "0";
+        setAlpha["expressions"] = new ArrayList();
+        setAlpha["properties"] = new ArrayList { new object[] { "alpha", "0.0" } };
+
+        var easeIn = new ClassDict("renpy.atl", "RawMultipurpose");
+        easeIn["warper"] = "ease"; easeIn["duration"] = "0.05";
+        easeIn["expressions"] = new ArrayList();
+        easeIn["properties"] = new ArrayList { new object[] { "alpha", "1.0" } };
+
         var atl = new ClassDict("renpy.atl", "RawBlock");
-        atl["statements"] = new ArrayList { "dummy1", "dummy2" };
+        atl["statements"] = new ArrayList { setAlpha, pauseStmt, easeIn };
+
         var img = Node("renpy.ast.Image",
-            ("imgname", new object[] { "flash_effect" }),
+            ("imgname", new object[] { "flash" }),
             ("atl", atl));
         var text = _dec.Decompile(new object[] { img });
-        text.Should().Contain("image flash_effect:");
-        text.Should().Contain("# <ATL-Block");
-        text.Should().Contain("pass");
+        text.Should().Contain("image flash:");
+        text.Should().Contain("    alpha 0.0");
+        text.Should().Contain("    pause 0.3");
+        text.Should().Contain("    ease 0.05 alpha 1.0");
+    }
+
+    [Fact]
+    public void Atl_multipurpose_with_multiple_properties_emits_them_all()
+    {
+        var stmt = new ClassDict("renpy.atl", "RawMultipurpose");
+        stmt["warper"] = "linear"; stmt["duration"] = "0.5";
+        stmt["expressions"] = new ArrayList();
+        stmt["properties"] = new ArrayList
+        {
+            new object[] { "xpos", "100" },
+            new object[] { "ypos", "200" },
+            new object[] { "alpha", "0.8" },
+        };
+        var block = new ClassDict("renpy.atl", "RawBlock");
+        block["statements"] = new ArrayList { stmt };
+        var img = Node("renpy.ast.Image",
+            ("imgname", new object[] { "hero" }), ("atl", block));
+        var text = _dec.Decompile(new object[] { img });
+        text.Should().Contain("linear 0.5 xpos 100 ypos 200 alpha 0.8");
+    }
+
+    [Fact]
+    public void Atl_unknown_raw_class_becomes_comment_with_pass()
+    {
+        var stmt = new ClassDict("renpy.atl", "RawSomethingNew");
+        var block = new ClassDict("renpy.atl", "RawBlock");
+        block["statements"] = new ArrayList { stmt };
+        var img = Node("renpy.ast.Image", ("imgname", new object[] { "x" }), ("atl", block));
+        var text = _dec.Decompile(new object[] { img });
+        text.Should().Contain("# <unsupported ATL: renpy.atl.RawSomethingNew>");
+        text.Should().Contain("    pass"); // damit der image-Block valide bleibt
     }
 
     [Fact]
