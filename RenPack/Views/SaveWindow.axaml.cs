@@ -57,6 +57,24 @@ public partial class SaveWindow : ChromeWindow, ISaveUi
         return files.Count > 0 ? files[0].TryGetLocalPath() : null;
     }
 
+    public async Task<string?> PickSaveTargetAsync(string suggestedName)
+    {
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Save speichern unter",
+            SuggestedFileName = suggestedName,
+            DefaultExtension = "save",
+            FileTypeChoices =
+            [
+                new FilePickerFileType("Ren'Py-Saves (*.save)") { Patterns = ["*.save"] },
+            ],
+        });
+        return file?.TryGetLocalPath();
+    }
+
     public Task ShowMessageAsync(string title, string message) =>
         MessageBox.ShowAsync(this, title, message);
+
+    public Task<bool> ConfirmAsync(string title, string message) =>
+        MessageBox.ShowAsync(this, title, message, showCancel: true);
 }

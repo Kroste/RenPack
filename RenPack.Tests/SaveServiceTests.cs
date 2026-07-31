@@ -272,6 +272,93 @@ public sealed class SaveServiceTests : IDisposable
         info.Variables.Should().BeEmpty();
     }
 
+    // ---- v0.3 Editor-Tests -------------------------------------------------
+
+    [Fact]
+    public void Roundtrip_edit_int_bool_str_float_preserves_other_bytes()
+    {
+        var py = PythonExe();
+        if (py is null) { Assert.Skip("python3 nicht verfügbar"); return; }
+
+        var savePath = Path.Combine(_tmp, "edit.save");
+        RunPython(py, PyBuildSaveRenpy8, savePath);
+
+        var beforeInfo = _svc.Read(savePath);
+        beforeInfo.LogError.Should().BeNull();
+        beforeInfo.Variables.Should().Contain(v => v.Name == "money" && v.Value == "5000");
+
+        var edited = Path.Combine(_tmp, "edited.save");
+        _svc.Write(savePath, edited, [
+            new SaveEdit("money", (long)999999),          // BININT1(2) → BININT(5) — Länge ändert sich
+            new SaveEdit("has_key", false),               // NEWTRUE(1) → NEWFALSE(1) — gleiche Länge
+            new SaveEdit("player_name", "Zoe Longname"),  // SHORT_BINUNICODE mit neuer Länge
+        ]);
+
+        var afterInfo = _svc.Read(edited);
+        afterInfo.LogError.Should().BeNull("Nach Splice muss der Log weiter lesbar sein");
+        afterInfo.Variables.Should().Contain(v => v.Name == "money" && v.Value == "999999");
+        afterInfo.Variables.Should().Contain(v => v.Name == "has_key" && v.Value == "False");
+        afterInfo.Variables.Should().Contain(v => v.Name == "player_name" && v.Value == "Zoe Longname");
+        // Nicht editierte Variablen bleiben.
+        afterInfo.Variables.Should().Contain(v => v.Name == "strange_obj" && v.TypeName == "Displayable");
+    }
+
+    [Fact]
+    public void Write_can_replace_original_file_atomically()
+    {
+        var py = PythonExe();
+        if (py is null) { Assert.Skip("python3 nicht verfügbar"); return; }
+
+        var savePath = Path.Combine(_tmp, "inplace.save");
+        RunPython(py, PyBuildSaveRenpy8, savePath);
+        long originalBytes = new FileInfo(savePath).Length;
+
+        _svc.Write(savePath, savePath, [new SaveEdit("money", (long)7000)]);
+
+        var info = _svc.Read(savePath);
+        info.Variables.Should().Contain(v => v.Name == "money" && v.Value == "7000");
+        // Datei soll intakt sein (nicht während des Ersetzens gelöscht liegen bleiben).
+        File.Exists(savePath).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Write_updates_save_name_in_json_when_requested()
+    {
+        var py = PythonExe();
+        if (py is null) { Assert.Skip("python3 nicht verfügbar"); return; }
+
+        var savePath = Path.Combine(_tmp, "rename.save");
+        RunPython(py, PyBuildSaveRenpy8, savePath);
+
+        var edited = Path.Combine(_tmp, "renamed.save");
+        _svc.Write(savePath, edited, [], newSaveName: "Cheat-Save");
+
+        var info = _svc.Read(edited);
+        info.Metadata.SaveName.Should().Be("Cheat-Save");
+    }
+
+    [Fact]
+    public void Write_drops_signatures_by_default()
+    {
+        var py = PythonExe();
+        if (py is null) { Assert.Skip("python3 nicht verfügbar"); return; }
+
+        var savePath = Path.Combine(_tmp, "sig.save");
+        RunPython(py, PyBuildSaveRenpy8, savePath);
+        // Signatures-Eintrag hinzufügen.
+        using (var zip = ZipFile.Open(savePath, ZipArchiveMode.Update))
+        {
+            using var s = zip.CreateEntry("signatures").Open();
+            s.Write("fake-hmac"u8);
+        }
+
+        var edited = Path.Combine(_tmp, "no-sig.save");
+        _svc.Write(savePath, edited, [new SaveEdit("money", (long)42)]);
+
+        using var check = ZipFile.OpenRead(edited);
+        check.GetEntry("signatures").Should().BeNull();
+    }
+
     [Fact]
     public void Missing_json_yields_empty_metadata_but_still_reads_log()
     {

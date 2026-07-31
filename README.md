@@ -14,7 +14,7 @@ Ren'Py-Archive (.rpa) entpacken und packen — Desktop-App für Windows und Linu
 - **Entpacken:** alle Dateien oder gezielt eine Auswahl (Häkchen) in einen Zielordner extrahieren — die Ordnerstruktur des Archivs bleibt erhalten.
 - **Packen:** aus einem Ordner ein neues Archiv im Format **RPA-3.0** erstellen (das Standardformat, das Ren'Py selbst liest).
 - **Formate:** liest **RPA-2.0**, **RPA-3.0** und **RPA-3.2** (inkl. XOR-Verschleierung); schreibt RPA-3.0/RPA-2.0/RPA-3.2.
-- **Save-Inspector (neu in v0.2):** Ren'Py-Save-Dateien (`.save`) öffnen und lesen — Screenshot, Metadaten (Slot-Name, Zeit, Ren'Py-Version) und alle Variablen des zuletzt gespeicherten Zustands als Tabelle mit Filter. **Read-only** in dieser Version; Editieren folgt in v0.3.
+- **Save-Editor (neu in v0.3):** Ren'Py-Save-Dateien (`.save`) öffnen, Screenshot + Metadaten (Slot-Name, Zeit, Ren'Py-Version) anzeigen und **alle Variablen editieren** — Doppelklick oder F2 auf einer Zeile ändert den Wert (unterstützt einfache Typen: int, float, str, bool, None). Änderungen bekommen einen Gold-Marker (●); „💾 Speichern" überschreibt das Original, „💾 Speichern unter …" schreibt eine Kopie, „↩ Verwerfen" macht alle Änderungen rückgängig. Der Rollback-Log und alle unbekannten Ren'Py-Klassen bleiben dabei byte-identisch — Ren'Py lädt die geänderte Save-Datei genauso wie das Original.
 - **Fortschritt & Log:** Fortschrittsanzeige beim Ent-/Packen, umfassendes Log mit automatischer Maskierung von Passwörtern/Tokens.
 - 🔄 **Update-Check:** Prüft GitHub-Releases (proxy-fähig) und meldet neue Versionen.
 
@@ -52,12 +52,24 @@ Buttons „Alle" / „Keine" helfen bei der Auswahl), dann „⬇ Auswahl entpac
 danach den Zielpfad für die neue `.rpa`. RenPack erzeugt ein RPA-3.0-Archiv, das Ren'Py
 direkt laden kann. Auf Wunsch wird das frisch erstellte Archiv gleich geöffnet.
 
-**Save inspizieren:** „💾 Save öffnen …" klicken oder eine `.save`-Datei ins Save-Fenster
-ziehen. Links erscheint der Screenshot, rechts alle Variablen des Spielstands als
-Tabelle (Filter über der Liste, Häkchen „interne (mit _)" für Ren'Py-Interna).
+**Save öffnen & editieren:** „💾 Save öffnen …" klicken oder eine `.save`-Datei ins
+Save-Fenster ziehen. Links erscheint der Screenshot, rechts alle Variablen des
+Spielstands als Tabelle (Filter über der Liste, Häkchen „interne (mit _)" für
+Ren'Py-Interna). **Doppelklick oder F2** auf eine Zelle in der Wert-Spalte macht sie
+editierbar; ein goldener Punkt (●) neben geänderten Werten zeigt an, dass sie noch
+nicht gespeichert sind. „💾 Speichern" überschreibt das Original, „💾 Speichern
+unter …" schreibt eine Kopie, „↩ Verwerfen" macht alle Änderungen zurück.
+
 Ren'Py-Saves liegen typischerweise unter `~/.renpy/<Spielname>/` (Linux) bzw.
-`%APPDATA%/RenPy/<Spielname>/` (Windows) und heißen z. B. `1-1-LT1.save`. Der Inspector
-ist read-only — Editieren kommt in v0.3.
+`%APPDATA%/RenPy/<Spielname>/` (Windows) und heißen z. B. `1-1-LT1.save`. Bei einigen
+Spielen liegen sie im Spielverzeichnis unter `game/saves/`.
+
+**Was funktioniert:** einfache Werte (int, float, str, bool, None) editieren. Der
+Rollback-Log und alle unbekannten Ren'Py-Klassen bleiben byte-identisch — Ren'Py lädt
+die geänderte Datei genauso wie das Original.
+
+**Was noch nicht geht:** neue Variablen anlegen, Typ-Wechsel (int → str), Listen oder
+Dictionaries editieren. Kommt in einer späteren Version.
 
 ## Einstellungen
 

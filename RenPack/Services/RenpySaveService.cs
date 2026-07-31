@@ -35,6 +35,106 @@ public sealed class RenpySaveService : IRenpySaveService
 
     public RenpySaveService() => EnsureInitialized();
 
+    public void Write(string sourcePath, string destinationPath,
+        IReadOnlyList<SaveEdit> edits, string? newSaveName = null,
+        bool dropSignatures = true)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        Log.Info("Schreibe Save: {src} → {dst} ({edits} Änderung(en), signatures={sig})",
+            sourcePath, destinationPath, edits.Count, dropSignatures ? "verwerfen" : "erhalten");
+
+        // Original einlesen und log-Bytes patchen.
+        byte[] originalLog;
+        byte[]? originalJson;
+        var extraEntries = new List<(string name, byte[] data)>();
+        using (var src = ZipFile.OpenRead(sourcePath))
+        {
+            originalLog = ReadEntryBytes(src, "log")
+                ?? throw new InvalidDataException("Quell-Save enthält keinen 'log'-Eintrag.");
+            originalJson = ReadEntryBytes(src, "json");
+            foreach (var e in src.Entries)
+            {
+                if (e.Name is "log" or "json") continue;
+                if (dropSignatures && e.Name == "signatures") continue;
+                using var s = e.Open();
+                using var ms = new MemoryStream();
+                s.CopyTo(ms);
+                extraEntries.Add((e.FullName, ms.ToArray()));
+            }
+        }
+
+        byte[] patchedLog = PatchLog(originalLog, edits);
+        byte[]? patchedJson = newSaveName is null ? originalJson : PatchSaveName(originalJson, newSaveName);
+
+        // Neues ZIP schreiben. Wenn destination == source, erst in Tempdatei und dann move.
+        string writeTarget = string.Equals(Path.GetFullPath(sourcePath), Path.GetFullPath(destinationPath),
+            StringComparison.Ordinal)
+            ? destinationPath + ".tmp"
+            : destinationPath;
+
+        if (File.Exists(writeTarget)) File.Delete(writeTarget);
+        using (var dst = ZipFile.Open(writeTarget, ZipArchiveMode.Create))
+        {
+            WriteEntry(dst, "log", patchedLog);
+            if (patchedJson is not null) WriteEntry(dst, "json", patchedJson);
+            foreach (var (name, data) in extraEntries) WriteEntry(dst, name, data);
+        }
+        if (!ReferenceEquals(writeTarget, destinationPath) && writeTarget != destinationPath)
+        {
+            File.Move(writeTarget, destinationPath, overwrite: true);
+        }
+
+        Log.Info("Save geschrieben: {ms} ms", sw.ElapsedMilliseconds);
+    }
+
+    private static byte[] PatchLog(byte[] originalLog, IReadOnlyList<SaveEdit> edits)
+    {
+        if (edits.Count == 0) return originalLog;
+
+        // Der log ist meist rohes Pickle (0x80), älter zlib (0x78). Für zlib erst
+        // dekomprimieren, patchen, dann NICHT wieder komprimieren — Ren'Py liest
+        // beides (der 0x78/0x80-Diskriminator im Reader beider Seiten steckt).
+        // Damit bleiben die Splice-Positionen einfach nachvollziehbar.
+        bool wasZlib = originalLog.Length > 0 && originalLog[0] == 0x78;
+        byte[] pickle = wasZlib ? ZlibDecompress(originalLog) : originalLog;
+
+        var patches = new List<PicklePatcher.PatchOp>(edits.Count);
+        foreach (var edit in edits)
+        {
+            var span = PicklePatcher.FindStoreValue(pickle, edit.Name);
+            var newBytes = PicklePatcher.EncodeValue(edit.NewValue);
+            patches.Add(new PicklePatcher.PatchOp(span.Position, span.Length, newBytes));
+            Log.Debug("Patch {name}: pos={pos} len={old}→{new}",
+                edit.Name, span.Position, span.Length, newBytes.Length);
+        }
+        return PicklePatcher.Splice(pickle, patches);
+    }
+
+    private static byte[]? PatchSaveName(byte[]? originalJson, string newSaveName)
+    {
+        if (originalJson is null) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(originalJson);
+            var dict = new Dictionary<string, object?>(StringComparer.Ordinal);
+            foreach (var p in doc.RootElement.EnumerateObject())
+                dict[p.Name] = JsonToObject(p.Value);
+            dict["_save_name"] = newSaveName;
+            return JsonSerializer.SerializeToUtf8Bytes(dict);
+        }
+        catch (JsonException)
+        {
+            return originalJson;
+        }
+    }
+
+    private static void WriteEntry(ZipArchive zip, string name, byte[] data)
+    {
+        var entry = zip.CreateEntry(name);
+        using var s = entry.Open();
+        s.Write(data);
+    }
+
     public SaveInfo Read(string savePath)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();

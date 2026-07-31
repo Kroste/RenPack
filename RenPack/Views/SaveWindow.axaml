@@ -9,7 +9,7 @@
         x:Class="RenPack.Views.SaveWindow"
         x:DataType="vm:SaveWindowViewModel"
         Width="900" Height="640" MinWidth="640" MinHeight="440"
-        Title="RenPack — Save-Inspector"
+        Title="RenPack — Save-Editor"
         WindowStartupLocation="CenterOwner"
         DragDrop.AllowDrop="True"
         Background="{DynamicResource KrosteBackgroundBrush}">
@@ -19,14 +19,23 @@
     </Design.DataContext>
 
     <DockPanel>
-        <controls:TitleBar DockPanel.Dock="Top" Title="RenPack — Save-Inspector" />
+        <controls:TitleBar DockPanel.Dock="Top" Title="RenPack — Save-Editor" />
 
         <!-- Toolbar -->
         <Border DockPanel.Dock="Top" Background="{DynamicResource KrosteTitleBarBrush}" Padding="12,8">
             <WrapPanel Orientation="Horizontal">
                 <Button Classes="accent" Content="💾 Save öffnen" Margin="0,0,8,0"
                         Command="{Binding OpenSaveCommand}" />
-                <CheckBox Content="_interne (mit _)" Margin="12,0,0,0"
+                <Rectangle Width="1" Margin="4,2" Fill="#33FFFFFF" />
+                <Button Content="💾 Speichern" Margin="8,0,8,0"
+                        Command="{Binding SaveCommand}" />
+                <Button Content="💾 Speichern unter …" Margin="0,0,8,0"
+                        Command="{Binding SaveAsCommand}" />
+                <Button Content="↩ Verwerfen" Margin="0,0,8,0"
+                        Command="{Binding RevertCommand}" />
+                <TextBlock Text="{Binding DirtySummary}" Margin="12,0,0,0"
+                           VerticalAlignment="Center" Foreground="{DynamicResource KrosteGoldBrush}" />
+                <CheckBox Content="_interne (mit _)" Margin="24,0,0,0"
                           IsChecked="{Binding ShowInternal}"
                           VerticalAlignment="Center" Foreground="#B7BEC7" />
             </WrapPanel>
@@ -38,14 +47,14 @@
                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
         </Border>
 
-        <!-- Fehler-Banner (Log unlesbar) -->
+        <!-- Fehler-Banner -->
         <Border DockPanel.Dock="Top" Background="#3A2020" Padding="12,8"
                 IsVisible="{Binding HasLogError}">
             <TextBlock Foreground="#FFD1D1" TextWrapping="Wrap"
-                       Text="{Binding LogErrorText, StringFormat='⚠ Log konnte nicht dekodiert werden: {0}. Metadaten und Screenshot sind trotzdem verfügbar.'}" />
+                       Text="{Binding LogErrorText, StringFormat='⚠ Log konnte nicht dekodiert werden: {0}. Metadaten und Screenshot sind trotzdem verfügbar; Editieren nicht möglich.'}" />
         </Border>
 
-        <!-- Kopfzeile mit Zusammenfassung -->
+        <!-- Kopfzeile -->
         <Border DockPanel.Dock="Top" Padding="12,10,12,4">
             <TextBlock Text="{Binding SaveSummary}" Foreground="{DynamicResource KrosteGoldBrush}"
                        FontSize="13" TextTrimming="CharacterEllipsis" />
@@ -57,7 +66,7 @@
                      Text="{Binding FilterText}" />
         </Border>
 
-        <!-- Hauptbereich: Screenshot links, Variablen rechts -->
+        <!-- Hauptbereich: Screenshot links, editierbare Variablen rechts -->
         <Grid Margin="12,0,12,12" ColumnDefinitions="Auto,*">
             <Border Grid.Column="0" Width="280" MinHeight="180" Margin="0,0,12,0"
                     CornerRadius="6" ClipToBounds="True"
@@ -70,18 +79,38 @@
             <Border Grid.Column="1" CornerRadius="6" ClipToBounds="True"
                     Background="{DynamicResource KrosteSurfaceBrush}">
                 <DataGrid ItemsSource="{Binding Variables}"
-                          IsReadOnly="True"
                           CanUserReorderColumns="True"
                           CanUserSortColumns="True"
                           GridLinesVisibility="Horizontal"
                           Background="Transparent">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Name" Width="*"
+                        <DataGridTextColumn Header="Name" Width="*" IsReadOnly="True"
                             Binding="{Binding Name}" />
-                        <DataGridTextColumn Header="Typ" Width="140"
+                        <DataGridTextColumn Header="Typ" Width="110" IsReadOnly="True"
                             Binding="{Binding TypeName}" />
-                        <DataGridTextColumn Header="Wert" Width="2*"
-                            Binding="{Binding Value}" />
+                        <!-- Wert-Spalte: editierbar, wenn IsEditable=true.
+                             Ein visueller Marker "*" wird bei Dirty gezeigt. -->
+                        <DataGridTemplateColumn Header="Wert" Width="2*" CanUserSort="True"
+                                                SortMemberPath="EditableValue">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate DataType="vm:SaveVariableViewModel">
+                                    <Grid ColumnDefinitions="*,Auto" Margin="4,0">
+                                        <TextBlock Grid.Column="0" Text="{Binding EditableValue}"
+                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="1" Text="●" Margin="6,0,0,0"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource KrosteGoldBrush}"
+                                                   IsVisible="{Binding IsDirty}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                            <DataGridTemplateColumn.CellEditingTemplate>
+                                <DataTemplate DataType="vm:SaveVariableViewModel">
+                                    <TextBox Text="{Binding EditableValue, Mode=TwoWay}"
+                                             IsEnabled="{Binding IsEditable}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellEditingTemplate>
+                        </DataGridTemplateColumn>
                     </DataGrid.Columns>
                 </DataGrid>
             </Border>

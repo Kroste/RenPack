@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -33,12 +34,20 @@ public sealed partial class SaveWindowViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(SaveSummary))]
     [NotifyPropertyChangedFor(nameof(HasScreenshot))]
     [NotifyPropertyChangedFor(nameof(HasLogError))]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveAsCommand))]
     private SaveInfo? _save;
 
     [ObservableProperty] private Bitmap? _screenshot;
     [ObservableProperty] private string _statusText = "Kein Save geladen.";
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _showInternal;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DirtySummary))]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RevertCommand))]
+    private int _dirtyCount;
 
     private string _filterText = "";
     public string FilterText
@@ -53,6 +62,7 @@ public sealed partial class SaveWindowViewModel : ObservableObject
     public bool HasScreenshot => Screenshot is not null;
     public bool HasLogError => Save?.LogError is not null;
     public string LogErrorText => Save?.LogError ?? "";
+    public string DirtySummary => DirtyCount > 0 ? $"{DirtyCount} geändert" : "";
 
     public string SaveSummary
     {
@@ -69,10 +79,13 @@ public sealed partial class SaveWindowViewModel : ObservableObject
         }
     }
 
+    // ---- Öffnen / Laden ----------------------------------------------------
+
     [RelayCommand(CanExecute = nameof(CanInteract))]
     private async Task OpenSaveAsync()
     {
         if (Ui is null) return;
+        if (!await ConfirmDiscardDirtyAsync()) return;
         string? path = await Ui.PickOpenSaveAsync();
         if (path is null) return;
         await LoadSaveAsync(path);
@@ -81,6 +94,7 @@ public sealed partial class SaveWindowViewModel : ObservableObject
     public async Task LoadSaveAsync(string path)
     {
         if (Ui is null) return;
+        if (!await ConfirmDiscardDirtyAsync()) return;
         IsBusy = true;
         StatusText = "Lese Save …";
         try
@@ -90,7 +104,13 @@ public sealed partial class SaveWindowViewModel : ObservableObject
             Screenshot = LoadScreenshot(info.ScreenshotBytes);
 
             _allVariables.Clear();
-            foreach (var v in info.Variables) _allVariables.Add(new SaveVariableViewModel(v));
+            foreach (var v in info.Variables)
+            {
+                var vm = new SaveVariableViewModel(v);
+                vm.PropertyChanged += OnVariableChanged;
+                _allVariables.Add(vm);
+            }
+            DirtyCount = 0;
             ApplyFilter();
 
             StatusText = info.LogError is null
@@ -116,6 +136,106 @@ public sealed partial class SaveWindowViewModel : ObservableObject
         }
     }
 
+    private async Task<bool> ConfirmDiscardDirtyAsync()
+    {
+        if (Ui is null || DirtyCount == 0) return true;
+        return await Ui.ConfirmAsync("Ungespeicherte Änderungen",
+            $"Du hast {DirtyCount} ungespeicherte Änderung(en). Trotzdem verwerfen?");
+    }
+
+    // ---- Speichern ---------------------------------------------------------
+
+    [RelayCommand(CanExecute = nameof(CanSave))]
+    private Task SaveAsync() => SaveToAsync(Save!.SavePath, overwriteOriginal: true);
+
+    [RelayCommand(CanExecute = nameof(CanSaveAs))]
+    private async Task SaveAsAsync()
+    {
+        if (Ui is null || Save is null) return;
+        string suggested = System.IO.Path.GetFileNameWithoutExtension(Save.SavePath) + "-edited.save";
+        string? target = await Ui.PickSaveTargetAsync(suggested);
+        if (target is null) return;
+        await SaveToAsync(target, overwriteOriginal: false);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRevert))]
+    private void Revert()
+    {
+        foreach (var v in _allVariables)
+            if (v.IsDirty) v.EditableValue = v.OriginalValue;
+        DirtyCount = 0;
+        StatusText = "Änderungen verworfen.";
+    }
+
+    private async Task SaveToAsync(string target, bool overwriteOriginal)
+    {
+        if (Ui is null || Save is null) return;
+        var dirtyVars = _allVariables.Where(v => v.IsDirty).ToList();
+        if (dirtyVars.Count == 0) return;
+
+        IsBusy = true;
+        StatusText = "Sammle Änderungen …";
+        var edits = new List<SaveEdit>(dirtyVars.Count);
+        try
+        {
+            foreach (var vm in dirtyVars)
+                edits.Add(new SaveEdit(vm.Name, vm.ParseEditedValue()));
+        }
+        catch (Exception ex)
+        {
+            IsBusy = false;
+            StatusText = "Ungültiger Wert.";
+            await Ui.ShowMessageAsync("Ungültige Eingabe",
+                $"Konnte einen Wert nicht in den passenden Typ konvertieren:\n{ex.Message}");
+            return;
+        }
+
+        try
+        {
+            string source = Save.SavePath;
+            await Task.Run(() => _saveService.Write(source, target, edits));
+            StatusText = overwriteOriginal
+                ? $"Gespeichert: {System.IO.Path.GetFileName(target)}"
+                : $"Kopie gespeichert: {System.IO.Path.GetFileName(target)}";
+            Log.Info("Save geschrieben: {target} ({count} Änderungen)", target, edits.Count);
+            // Original neu laden, um DirtyCount zu resetten und aktuelle Baseline zu haben.
+            await LoadSaveAsync(overwriteOriginal ? target : source);
+            if (!overwriteOriginal)
+                await Ui.ShowMessageAsync("Fertig", $"Kopie gespeichert:\n{target}");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Save konnte nicht geschrieben werden: {target}", target);
+            StatusText = "Fehler beim Speichern.";
+            await Ui.ShowMessageAsync("Speichern fehlgeschlagen", ex.Message);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    // ---- Filter & Dirty-Tracking -------------------------------------------
+
+    private void OnVariableChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SaveVariableViewModel.EditableValue) ||
+            e.PropertyName == nameof(SaveVariableViewModel.IsDirty))
+        {
+            DirtyCount = _allVariables.Count(v => v.IsDirty);
+        }
+    }
+
+    private void ApplyFilter()
+    {
+        Variables.Clear();
+        IEnumerable<SaveVariableViewModel> src = _allVariables;
+        if (!ShowInternal) src = src.Where(v => !v.IsInternal);
+        if (!string.IsNullOrWhiteSpace(FilterText))
+            src = src.Where(v => v.Name.Contains(FilterText, StringComparison.OrdinalIgnoreCase));
+        foreach (var v in src) Variables.Add(v);
+    }
+
     private static Bitmap? LoadScreenshot(byte[]? bytes)
     {
         if (bytes is null || bytes.Length == 0) return null;
@@ -131,15 +251,8 @@ public sealed partial class SaveWindowViewModel : ObservableObject
         }
     }
 
-    private void ApplyFilter()
-    {
-        Variables.Clear();
-        IEnumerable<SaveVariableViewModel> src = _allVariables;
-        if (!ShowInternal) src = src.Where(v => !v.IsInternal);
-        if (!string.IsNullOrWhiteSpace(FilterText))
-            src = src.Where(v => v.Name.Contains(FilterText, StringComparison.OrdinalIgnoreCase));
-        foreach (var v in src) Variables.Add(v);
-    }
-
     private bool CanInteract() => !IsBusy;
+    private bool CanSave() => !IsBusy && HasSave && DirtyCount > 0;
+    private bool CanSaveAs() => !IsBusy && HasSave;
+    private bool CanRevert() => !IsBusy && DirtyCount > 0;
 }
