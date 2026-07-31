@@ -15,6 +15,7 @@ Ren'Py-Archive (.rpa) entpacken und packen — Desktop-App für Windows und Linu
 - **Packen:** aus einem Ordner ein neues Archiv im Format **RPA-3.0** erstellen (das Standardformat, das Ren'Py selbst liest).
 - **Formate:** liest **RPA-2.0**, **RPA-3.0** und **RPA-3.2** (inkl. XOR-Verschleierung); schreibt RPA-3.0/RPA-2.0/RPA-3.2.
 - **Save-Editor (neu in v0.3):** Ren'Py-Save-Dateien (`.save`) öffnen, Screenshot + Metadaten (Slot-Name, Zeit, Ren'Py-Version) anzeigen und **alle Variablen editieren** — Doppelklick oder F2 auf einer Zeile ändert den Wert (unterstützt einfache Typen: int, float, str, bool, None). Änderungen bekommen einen Gold-Marker (●); „💾 Speichern" überschreibt das Original, „💾 Speichern unter …" schreibt eine Kopie, „↩ Verwerfen" macht alle Änderungen rückgängig. Der Rollback-Log und alle unbekannten Ren'Py-Klassen bleiben dabei byte-identisch — Ren'Py lädt die geänderte Save-Datei genauso wie das Original.
+- **`.rpyc`-Decompiler (neu in v0.4c):** Kompilierte Ren'Py-Skripte (`.rpyc`) zurück in Ren'Py-Quellcode wandeln — direkt aus der App, **ohne Python**, **ohne das Spiel starten zu müssen**. Einzelne Dateien oder ganze Ordner (rekursiv, mit Fortschritt). Deckt Dialoge, Labels, Menüs, If/Else, Show/Scene/Hide, Jump/Call, Python-Blöcke und die üblichen Statements ab. Für Screens/ATL/Styles bleibt weiterhin unrpyc das Werkzeug der Wahl.
 - **KI-Übersetzung (v0.4a/b):** Der Save-Editor kann Variablennamen (die oft nur Abkürzungen oder englisch sind) per KI in deine Zielsprache übersetzen und in einer eigenen Spalte anzeigen. Der Original-Name bleibt unverändert (er ist der Anker für's Speichern). Unterstützt: **Ollama** (lokal, kein API-Key), **Anthropic Claude**, **OpenAI ChatGPT**, **Google Gemini**, **Mistral** und beliebige **OpenAI-kompatible** Endpoints (Groq, OpenRouter, LM Studio, …). API-Keys werden verschlüsselt gespeichert (Windows: DPAPI; Linux/macOS: AES mit Maschinen-Binding). Ollama-Modelle lassen sich direkt aus der App herunterladen (Fortschrittsanzeige).
 - **Fortschritt & Log:** Fortschrittsanzeige beim Ent-/Packen, umfassendes Log mit automatischer Maskierung von Passwörtern/Tokens.
 - 🔄 **Update-Check:** Prüft GitHub-Releases (proxy-fähig) und meldet neue Versionen.
@@ -52,6 +53,15 @@ Buttons „Alle" / „Keine" helfen bei der Auswahl), dann „⬇ Auswahl entpac
 **Ordner zu Archiv packen:** „📦 Ordner packen …" klicken, den Quellordner wählen und
 danach den Zielpfad für die neue `.rpa`. RenPack erzeugt ein RPA-3.0-Archiv, das Ren'Py
 direkt laden kann. Auf Wunsch wird das frisch erstellte Archiv gleich geöffnet.
+
+**Ren'Py-Skripte dekompilieren:** „🔓 .rpyc dekompilieren" öffnet einen Datei-
+Picker mit Multi-Auswahl — jede gewählte `.rpyc` wird zu einer `.rpy` neben der
+Original-Datei. Für ganze Spiele: „🔓 Ordner dekompilieren …" wählt einen
+Ordner, findet rekursiv alle `.rpyc` und verarbeitet sie mit Fortschrittsanzeige.
+Die App liefert einen **Basic-Decompiler** für Story-Skripte (Dialoge, Menüs,
+If-Zweige, Show/Scene, Python-Blöcke). Für Screens/ATL/Style-Definitionen —
+also die UI-`.rpyc` — reicht die Ausgabe nicht; dafür bleibt unrpyc das
+richtige Werkzeug.
 
 **Save öffnen & editieren:** „💾 Save öffnen …" klicken oder eine `.save`-Datei ins
 Save-Fenster ziehen. Links erscheint der Screenshot, rechts alle Variablen des

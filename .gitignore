@@ -6,3 +6,9 @@ publish/
 .idea/
 # Lokaler NuGet-Offline-Feed (Arbeitslaptop) — nie einchecken
 NuGet-Local/
+
+# Externer Kram (unrpyc-Referenz, temporäre .rpyc-Samples) — Referenz-only, nicht im Repo
+external/
+
+# Runtime-Logs
+logs/

@@ -43,6 +43,11 @@
                         Command="{Binding ExtractAllCommand}" />
                 <Button Content="⬇ Auswahl entpacken" Margin="0,0,8,0"
                         Command="{Binding ExtractSelectedCommand}" />
+                <Rectangle Width="1" Margin="4,2" Fill="#33FFFFFF" />
+                <Button x:Name="DecompileFileButton" Content="🔓 .rpyc dekompilieren" Margin="8,0,8,0"
+                        ToolTip.Tip="Einzelne oder mehrere .rpyc-Dateien zu .rpy dekompilieren (kein Ren'Py-Start nötig, kein Python)" />
+                <Button x:Name="DecompileFolderButton" Content="🔓 Ordner dekompilieren …" Margin="0,0,8,0"
+                        ToolTip.Tip="Alle .rpyc-Dateien in einem Ordner rekursiv zu .rpy dekompilieren" />
             </WrapPanel>
         </Border>
 

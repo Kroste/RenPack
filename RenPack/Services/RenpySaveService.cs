@@ -449,7 +449,26 @@ public sealed class RenpySaveService : IRenpySaveService
             if (args.Length > 0) this["__args__"] = args;
         }
         public new void __setstate__(Hashtable state) => base.__setstate__(state);
-        public void __setstate__(object[] state) { this["__state__"] = state; }
+
+        /// <summary>Ren'Py-AST-Nodes serialisieren ihren State als Tuple
+        /// <c>(slots, __dict__)</c> (Python-Standard aus <c>object.__reduce_ex__</c>
+        /// bei Klassen mit <c>__slots__ = ()</c>). Wir extrahieren das
+        /// eingebettete Dict und übernehmen die Felder direkt in dieses ClassDict,
+        /// damit sie per Key erreichbar sind (z. B. <c>node["filename"]</c>).</summary>
+        public void __setstate__(object[] state)
+        {
+            if (state.Length == 2 && state[1] is IDictionary dict)
+            {
+                foreach (DictionaryEntry de in dict)
+                    if (de.Key is string s) this[s] = de.Value;
+                if (state[0] is not null) this["__slots__"] = state[0];
+            }
+            else
+            {
+                this["__state__"] = state;
+            }
+        }
+
         public void __setstate__(object state) { this["__state__"] = state; }
     }
 

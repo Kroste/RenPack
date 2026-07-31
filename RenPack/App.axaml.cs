@@ -42,6 +42,9 @@ public partial class App : Application
         // Services
         services.AddSingleton<IRenpyArchiveService, RenpyArchiveService>();
         services.AddSingleton<IRenpySaveService, RenpySaveService>();
+        services.AddSingleton<RenpyRpycService>();
+        services.AddSingleton<RenpyRpycDecompiler>();
+        services.AddSingleton<RpycBatchService>();
         services.AddSingleton<UpdateService>();
 
         // KI-Services (v0.4b — Multi-Provider)

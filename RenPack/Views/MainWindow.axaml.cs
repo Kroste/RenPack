@@ -19,6 +19,8 @@ public partial class MainWindow : ChromeWindow, IUiInteractions
         AboutButton.Click += OnAbout;
         OpenSaveButton.Click += OnOpenSave;
         SettingsButton.Click += OnSettings;
+        DecompileFileButton.Click += OnDecompileFiles;
+        DecompileFolderButton.Click += OnDecompileFolder;
 
         AddHandler(DragDrop.DropEvent, OnDrop);
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
@@ -87,6 +89,91 @@ public partial class MainWindow : ChromeWindow, IUiInteractions
         {
             Log.Error(ex, "Einstellungs-Fenster konnte nicht geöffnet werden");
         }
+    }
+
+    // ---- .rpyc-Dekompilierung ----------------------------------------------
+
+    private async void OnDecompileFiles(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var picked = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Ren'Py-Skripte dekompilieren",
+                AllowMultiple = true,
+                FileTypeFilter =
+                [
+                    new FilePickerFileType("Ren'Py-Skripte (*.rpyc)") { Patterns = ["*.rpyc"] },
+                    new FilePickerFileType("Alle Dateien") { Patterns = ["*"] },
+                ],
+            });
+            if (picked.Count == 0) return;
+
+            var batch = App.Services.GetRequiredService<RpycBatchService>();
+            SetBusy(true, $"Dekompiliere {picked.Count} Datei(en) …");
+            int ok = 0, failed = 0;
+            var errors = new List<string>();
+            await Task.Run(() =>
+            {
+                foreach (var f in picked)
+                {
+                    var path = f.TryGetLocalPath();
+                    if (path is null) { failed++; continue; }
+                    try { batch.DecompileFile(path); ok++; }
+                    catch (Exception ex) { failed++; errors.Add($"{Path.GetFileName(path)}: {ex.Message}"); }
+                }
+            });
+            SetBusy(false, $"Fertig: {ok} erfolgreich, {failed} fehlgeschlagen.");
+            var msg = failed == 0
+                ? $"{ok} Datei(en) dekompiliert. Ergebnis liegt neben der Original-.rpyc als .rpy."
+                : $"{ok} erfolgreich, {failed} fehlgeschlagen:\n\n" + string.Join("\n", errors.Take(10));
+            await MessageBox.ShowAsync(this, "Dekompilieren fertig", msg);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Dekompilieren-Datei fehlgeschlagen");
+            SetBusy(false, "Fehler beim Dekompilieren.");
+        }
+    }
+
+    private async void OnDecompileFolder(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Ordner mit .rpyc-Dateien wählen (rekursiv)",
+                AllowMultiple = false,
+            });
+            if (folders.Count == 0) return;
+            var root = folders[0].TryGetLocalPath();
+            if (root is null) return;
+
+            var batch = App.Services.GetRequiredService<RpycBatchService>();
+            SetBusy(true, "Suche .rpyc-Dateien …");
+            var progress = new Progress<(int done, int total, string current)>(p =>
+                SetBusy(true, $"Dekompiliere {p.done}/{p.total}: {Path.GetFileName(p.current)}"));
+            var result = await Task.Run(() => batch.DecompileDirectory(root, progress));
+            SetBusy(false, $"Fertig: {result.Succeeded}/{result.Total} dekompiliert, {result.Failed} Fehler.");
+            var msg = result.Failed == 0
+                ? $"{result.Succeeded} von {result.Total} Datei(en) dekompiliert (rekursiv unter {root})."
+                : $"{result.Succeeded} von {result.Total} erfolgreich, {result.Failed} fehlgeschlagen:\n\n"
+                    + string.Join("\n", result.Errors.Take(10).Select(x => $"{Path.GetFileName(x.File)}: {x.Error}"));
+            await MessageBox.ShowAsync(this, "Ordner-Dekompilierung fertig", msg);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Ordner-Dekompilierung fehlgeschlagen");
+            SetBusy(false, "Fehler bei der Ordner-Dekompilierung.");
+        }
+    }
+
+    private void SetBusy(bool busy, string status)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+        vm.IsBusy = busy;
+        vm.ProgressIndeterminate = busy;
+        vm.StatusText = status;
     }
 
     // ---- Drag & Drop: Archiv fallen lassen zum Öffnen -----------------------
