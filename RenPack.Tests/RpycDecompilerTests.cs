@@ -110,6 +110,26 @@ public sealed class RpycDecompilerTests
     }
 
     [Fact]
+    public void EarlyPython_uses_python_early_block_not_dollar_shortcut()
+    {
+        // Der $-Shortcut existiert NUR für `python:` ohne Modifier. Bei
+        // EarlyPython (und bei hide/in) muss immer die Block-Form kommen.
+        // Reihenfolge: `python early:` (Wort-Reihenfolge ist wichtig — Ren'Py
+        // wirft "expected statement" bei `early python:`).
+        var pyCode = new ClassDict("renpy.ast", "PyCode");
+        pyCode["__args__"] = new object[] { "import sys" };
+        var script = new object[]
+        {
+            Node("renpy.ast.EarlyPython", ("code", pyCode)),
+        };
+        var text = _dec.Decompile(script);
+        text.Should().Contain("python early:");
+        text.Should().Contain("    import sys");
+        text.Should().NotContain("early python:");
+        text.Should().NotContain("$ early");
+    }
+
+    [Fact]
     public void Emits_python_single_line_as_dollar_shortcut()
     {
         var pyCode = new ClassDict("renpy.ast", "PyCode");

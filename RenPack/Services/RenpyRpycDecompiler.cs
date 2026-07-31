@@ -160,8 +160,8 @@ public sealed class RenpyRpycDecompiler
             case "renpy.ast.Scene": EmitShowHideScene(sb, node, indent, "scene"); break;
             case "renpy.ast.Hide": EmitShowHideScene(sb, node, indent, "hide"); break;
             case "renpy.ast.With": EmitWith(sb, node, indent); break;
-            case "renpy.ast.Python": EmitPython(sb, node, indent, prefix: ""); break;
-            case "renpy.ast.EarlyPython": EmitPython(sb, node, indent, prefix: "early "); break;
+            case "renpy.ast.Python": EmitPython(sb, node, indent, early: false); break;
+            case "renpy.ast.EarlyPython": EmitPython(sb, node, indent, early: true); break;
             case "renpy.ast.Init": EmitInit(sb, node, indent); break;
             case "renpy.ast.Pass": AppendIndented(sb, indent, "pass"); break;
             case "renpy.ast.Define": EmitDefine(sb, node, indent, "define"); break;
@@ -274,18 +274,40 @@ public sealed class RenpyRpycDecompiler
         AppendIndented(sb, indent, $"with {AsString(expr)}");
     }
 
-    private static void EmitPython(StringBuilder sb, ClassDict node, int indent, string prefix)
+    private static void EmitPython(StringBuilder sb, ClassDict node, int indent, bool early)
     {
         string code = AsString(node.GetValueOrDefault("code"));
-        // Einzeiliger Code ohne Newline → $ shortcut
-        if (!code.Contains('\n'))
+        bool hide = node.GetValueOrDefault("hide") is bool h && h;
+        bool store = node.GetValueOrDefault("store") is string s && s != "store";
+
+        // Optionale hide/store-Modifier bauen die Header-Zeile mit — Reihenfolge:
+        // `python [early] [hide] [in <store>]:`. Der $-Shortcut existiert NUR
+        // für das einfache Python-Statement — nicht für early/hide/in.
+        bool needsBlockForm = early || hide || store;
+
+        if (!code.Contains('\n') && !needsBlockForm)
         {
-            AppendIndented(sb, indent, $"${(string.IsNullOrEmpty(prefix) ? "" : " " + prefix)} {code}".TrimStart());
+            AppendIndented(sb, indent, $"$ {code}");
             return;
         }
-        AppendIndented(sb, indent, $"{prefix}python:");
+
+        var header = new System.Text.StringBuilder("python");
+        if (early) header.Append(" early");
+        if (hide) header.Append(" hide");
+        if (node.GetValueOrDefault("store") is string ns && !string.IsNullOrEmpty(ns) && ns != "store")
+            header.Append(" in ").Append(ns);
+        header.Append(':');
+        AppendIndented(sb, indent, header.ToString());
+
+        int lineCount = 0;
         foreach (var line in code.Split('\n'))
+        {
             AppendIndented(sb, indent + 1, line);
+            lineCount++;
+        }
+        // Ren'Py erwartet einen non-empty Block — leerer Python-Body kracht.
+        if (lineCount == 0 || (lineCount == 1 && string.IsNullOrWhiteSpace(code)))
+            AppendIndented(sb, indent + 1, "pass");
     }
 
     private void EmitInit(StringBuilder sb, ClassDict node, int indent)
