@@ -237,6 +237,86 @@ public sealed class RpycDecompilerTests
     }
 
     [Fact]
+    public void Screen_with_widgets_and_conditionals_is_emitted_as_screen_language()
+    {
+        // Ein realistischer Mini-Screen: ein Frame mit vbox, text, textbutton
+        // und einem if-Zweig.
+        var textNode = new ClassDict("renpy.sl2.slast", "SLDisplayable");
+        textNode["name"] = "text";
+        textNode["positional"] = new ArrayList { "\"Hello\"" };
+        textNode["keyword"] = new ArrayList();
+        textNode["children"] = new ArrayList();
+
+        var buttonNode = new ClassDict("renpy.sl2.slast", "SLDisplayable");
+        buttonNode["name"] = "textbutton";
+        buttonNode["positional"] = new ArrayList { "\"Start\"" };
+        buttonNode["keyword"] = new ArrayList { new object[] { "action", "Start()" } };
+        buttonNode["children"] = new ArrayList();
+
+        var ifBlock = new ClassDict("renpy.sl2.slast", "SLBlock");
+        ifBlock["keyword"] = new ArrayList();
+        ifBlock["children"] = new ArrayList { textNode };
+
+        var ifNode = new ClassDict("renpy.sl2.slast", "SLIf");
+        ifNode["entries"] = new ArrayList { new object[] { "condition", ifBlock } };
+
+        var vboxNode = new ClassDict("renpy.sl2.slast", "SLDisplayable");
+        vboxNode["name"] = "vbox";
+        vboxNode["positional"] = new ArrayList();
+        vboxNode["keyword"] = new ArrayList();
+        vboxNode["children"] = new ArrayList { textNode, buttonNode, ifNode };
+
+        var slScreen = new ClassDict("renpy.sl2.slast", "SLScreen");
+        slScreen["name"] = "main_menu";
+        slScreen["keyword"] = new ArrayList { new object[] { "modal", "True" } };
+        slScreen["children"] = new ArrayList { vboxNode };
+
+        var astScreen = Node("renpy.ast.Screen", ("screen", slScreen));
+        var text = _dec.Decompile(new object[] { astScreen });
+
+        text.Should().Contain("screen main_menu:");
+        text.Should().Contain("modal True");
+        text.Should().Contain("vbox:");
+        text.Should().Contain("text \"Hello\"");
+        text.Should().Contain("textbutton \"Start\":");
+        text.Should().Contain("action Start()");
+        text.Should().Contain("if condition:");
+    }
+
+    [Fact]
+    public void Style_declaration_is_emitted_with_properties()
+    {
+        var props = new Hashtable
+        {
+            ["color"] = "\"#ffffff\"",
+            ["size"] = "24",
+        };
+        var style = Node("renpy.ast.Style",
+            ("style_name", "chat_header"),
+            ("parent", "default"),
+            ("properties", props));
+        var text = _dec.Decompile(new object[] { style });
+        text.Should().Contain("style chat_header is default:");
+        text.Should().Contain("color \"#ffffff\"");
+        text.Should().Contain("size 24");
+    }
+
+    [Fact]
+    public void Transform_declaration_uses_atl_writer_for_body()
+    {
+        var pauseStmt = new ClassDict("renpy.atl", "RawMultipurpose");
+        pauseStmt["warper"] = "pause"; pauseStmt["duration"] = "0.5";
+        pauseStmt["expressions"] = new ArrayList(); pauseStmt["properties"] = new ArrayList();
+        var block = new ClassDict("renpy.atl", "RawBlock");
+        block["statements"] = new ArrayList { pauseStmt };
+
+        var tr = Node("renpy.ast.Transform", ("varname", "delayed"), ("atl", block));
+        var text = _dec.Decompile(new object[] { tr });
+        text.Should().Contain("transform delayed:");
+        text.Should().Contain("    pause 0.5");
+    }
+
+    [Fact]
     public void Atl_unknown_raw_class_becomes_comment_with_pass()
     {
         var stmt = new ClassDict("renpy.atl", "RawSomethingNew");

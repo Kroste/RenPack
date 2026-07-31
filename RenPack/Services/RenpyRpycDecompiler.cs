@@ -115,7 +115,8 @@ public sealed class RenpyRpycDecompiler
         "renpy.ast.Scene", "renpy.ast.Hide", "renpy.ast.With", "renpy.ast.Python",
         "renpy.ast.EarlyPython", "renpy.ast.Init", "renpy.ast.Pass",
         "renpy.ast.Define", "renpy.ast.Default", "renpy.ast.UserStatement",
-        "renpy.ast.Image",
+        "renpy.ast.Image", "renpy.ast.Screen", "renpy.ast.Style",
+        "renpy.ast.Transform",
     };
 
     private static bool IsUnsupported(ClassDict node) => !KnownNodeClasses.Contains(node.ClassName);
@@ -167,6 +168,9 @@ public sealed class RenpyRpycDecompiler
             case "renpy.ast.Default": EmitDefine(sb, node, indent, "default"); break;
             case "renpy.ast.UserStatement": EmitUserStatement(sb, node, indent); break;
             case "renpy.ast.Image": EmitImage(sb, node, indent); break;
+            case "renpy.ast.Screen": RenpySlWriter.EmitScreen(sb, node, indent); break;
+            case "renpy.ast.Style": EmitStyle(sb, node, indent); break;
+            case "renpy.ast.Transform": EmitTransform(sb, node, indent); break;
             default:
                 AppendIndented(sb, indent, $"# <unsupported: {node.ClassName}>");
                 break;
@@ -298,6 +302,52 @@ public sealed class RenpyRpycDecompiler
         string op = AsString(node.GetValueOrDefault("operator")); // "=" usw.
         if (string.IsNullOrEmpty(op)) op = "=";
         AppendIndented(sb, indent, $"{keyword} {name} {op} {code}".TrimEnd());
+    }
+
+    /// <summary>Transform-Deklaration auf Top-Level: <c>transform NAME:</c>
+    /// gefolgt von einem ATL-Block. Wie ein Named-Image-mit-ATL, nur
+    /// wiederverwendbar per <c>at NAME</c> auf beliebigen Displayables.</summary>
+    private static void EmitTransform(StringBuilder sb, ClassDict node, int indent)
+    {
+        string name = AsString(node.GetValueOrDefault("varname") ?? node.GetValueOrDefault("name"));
+        // Optional: parameters (Signature) — nutzen wir wenn vorhanden.
+        AppendIndented(sb, indent, $"transform {name}:");
+        RenpyAtlWriter.EmitBlockBody(sb, node.GetValueOrDefault("atl"), indent + 1);
+    }
+
+    private static void EmitStyle(StringBuilder sb, ClassDict node, int indent)
+    {
+        string name = AsString(node.GetValueOrDefault("style_name") ?? node.GetValueOrDefault("name"));
+        string parent = AsString(node.GetValueOrDefault("parent"));
+        bool clear = node.GetValueOrDefault("clear") is bool c && c;
+        var properties = node.GetValueOrDefault("properties") as IDictionary;
+        var delattr = node.GetValueOrDefault("delattr") as IEnumerable;
+        var take = node.GetValueOrDefault("take");
+        var variant = AsString(node.GetValueOrDefault("variant"));
+
+        string head = $"style {name}";
+        if (!string.IsNullOrEmpty(parent) && parent != "None") head += $" is {parent}";
+        AppendIndented(sb, indent, head + ":");
+
+        int emitted = 0;
+        if (clear) { AppendIndented(sb, indent + 1, "clear"); emitted++; }
+        if (take is not null && AsString(take) is { Length: > 0 } takeStr && takeStr != "None")
+        { AppendIndented(sb, indent + 1, $"take {takeStr}"); emitted++; }
+        if (!string.IsNullOrEmpty(variant) && variant != "None")
+        { AppendIndented(sb, indent + 1, $"variant {variant}"); emitted++; }
+        if (delattr is not null)
+        {
+            foreach (var d in delattr) { AppendIndented(sb, indent + 1, $"del {AsString(d)}"); emitted++; }
+        }
+        if (properties is not null)
+        {
+            foreach (DictionaryEntry de in properties)
+            {
+                AppendIndented(sb, indent + 1, $"{AsString(de.Key)} {AsString(de.Value)}");
+                emitted++;
+            }
+        }
+        if (emitted == 0) AppendIndented(sb, indent + 1, "pass");
     }
 
     private static void EmitImage(StringBuilder sb, ClassDict node, int indent)
