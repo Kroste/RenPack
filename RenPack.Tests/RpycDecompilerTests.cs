@@ -110,6 +110,45 @@ public sealed class RpycDecompilerTests
     }
 
     [Fact]
+    public void Scene_with_python_expression_uses_expression_keyword()
+    {
+        // imspec = (name=(), expression="renpy.random.choice([…])", tag=None, …)
+        var imspec = new object?[]
+        {
+            new object[] { },           // name-tuple leer
+            "renpy.random.choice(['a', 'b'])", // expression
+            null, null, "master", null, null,  // tag, at_list, layer, zorder, behind
+        };
+        var script = new object[]
+        {
+            Node("renpy.ast.Scene", ("imspec", imspec)),
+        };
+        var text = _dec.Decompile(script);
+        text.Should().Contain("scene expression renpy.random.choice(['a', 'b'])");
+        text.Should().NotContain("scene renpy.random.choice");
+    }
+
+    [Fact]
+    public void Show_with_at_list_and_zorder_emits_at_and_zorder_clauses()
+    {
+        var imspec = new object?[]
+        {
+            new object[] { "hero", "happy" }, // name
+            null, "hero_tag",                 // expression, tag
+            new object[] { "left", "flip" },  // at_list
+            "screens",                        // layer
+            "5",                              // zorder
+            new object[] { "menu" },          // behind
+        };
+        var script = new object[]
+        {
+            Node("renpy.ast.Show", ("imspec", imspec)),
+        };
+        var text = _dec.Decompile(script);
+        text.Should().Contain("show hero happy as hero_tag at left, flip behind menu onlayer screens zorder 5");
+    }
+
+    [Fact]
     public void EarlyPython_uses_python_early_block_not_dollar_shortcut()
     {
         // Der $-Shortcut existiert NUR für `python:` ohne Modifier. Bei

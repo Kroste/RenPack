@@ -253,19 +253,113 @@ public sealed class RenpyRpycDecompiler
         AppendIndented(sb, indent, $"return{suffix}");
     }
 
+    /// <summary>Emittiert show/scene/hide-Statements. Die Imspec-Struktur ist
+    /// ein Tupel mit variabler Länge:
+    /// <c>(name-tuple, expression, tag, at_list, layer, zorder, behind)</c>.
+    /// Neuere Ren'Py-Versionen können zusätzliche Felder haben — wir lesen nur
+    /// die, die vorhanden sind.
+    ///
+    /// Wichtige Sonderfälle:
+    /// <list type="bullet">
+    ///   <item><c>expression</c> ist gesetzt → <c>scene expression &lt;expr&gt;</c>
+    ///     (Python-Ausdruck statt festem Bild-Namen, z. B.
+    ///     <c>renpy.random.choice([...])</c>). Sonst hätte Ren'Py mit
+    ///     "end of line expected" abgebrochen.</item>
+    ///   <item><c>tag</c> → <c>as TAG</c></item>
+    ///   <item><c>at_list</c> → <c>at TRANSFORM[, …]</c></item>
+    ///   <item><c>behind</c> → <c>behind TAG[, …]</c></item>
+    ///   <item><c>layer</c> (non-Default "master") → <c>onlayer LAYER</c></item>
+    ///   <item><c>zorder</c> → <c>zorder N</c></item>
+    ///   <item><c>atl</c> auf dem Node → Body mit ATL-Block</item>
+    /// </list></summary>
     private static void EmitShowHideScene(StringBuilder sb, ClassDict node, int indent, string keyword)
     {
-        // imspec ist ein Tupel — meist (name-tuple, at-list, layer, ...). Wir nehmen
-        // den Namen als Space-separierte Attribut-Kette.
-        var imspec = node.GetValueOrDefault("imspec");
-        string spec;
-        if (imspec is object[] arr && arr.Length > 0 && arr[0] is IEnumerable nameParts)
-            spec = string.Join(" ", nameParts.Cast<object?>().Select(AsString));
-        else if (imspec is not null)
-            spec = AsString(imspec);
+        var imspec = node.GetValueOrDefault("imspec") as object[];
+        var parts = new List<string> { keyword };
+
+        object? name = null, expression = null, tag = null, atList = null,
+            layer = null, zorder = null, behind = null;
+        if (imspec is not null)
+        {
+            if (imspec.Length > 0) name = imspec[0];
+            if (imspec.Length > 1) expression = imspec[1];
+            if (imspec.Length > 2) tag = imspec[2];
+            if (imspec.Length > 3) atList = imspec[3];
+            if (imspec.Length > 4) layer = imspec[4];
+            if (imspec.Length > 5) zorder = imspec[5];
+            if (imspec.Length > 6) behind = imspec[6];
+        }
+
+        string exprText = expression is null ? "" : AsString(expression);
+        if (!string.IsNullOrEmpty(exprText) && exprText != "None")
+        {
+            parts.Add("expression");
+            parts.Add(exprText);
+        }
+        else if (name is IEnumerable nameParts && name is not string)
+        {
+            var tags = nameParts.Cast<object?>().Select(AsString)
+                .Where(s => !string.IsNullOrEmpty(s)).ToList();
+            if (tags.Count > 0) parts.Add(string.Join(" ", tags));
+        }
+        else if (name is not null)
+        {
+            parts.Add(AsString(name));
+        }
+
+        if (tag is string tagStr && !string.IsNullOrEmpty(tagStr))
+        {
+            parts.Add("as");
+            parts.Add(tagStr);
+        }
+
+        if (atList is IEnumerable atls)
+        {
+            var items = atls.Cast<object?>().Select(AsString)
+                .Where(s => !string.IsNullOrEmpty(s)).ToList();
+            if (items.Count > 0)
+            {
+                parts.Add("at");
+                parts.Add(string.Join(", ", items));
+            }
+        }
+
+        if (behind is IEnumerable behinds)
+        {
+            var items = behinds.Cast<object?>().Select(AsString)
+                .Where(s => !string.IsNullOrEmpty(s)).ToList();
+            if (items.Count > 0)
+            {
+                parts.Add("behind");
+                parts.Add(string.Join(", ", items));
+            }
+        }
+
+        if (layer is string layStr && !string.IsNullOrEmpty(layStr) && layStr != "master")
+        {
+            parts.Add("onlayer");
+            parts.Add(layStr);
+        }
+
+        string zorderText = AsString(zorder);
+        if (!string.IsNullOrEmpty(zorderText) && zorderText != "0" && zorderText != "None")
+        {
+            parts.Add("zorder");
+            parts.Add(zorderText);
+        }
+
+        // ATL-Body (z. B. `show hero: linear 1.0 xpos 100`) — nur bei show/scene
+        // relevant, hide hat nie einen atl-Block.
+        var atl = node.GetValueOrDefault("atl");
+        if (atl is ClassDict atlBlock && atlBlock.ClassName == "renpy.atl.RawBlock")
+        {
+            AppendIndented(sb, indent, string.Join(" ", parts) + ":");
+            RenpyAtlWriter.EmitBlockBody(sb, atlBlock, indent + 1);
+        }
         else
-            spec = "";
-        AppendIndented(sb, indent, $"{keyword} {spec}".TrimEnd());
+        {
+            AppendIndented(sb, indent, string.Join(" ", parts));
+        }
     }
 
     private static void EmitWith(StringBuilder sb, ClassDict node, int indent)
