@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Markup.Xaml;
 
 namespace RenPack.Views;
 
@@ -14,8 +13,6 @@ public partial class MessageBox : ChromeWindow
         OkButton.Click += OnOk;
         CancelButton.Click += OnCancel;
     }
-
-    private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
 
     private void OnOk(object? sender, RoutedEventArgs e) { _result = true; Close(_result); }
     private void OnCancel(object? sender, RoutedEventArgs e) { _result = false; Close(_result); }

@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using NLog;
@@ -22,8 +21,6 @@ public partial class MainWindow : ChromeWindow, IUiInteractions
         AddHandler(DragDrop.DropEvent, OnDrop);
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
     }
-
-    private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
 
     protected override void OnDataContextChanged(EventArgs e)
     {

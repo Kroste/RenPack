@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Markup.Xaml;
 using NLog;
 using RenPack.Services;
 
@@ -28,8 +27,6 @@ public partial class AboutWindow : ChromeWindow
         GithubButton.Click += (_, _) => Launch(GithubUrl);
         BmcButton.Click += (_, _) => Launch(BmcUrl);
     }
-
-    private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
 
     private async void OnCheckUpdate(object? sender, RoutedEventArgs e)
     {
