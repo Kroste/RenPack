@@ -41,10 +41,12 @@ public partial class App : Application
 
         // Services
         services.AddSingleton<IRenpyArchiveService, RenpyArchiveService>();
+        services.AddSingleton<IRenpySaveService, RenpySaveService>();
         services.AddSingleton<UpdateService>();
 
         // ViewModels
         services.AddTransient<MainWindowViewModel>();
+        services.AddTransient<SaveWindowViewModel>();
 
         return services.BuildServiceProvider();
     }

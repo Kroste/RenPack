@@ -34,6 +34,9 @@
                 <Button Content="📦 Ordner packen …" Margin="0,0,8,0"
                         Command="{Binding CreateArchiveCommand}" />
                 <Rectangle Width="1" Margin="4,2" Fill="#33FFFFFF" />
+                <Button x:Name="OpenSaveButton" Content="💾 Save öffnen …" Margin="8,0,8,0"
+                        ToolTip.Tip="Ren'Py-Save-Datei inspizieren (.save)" />
+                <Rectangle Width="1" Margin="4,2" Fill="#33FFFFFF" />
                 <Button Content="⬇ Alles entpacken" Margin="8,0,8,0"
                         Command="{Binding ExtractAllCommand}" />
                 <Button Content="⬇ Auswahl entpacken" Margin="0,0,8,0"

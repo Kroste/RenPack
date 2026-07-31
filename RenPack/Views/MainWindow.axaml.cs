@@ -17,6 +17,7 @@ public partial class MainWindow : ChromeWindow, IUiInteractions
     {
         InitializeComponent();
         AboutButton.Click += OnAbout;
+        OpenSaveButton.Click += OnOpenSave;
 
         AddHandler(DragDrop.DropEvent, OnDrop);
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
@@ -56,6 +57,20 @@ public partial class MainWindow : ChromeWindow, IUiInteractions
         catch (Exception ex)
         {
             Log.Error(ex, "Über-Fenster konnte nicht geöffnet werden");
+        }
+    }
+
+    private async void OnOpenSave(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var vm = App.Services.GetRequiredService<SaveWindowViewModel>();
+            var win = new SaveWindow { DataContext = vm };
+            await win.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Save-Fenster konnte nicht geöffnet werden");
         }
     }
 
