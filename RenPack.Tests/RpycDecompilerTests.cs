@@ -336,6 +336,52 @@ public sealed class RpycDecompilerTests
     }
 
     [Fact]
+    public void Translate_block_emits_translate_lang_identifier()
+    {
+        var translate = Node("renpy.ast.Translate",
+            ("language", "de"),
+            ("identifier", "greeting_abc123"),
+            ("block", new ArrayList { Node("renpy.ast.Say", ("what", "Hallo!")) }));
+        var endMarker = Node("renpy.ast.EndTranslate");
+        var text = _dec.Decompile(new object[] { translate, endMarker });
+        text.Should().Contain("translate de greeting_abc123:");
+        text.Should().Contain("    \"Hallo!\"");
+        // EndTranslate ist ein Compiler-Marker — im Output darf nichts davon stehen.
+        text.Should().NotContain("EndTranslate");
+    }
+
+    [Fact]
+    public void Translate_strings_are_grouped_into_single_block_per_language()
+    {
+        var ts1 = Node("renpy.ast.TranslateString", ("language", "de"), ("old", "Hello"), ("new", "Hallo"));
+        var ts2 = Node("renpy.ast.TranslateString", ("language", "de"), ("old", "Bye"),   ("new", "Tschüss"));
+        var ts3 = Node("renpy.ast.TranslateString", ("language", "de"), ("old", "Yes"),   ("new", "Ja"));
+        var text = _dec.Decompile(new object[] { ts1, ts2, ts3 });
+
+        // Genau EIN "translate de strings:"-Header für die drei Nodes
+        var headerCount = System.Text.RegularExpressions.Regex.Matches(
+            text, @"^translate de strings:", System.Text.RegularExpressions.RegexOptions.Multiline).Count;
+        headerCount.Should().Be(1, "aufeinanderfolgende TranslateStrings gehören in EINEN Block");
+
+        text.Should().Contain("old \"Hello\"");
+        text.Should().Contain("new \"Hallo\"");
+        text.Should().Contain("old \"Bye\"");
+        text.Should().Contain("new \"Tschüss\"");
+        text.Should().Contain("old \"Yes\"");
+        text.Should().Contain("new \"Ja\"");
+    }
+
+    [Fact]
+    public void Translate_strings_of_different_languages_get_separate_blocks()
+    {
+        var de = Node("renpy.ast.TranslateString", ("language", "de"), ("old", "Hi"), ("new", "Hallo"));
+        var en = Node("renpy.ast.TranslateString", ("language", "en"), ("old", "Hi"), ("new", "Hi"));
+        var text = _dec.Decompile(new object[] { de, en });
+        text.Should().Contain("translate de strings:");
+        text.Should().Contain("translate en strings:");
+    }
+
+    [Fact]
     public void Screen_parameters_are_emitted_from_signature_dict()
     {
         // Ren'Py speichert Screen-Parameter als Signature.parameters =

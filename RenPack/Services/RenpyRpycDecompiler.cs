@@ -68,6 +68,28 @@ public sealed class RenpyRpycDecompiler
                 continue;
             }
 
+            // Aufeinanderfolgende TranslateString-Nodes derselben Sprache in
+            // einen gemeinsamen "translate LANG strings:"-Block zusammenfassen.
+            // Ren'Py's Compiler wrappt jeden old/new-Paar in eine eigene Node,
+            // aber die User-Syntax hat sie unter einem Block.
+            if (node.ClassName == "renpy.ast.TranslateString")
+            {
+                string lang = AsString(node.GetValueOrDefault("language"));
+                if (string.IsNullOrEmpty(lang)) lang = "None";
+                AppendIndented(sb, indent, $"translate {lang} strings:");
+                EmitTranslateStringEntry(sb, node, indent + 1);
+                // Konsekutive TranslateStrings derselben Sprache mit-emittieren
+                while (i + 1 < list.Count && list[i + 1] is ClassDict tsNext
+                       && tsNext.ClassName == "renpy.ast.TranslateString"
+                       && AsString(tsNext.GetValueOrDefault("language")) == lang)
+                {
+                    i++;
+                    EmitTranslateStringEntry(sb, tsNext, indent + 1);
+                }
+                emitted++;
+                continue;
+            }
+
             // Nach Call: Auto-Sync-Sequenz behandeln (siehe Kommentar oben).
             string? fromClause = null;
             if (node.ClassName == "renpy.ast.Call" && i + 1 < list.Count &&
@@ -117,6 +139,9 @@ public sealed class RenpyRpycDecompiler
         "renpy.ast.Define", "renpy.ast.Default", "renpy.ast.UserStatement",
         "renpy.ast.Image", "renpy.ast.Screen", "renpy.ast.Style",
         "renpy.ast.Transform",
+        "renpy.ast.Translate", "renpy.ast.EndTranslate",
+        "renpy.ast.TranslateString", "renpy.ast.TranslateBlock",
+        "renpy.ast.TranslatePython", "renpy.ast.TranslateEarlyBlock",
     };
 
     private static bool IsUnsupported(ClassDict node) => !KnownNodeClasses.Contains(node.ClassName);
@@ -171,6 +196,17 @@ public sealed class RenpyRpycDecompiler
             case "renpy.ast.Screen": RenpySlWriter.EmitScreen(sb, node, indent); break;
             case "renpy.ast.Style": EmitStyle(sb, node, indent); break;
             case "renpy.ast.Transform": EmitTransform(sb, node, indent); break;
+            case "renpy.ast.Translate": EmitTranslate(sb, node, indent); break;
+            case "renpy.ast.EndTranslate": /* Marker, wird beim Emit übersprungen */ break;
+            case "renpy.ast.TranslateString":
+                // Wird niemals einzeln emittiert — der Block-Emit gruppiert
+                // aufeinanderfolgende TranslateStrings in einen strings-Block.
+                // Falls doch (fehlerhafter Input), als Kommentar durchlassen.
+                AppendIndented(sb, indent, "# <renpy.ast.TranslateString ohne umschließenden strings-Block>");
+                break;
+            case "renpy.ast.TranslateBlock": EmitTranslateBlock(sb, node, indent); break;
+            case "renpy.ast.TranslatePython": EmitTranslatePython(sb, node, indent); break;
+            case "renpy.ast.TranslateEarlyBlock": EmitTranslateBlock(sb, node, indent, early: true); break;
             default:
                 AppendIndented(sb, indent, $"# <unsupported: {node.ClassName}>");
                 break;
@@ -444,6 +480,52 @@ public sealed class RenpyRpycDecompiler
             qualified += $"[{idxStr}]";
 
         AppendIndented(sb, indent, $"{keyword} {qualified} {op} {code}".TrimEnd());
+    }
+
+    private static void EmitTranslateStringEntry(StringBuilder sb, ClassDict node, int indent)
+    {
+        string oldStr = AsString(node.GetValueOrDefault("old"));
+        string newStr = AsString(node.GetValueOrDefault("new"));
+        AppendIndented(sb, indent, $"old \"{EscapeString(oldStr)}\"");
+        AppendIndented(sb, indent, $"new \"{EscapeString(newStr)}\"");
+    }
+
+    /// <summary>Translate-Block: <c>translate LANG IDENTIFIER:</c> gefolgt von
+    /// dem eigentlichen Body (meist ein einzelnes Say). Der Ren'Py-Compiler
+    /// hängt danach automatisch einen <c>EndTranslate</c>-Marker an — den
+    /// überspringen wir im Block-Walker.</summary>
+    private void EmitTranslate(StringBuilder sb, ClassDict node, int indent)
+    {
+        string lang = AsString(node.GetValueOrDefault("language"));
+        string identifier = AsString(node.GetValueOrDefault("identifier"));
+        if (string.IsNullOrEmpty(lang)) lang = "None";
+        AppendIndented(sb, indent, $"translate {lang} {identifier}:");
+        EmitBlockNonEmpty(sb, node.GetValueOrDefault("block") as IEnumerable ?? Array.Empty<object>(), indent + 1);
+    }
+
+    /// <summary>TranslateBlock: <c>translate LANG python:</c> bzw.
+    /// <c>translate LANG:</c> mit Init/Style/… im Body.</summary>
+    private void EmitTranslateBlock(StringBuilder sb, ClassDict node, int indent, bool early = false)
+    {
+        string lang = AsString(node.GetValueOrDefault("language"));
+        if (string.IsNullOrEmpty(lang)) lang = "None";
+        string header = early ? $"translate {lang} early:" : $"translate {lang}:";
+        AppendIndented(sb, indent, header);
+        EmitBlockNonEmpty(sb, node.GetValueOrDefault("block") as IEnumerable ?? Array.Empty<object>(), indent + 1);
+    }
+
+    /// <summary>TranslatePython: <c>translate LANG python:</c> mit Python-Code.</summary>
+    private static void EmitTranslatePython(StringBuilder sb, ClassDict node, int indent)
+    {
+        string lang = AsString(node.GetValueOrDefault("language"));
+        if (string.IsNullOrEmpty(lang)) lang = "None";
+        string code = AsString(node.GetValueOrDefault("code"));
+        AppendIndented(sb, indent, $"translate {lang} python:");
+        if (string.IsNullOrWhiteSpace(code))
+            AppendIndented(sb, indent + 1, "pass");
+        else
+            foreach (var line in code.Split('\n'))
+                AppendIndented(sb, indent + 1, line);
     }
 
     /// <summary>Transform-Deklaration auf Top-Level: <c>transform NAME:</c>
