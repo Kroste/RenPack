@@ -327,27 +327,31 @@ public sealed class RenpyRpycDecompiler
 
         string head = $"style {name}";
         if (!string.IsNullOrEmpty(parent) && parent != "None") head += $" is {parent}";
-        AppendIndented(sb, indent, head + ":");
 
-        int emitted = 0;
-        if (clear) { AppendIndented(sb, indent + 1, "clear"); emitted++; }
+        // Erst den Body-Text sammeln, dann entscheiden ob wir überhaupt einen
+        // Doppelpunkt setzen. Ren'Py erlaubt "style X" ohne Body — dort kein
+        // "pass" einfügen, weil Ren'Py "pass" nicht als Style-Property kennt
+        // ("style property pass is not known").
+        var bodyLines = new List<string>();
+        if (clear) bodyLines.Add("clear");
         if (take is not null && AsString(take) is { Length: > 0 } takeStr && takeStr != "None")
-        { AppendIndented(sb, indent + 1, $"take {takeStr}"); emitted++; }
+            bodyLines.Add($"take {takeStr}");
         if (!string.IsNullOrEmpty(variant) && variant != "None")
-        { AppendIndented(sb, indent + 1, $"variant {variant}"); emitted++; }
+            bodyLines.Add($"variant {variant}");
         if (delattr is not null)
-        {
-            foreach (var d in delattr) { AppendIndented(sb, indent + 1, $"del {AsString(d)}"); emitted++; }
-        }
+            foreach (var d in delattr) bodyLines.Add($"del {AsString(d)}");
         if (properties is not null)
-        {
             foreach (DictionaryEntry de in properties)
-            {
-                AppendIndented(sb, indent + 1, $"{AsString(de.Key)} {AsString(de.Value)}");
-                emitted++;
-            }
+                bodyLines.Add($"{AsString(de.Key)} {AsString(de.Value)}");
+
+        if (bodyLines.Count == 0)
+        {
+            AppendIndented(sb, indent, head);
+            return;
         }
-        if (emitted == 0) AppendIndented(sb, indent + 1, "pass");
+
+        AppendIndented(sb, indent, head + ":");
+        foreach (var line in bodyLines) AppendIndented(sb, indent + 1, line);
     }
 
     private static void EmitImage(StringBuilder sb, ClassDict node, int indent)

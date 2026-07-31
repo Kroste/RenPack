@@ -284,6 +284,41 @@ public sealed class RpycDecompilerTests
     }
 
     [Fact]
+    public void Empty_style_declaration_has_no_colon_and_no_pass()
+    {
+        // Ren'Py kennt "pass" NICHT als Style-Property ("style property pass
+        // is not known"). Ein leerer Style darf ohne Doppelpunkt geschrieben
+        // werden — das ist die richtige Ausgabe.
+        var style = Node("renpy.ast.Style",
+            ("style_name", "window"),
+            ("parent", "default"),
+            ("properties", new Hashtable()));
+        var text = _dec.Decompile(new object[] { style });
+        text.Should().Contain("style window is default\n");
+        text.Should().NotContain("style window is default:");
+        text.Should().NotContain("    pass");
+    }
+
+    [Fact]
+    public void Screen_zorder_only_emitted_once_when_present_in_both_keyword_and_node_field()
+    {
+        // Der Ren'Py-Compiler kann zorder sowohl im SLScreen.zorder-Feld als
+        // auch im keyword-Feld ablegen. Wir wollen NICHT beides emittieren —
+        // sonst wirft der Parser "keyword argument 'zorder' appears more than
+        // once in a screen statement".
+        var slScreen = new ClassDict("renpy.sl2.slast", "SLScreen");
+        slScreen["name"] = "say";
+        slScreen["zorder"] = "25";
+        slScreen["keyword"] = new ArrayList { new object[] { "zorder", "25" } };
+        slScreen["children"] = new ArrayList();
+        var astScreen = Node("renpy.ast.Screen", ("screen", slScreen));
+        var text = _dec.Decompile(new object[] { astScreen });
+        var zorderCount = System.Text.RegularExpressions.Regex.Matches(text, @"^\s+zorder\s",
+            System.Text.RegularExpressions.RegexOptions.Multiline).Count;
+        zorderCount.Should().Be(1, "zorder darf nur einmal ausgegeben werden");
+    }
+
+    [Fact]
     public void Style_declaration_is_emitted_with_properties()
     {
         var props = new Hashtable

@@ -54,12 +54,11 @@ internal static class RenpySlWriter
 
         int bodyEmitted = 0;
 
-        // Screen-Attribute (tag, modal, layer, zorder, variant, predict,
-        // sensitive) — auf Node-Ebene als eigene Felder.
-        bodyEmitted += EmitScreenAttributes(sb, slScreen, indent + 1);
-
-        // Screen-Level-Keywords (aus dem keyword-Feld)
-        bodyEmitted += EmitKeywords(sb, slScreen.GetValueOrDefault("keyword"), indent + 1);
+        // Screen-Attribute: welche Attribute im keyword-Feld erscheinen, tracken
+        // wir, damit wir sie in EmitScreenAttributes nicht doppelt ausgeben.
+        var emittedKeys = new HashSet<string>(StringComparer.Ordinal);
+        bodyEmitted += EmitKeywords(sb, slScreen.GetValueOrDefault("keyword"), indent + 1, emittedKeys);
+        bodyEmitted += EmitScreenAttributes(sb, slScreen, indent + 1, emittedKeys);
 
         // Kinder-Widgets
         if (slScreen.GetValueOrDefault("children") is IEnumerable children)
@@ -68,11 +67,13 @@ internal static class RenpySlWriter
         if (bodyEmitted == 0) AppendIndented(sb, indent + 1, "pass");
     }
 
-    private static int EmitScreenAttributes(StringBuilder sb, ClassDict slScreen, int indent)
+    private static int EmitScreenAttributes(StringBuilder sb, ClassDict slScreen, int indent,
+        HashSet<string>? alreadyEmitted = null)
     {
         int count = 0;
         // Nur nicht-Default-Werte emittieren (Default: layer='screens',
-        // modal=False, sensitive=True, alles andere None).
+        // modal=False, sensitive=True, alles andere None). Und niemals doppelt,
+        // wenn EmitKeywords das Attribut schon aus dem keyword-Feld ausgegeben hat.
         foreach (var (field, defaultVal) in new[]
         {
             ("tag", (string?)null), ("modal", "False"), ("zorder", null),
@@ -80,6 +81,7 @@ internal static class RenpySlWriter
             ("sensitive", "True"), ("docstring", null),
         })
         {
+            if (alreadyEmitted is not null && alreadyEmitted.Contains(field)) continue;
             var val = slScreen.GetValueOrDefault(field);
             if (val is null) continue;
             string s = AsAtl(val);
@@ -301,8 +303,12 @@ internal static class RenpySlWriter
     }
 
     /// <summary>Emittiert eine Keyword-Liste (aus <c>keyword</c>-Feld). Format:
-    /// <c>[(name_str, expr_pyexpr), …]</c>. Rückgabe: Anzahl emittierter Zeilen.</summary>
-    private static int EmitKeywords(StringBuilder sb, object? keywords, int indent)
+    /// <c>[(name_str, expr_pyexpr), …]</c>. Rückgabe: Anzahl emittierter Zeilen.
+    /// Wenn <paramref name="track"/> gesetzt, werden die emittierten Namen dort
+    /// eingetragen — der Aufrufer nutzt das, um doppelte Ausgabe zu verhindern
+    /// (Screen-Attribute stehen sowohl im keyword-Feld als auch als Node-Felder).</summary>
+    private static int EmitKeywords(StringBuilder sb, object? keywords, int indent,
+        HashSet<string>? track = null)
     {
         if (keywords is not IEnumerable en) return 0;
         int count = 0;
@@ -312,6 +318,7 @@ internal static class RenpySlWriter
             string name = AsString(arr[0]);
             string expr = AsAtl(arr[1]);
             AppendIndented(sb, indent, $"{name} {expr}");
+            track?.Add(name);
             count++;
         }
         return count;
