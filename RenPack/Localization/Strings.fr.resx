@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="App_Title" xml:space="preserve"><value>RenPack</value></data>
+  <data name="Window_SaveEditor" xml:space="preserve"><value>RenPack — Éditeur de sauvegardes</value></data>
+  <data name="Window_Settings" xml:space="preserve"><value>RenPack — Paramètres</value></data>
+  <data name="Window_About" xml:space="preserve"><value>À propos de RenPack</value></data>
+  <data name="Window_OllamaPull" xml:space="preserve"><value>Télécharger un modèle Ollama</value></data>
+
+  <data name="Main_Subtitle" xml:space="preserve"><value>Ouvrir, empaqueter et extraire des archives Ren'Py · Éditeur de sauvegardes · Décompilateur .rpyc</value></data>
+  <data name="Section_Archive" xml:space="preserve"><value>ARCHIVE</value></data>
+  <data name="Section_Tools" xml:space="preserve"><value>OUTILS</value></data>
+  <data name="Section_Configuration" xml:space="preserve"><value>CONFIGURATION</value></data>
+  <data name="Main_OpenArchive" xml:space="preserve"><value>📂 Ouvrir</value></data>
+  <data name="Main_OpenArchive_Tip" xml:space="preserve"><value>Ouvrir une archive Ren'Py (.rpa) — aussi par glisser-déposer</value></data>
+  <data name="Main_CreateArchive" xml:space="preserve"><value>📦 Empaqueter …</value></data>
+  <data name="Main_CreateArchive_Tip" xml:space="preserve"><value>Empaqueter un dossier dans une archive RPA-3.0</value></data>
+  <data name="Main_OpenSave" xml:space="preserve"><value>💾 Éditeur de sauvegardes</value></data>
+  <data name="Main_OpenSave_Tip" xml:space="preserve"><value>Inspecter et modifier un fichier de sauvegarde Ren'Py (.save)</value></data>
+  <data name="Main_DecompileFile" xml:space="preserve"><value>🔓 .rpyc → .rpy</value></data>
+  <data name="Main_DecompileFile_Tip" xml:space="preserve"><value>Décompiler un ou plusieurs fichiers .rpyc en .rpy</value></data>
+  <data name="Main_DecompileFolder" xml:space="preserve"><value>🔓 Dossier …</value></data>
+  <data name="Main_DecompileFolder_Tip" xml:space="preserve"><value>Décompiler tous les fichiers .rpyc d'un dossier de manière récursive</value></data>
+  <data name="Main_Settings" xml:space="preserve"><value>⚙ Paramètres</value></data>
+  <data name="Main_Settings_Tip" xml:space="preserve"><value>Configurer le fournisseur d'IA, le modèle, la langue cible et la langue de l'interface</value></data>
+  <data name="Main_SelectAll" xml:space="preserve"><value>Tout</value></data>
+  <data name="Main_SelectAll_Tip" xml:space="preserve"><value>Sélectionner toutes les entrées</value></data>
+  <data name="Main_SelectNone" xml:space="preserve"><value>Aucun</value></data>
+  <data name="Main_SelectNone_Tip" xml:space="preserve"><value>Effacer la sélection</value></data>
+  <data name="Main_ExtractAll" xml:space="preserve"><value>⬇ Tout extraire</value></data>
+  <data name="Main_ExtractAll_Tip" xml:space="preserve"><value>Extraire le contenu complet de l'archive dans un dossier cible</value></data>
+  <data name="Main_ExtractSelected" xml:space="preserve"><value>⬇ Extraire la sélection</value></data>
+  <data name="Main_ExtractSelected_Tip" xml:space="preserve"><value>Extraire uniquement les entrées cochées</value></data>
+  <data name="Main_Filter_Placeholder" xml:space="preserve"><value>🔍  Filtrer les fichiers par nom …</value></data>
+  <data name="Main_Column_File" xml:space="preserve"><value>FICHIER</value></data>
+  <data name="Main_Column_Size" xml:space="preserve"><value>TAILLE</value></data>
+  <data name="About_Tip" xml:space="preserve"><value>À propos de RenPack</value></data>
+
+  <data name="Save_Subtitle" xml:space="preserve"><value>Lire les sauvegardes Ren'Py et éditer les variables du store en préservant les octets</value></data>
+  <data name="Save_Section_File" xml:space="preserve"><value>FICHIER</value></data>
+  <data name="Save_Section_Changes" xml:space="preserve"><value>MODIFICATIONS</value></data>
+  <data name="Save_Section_Ai" xml:space="preserve"><value>IA</value></data>
+  <data name="Save_Open" xml:space="preserve"><value>💾 Ouvrir la sauvegarde</value></data>
+  <data name="Save_Open_Tip" xml:space="preserve"><value>Ouvrir un fichier de sauvegarde Ren'Py (.save)</value></data>
+  <data name="Save_Save" xml:space="preserve"><value>💾 Enregistrer</value></data>
+  <data name="Save_Save_Tip" xml:space="preserve"><value>Écrire les modifications dans le fichier original</value></data>
+  <data name="Save_SaveAs" xml:space="preserve"><value>💾 Enregistrer sous …</value></data>
+  <data name="Save_SaveAs_Tip" xml:space="preserve"><value>Écrire les modifications dans un nouveau fichier</value></data>
+  <data name="Save_Revert" xml:space="preserve"><value>↩ Annuler</value></data>
+  <data name="Save_Revert_Tip" xml:space="preserve"><value>Annuler toutes les modifications</value></data>
+  <data name="Save_Translate" xml:space="preserve"><value>🌐 Traduire</value></data>
+  <data name="Save_Translate_Tip" xml:space="preserve"><value>Traduire les noms de variables via IA dans la langue cible (vérifier les paramètres)</value></data>
+  <data name="Save_ShowInternal" xml:space="preserve"><value>Afficher internes (_)</value></data>
+  <data name="Save_Filter_Placeholder" xml:space="preserve"><value>🔍  Filtrer les variables par nom …</value></data>
+  <data name="Save_Column_Name" xml:space="preserve"><value>NOM</value></data>
+  <data name="Save_Column_Description" xml:space="preserve"><value>DESCRIPTION</value></data>
+  <data name="Save_Column_Type" xml:space="preserve"><value>TYPE</value></data>
+  <data name="Save_Column_Value" xml:space="preserve"><value>VALEUR</value></data>
+  <data name="Save_LogError_Format" xml:space="preserve"><value>⚠ Le journal n'a pas pu être décodé : {0}. Les métadonnées et la capture d'écran restent disponibles ; l'édition n'est pas possible.</value></data>
+
+  <data name="Settings_Subtitle" xml:space="preserve"><value>Fournisseur d'IA pour traduire les noms de variables dans l'éditeur de sauvegardes. Le nom de la variable reste inchangé — il sert d'ancre lors de l'enregistrement.</value></data>
+  <data name="Settings_Section_General" xml:space="preserve"><value>GÉNÉRAL</value></data>
+  <data name="Settings_Section_UiLanguage" xml:space="preserve"><value>LANGUE DE L'APPLICATION</value></data>
+  <data name="Settings_Provider" xml:space="preserve"><value>Fournisseur</value></data>
+  <data name="Settings_TargetLanguage" xml:space="preserve"><value>Langue cible</value></data>
+  <data name="Settings_UiLanguage" xml:space="preserve"><value>Langue de l'application</value></data>
+  <data name="Settings_UiLanguage_Hint" xml:space="preserve"><value>Les changements s'appliquent immédiatement — aucun redémarrage requis.</value></data>
+  <data name="Settings_TestConnection" xml:space="preserve"><value>Tester la connexion</value></data>
+  <data name="Settings_Cancel" xml:space="preserve"><value>Annuler</value></data>
+  <data name="Settings_Save" xml:space="preserve"><value>Enregistrer</value></data>
+
+  <data name="Settings_Ollama_Section" xml:space="preserve"><value>OLLAMA · LOCAL</value></data>
+  <data name="Settings_Ollama_Title" xml:space="preserve"><value>Ollama (local)</value></data>
+  <data name="Settings_Ollama_Description" xml:space="preserve"><value>Respectueux de la vie privée, sans clé API. Démarrer Ollama localement (ollama serve), puis charger les modèles directement depuis l'application.</value></data>
+  <data name="Settings_Endpoint" xml:space="preserve"><value>Point de terminaison</value></data>
+  <data name="Settings_Ollama_InstalledModel" xml:space="preserve"><value>Modèle (installé)</value></data>
+  <data name="Settings_Ollama_Refresh" xml:space="preserve"><value>↺ Actualiser</value></data>
+  <data name="Settings_Ollama_InstalledPlaceholder" xml:space="preserve"><value>Démarrer Ollama et cliquer sur ↺ …</value></data>
+  <data name="Settings_ModelManualHint" xml:space="preserve"><value>Ou saisir un nom de modèle manuellement :</value></data>
+  <data name="Settings_Ollama_Download" xml:space="preserve"><value>Télécharger un modèle</value></data>
+  <data name="Settings_Ollama_DownloadPlaceholder" xml:space="preserve"><value>Choisir un modèle recommandé …</value></data>
+  <data name="Settings_Ollama_DownloadButton" xml:space="preserve"><value>⬇ Télécharger</value></data>
+  <data name="Settings_Ollama_DownloadHint" xml:space="preserve"><value>Toutes les suggestions sont assez petites pour une traduction locale discrète.</value></data>
+
+  <data name="Settings_Anthropic_Section" xml:space="preserve"><value>ANTHROPIC · CLOUD</value></data>
+  <data name="Settings_Anthropic_Title" xml:space="preserve"><value>Anthropic Claude</value></data>
+  <data name="Settings_ApiKey" xml:space="preserve"><value>Clé API</value></data>
+  <data name="Settings_Model" xml:space="preserve"><value>Modèle</value></data>
+  <data name="Settings_ModelPlaceholder" xml:space="preserve"><value>Choisir un modèle recommandé …</value></data>
+  <data name="Settings_EndpointProxyHint" xml:space="preserve"><value>Point de terminaison (à modifier seulement pour un proxy personnel)</value></data>
+
+  <data name="Settings_OpenAi_Section" xml:space="preserve"><value>OPENAI · CLOUD</value></data>
+  <data name="Settings_OpenAi_Title" xml:space="preserve"><value>OpenAI ChatGPT</value></data>
+
+  <data name="Settings_Gemini_Section" xml:space="preserve"><value>GOOGLE · CLOUD</value></data>
+  <data name="Settings_Gemini_Title" xml:space="preserve"><value>Google Gemini</value></data>
+
+  <data name="Settings_Mistral_Section" xml:space="preserve"><value>MISTRAL · CLOUD</value></data>
+  <data name="Settings_Mistral_Title" xml:space="preserve"><value>Mistral</value></data>
+
+  <data name="Settings_Compatible_Section" xml:space="preserve"><value>COMPATIBLE OPENAI</value></data>
+  <data name="Settings_Compatible_Title" xml:space="preserve"><value>Groq, OpenRouter, LM Studio, …</value></data>
+  <data name="Settings_Compatible_Description" xml:space="preserve"><value>Pour tout fournisseur qui parle l'API OpenAI Chat Completions.</value></data>
+  <data name="Settings_Compatible_BaseUrl" xml:space="preserve"><value>URL de base</value></data>
+  <data name="Settings_Compatible_ApiKeyOptional" xml:space="preserve"><value>Clé API (facultative pour les serveurs locaux)</value></data>
+
+  <data name="About_Subtitle" xml:space="preserve"><value>Archives Ren'Py · Éditeur de sauvegardes · Décompilateur .rpyc</value></data>
+  <data name="About_CheckUpdates" xml:space="preserve"><value>Vérifier les mises à jour</value></data>
+  <data name="About_GitHub" xml:space="preserve"><value>GitHub</value></data>
+  <data name="About_BuyMeCoffee" xml:space="preserve"><value>☕ Offre-moi un café</value></data>
+  <data name="About_License" xml:space="preserve"><value>Licence MIT · © 2026 Lars Krügel (Kroste)</value></data>
+
+  <data name="OllamaPull_Cancel" xml:space="preserve"><value>Annuler</value></data>
+  <data name="OllamaPull_Close" xml:space="preserve"><value>Fermer</value></data>
+  <data name="OllamaPull_LoadingFormat" xml:space="preserve"><value>Téléchargement du modèle : {0}</value></data>
+  <data name="OllamaPull_Starting" xml:space="preserve"><value>Démarrage du téléchargement …</value></data>
+  <data name="Status_Cancelled" xml:space="preserve"><value>Annulé.</value></data>
+  <data name="Status_Done" xml:space="preserve"><value>Terminé.</value></data>
+
+  <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
+
+  <data name="Status_Ready" xml:space="preserve"><value>Prêt.</value></data>
+  <data name="Status_ArchiveLoadedFormat" xml:space="preserve"><value>Chargé : {0} ({1} entrées)</value></data>
+  <data name="Status_ArchiveEmpty" xml:space="preserve"><value>Aucune archive ouverte.</value></data>
+  <data name="Status_SelectedFormat" xml:space="preserve"><value>{0} sélectionnés</value></data>
+  <data name="Status_ExtractingFormat" xml:space="preserve"><value>Extraction : {0} sur {1} …</value></data>
+  <data name="Status_ExtractDoneFormat" xml:space="preserve"><value>Extrait : {0} fichiers vers {1}</value></data>
+  <data name="Status_PackingFormat" xml:space="preserve"><value>Empaquetage : {0} sur {1} …</value></data>
+  <data name="Status_PackDoneFormat" xml:space="preserve"><value>Empaqueté : {0} fichiers dans {1}</value></data>
+  <data name="Status_DecompileFormat" xml:space="preserve"><value>Décompilation : {0} sur {1} …</value></data>
+  <data name="Status_DecompileDoneFormat" xml:space="preserve"><value>Décompilé : {0} fichiers</value></data>
+  <data name="Status_ErrorFormat" xml:space="preserve"><value>Erreur : {0}</value></data>
+  <data name="Status_SaveLoadedFormat" xml:space="preserve"><value>Chargé : {0} ({1} variables)</value></data>
+  <data name="Status_SaveNone" xml:space="preserve"><value>Aucune sauvegarde ouverte.</value></data>
+  <data name="Status_SaveDirtyFormat" xml:space="preserve"><value>{0} modifiés</value></data>
+  <data name="Status_SaveWritten" xml:space="preserve"><value>Fichier de sauvegarde écrit.</value></data>
+  <data name="Status_SaveReverted" xml:space="preserve"><value>Modifications annulées.</value></data>
+  <data name="Status_TranslatingFormat" xml:space="preserve"><value>Traduction : {0} sur {1} …</value></data>
+  <data name="Status_TranslateDone" xml:space="preserve"><value>Traduction terminée.</value></data>
+  <data name="Status_TranslateNotConfigured" xml:space="preserve"><value>Veuillez d'abord configurer un fournisseur d'IA dans les paramètres.</value></data>
+  <data name="Status_ConnectionOk" xml:space="preserve"><value>Connexion OK.</value></data>
+  <data name="Status_ConnectionFailedFormat" xml:space="preserve"><value>Échec de la connexion : {0}</value></data>
+  <data name="Status_SettingsSaved" xml:space="preserve"><value>Paramètres enregistrés.</value></data>
+
+  <data name="Common_Files" xml:space="preserve"><value>fichiers</value></data>
+  <data name="Status_ArchiveLoading" xml:space="preserve"><value>Lecture de l'archive …</value></data>
+  <data name="Status_ExtractingProgressFormat" xml:space="preserve"><value>Extraction {0}/{1} : {2}</value></data>
+  <data name="Status_PackingProgressFormat" xml:space="preserve"><value>Empaquetage {0}/{1} : {2}</value></data>
+  <data name="Status_LoadFailed" xml:space="preserve"><value>Échec du chargement.</value></data>
+  <data name="Status_ExtractFailed" xml:space="preserve"><value>Échec de l'extraction.</value></data>
+  <data name="Status_PackFailed" xml:space="preserve"><value>Échec de l'empaquetage.</value></data>
+  <data name="Extract_All" xml:space="preserve"><value>tous les fichiers</value></data>
+  <data name="Extract_Selection" xml:space="preserve"><value>sélection</value></data>
+  <data name="Msg_ArchiveLoadFailed_Title" xml:space="preserve"><value>Impossible de charger l'archive</value></data>
+  <data name="Msg_PickDestFormat" xml:space="preserve"><value>Dossier de destination pour {0}</value></data>
+  <data name="Msg_PickSourceFolder" xml:space="preserve"><value>Choisir le dossier à empaqueter</value></data>
+  <data name="Msg_ExtractDone_Title" xml:space="preserve"><value>Terminé</value></data>
+  <data name="Msg_ExtractDone_Body_Format" xml:space="preserve"><value>{0} fichier(s) extrait(s) vers :
+{1}</value></data>
+  <data name="Msg_ExtractFailed_Title" xml:space="preserve"><value>Échec de l'extraction</value></data>
+  <data name="Msg_ArchiveCreated_Title" xml:space="preserve"><value>Archive créée</value></data>
+  <data name="Msg_ArchiveCreated_Body_Format" xml:space="preserve"><value>{0} fichier(s) empaqueté(s) dans l'archive RPA-3.0 :
+{1}
+
+Ouvrir la nouvelle archive maintenant ?</value></data>
+  <data name="Msg_CreateFailed_Title" xml:space="preserve"><value>Échec de la création</value></data>
+
+  <data name="Save_Reading" xml:space="preserve"><value>Lecture de la sauvegarde …</value></data>
+  <data name="Save_MetadataOnlyFormat" xml:space="preserve"><value>Métadonnées chargées, journal illisible : {0}</value></data>
+  <data name="Save_CollectingChanges" xml:space="preserve"><value>Collecte des modifications …</value></data>
+  <data name="Save_InvalidValue" xml:space="preserve"><value>Valeur invalide.</value></data>
+  <data name="Save_SavedFormat" xml:space="preserve"><value>Enregistré : {0}</value></data>
+  <data name="Save_CopySavedFormat" xml:space="preserve"><value>Copie enregistrée : {0}</value></data>
+  <data name="Save_SaveFailed" xml:space="preserve"><value>Échec de l'enregistrement.</value></data>
+  <data name="Save_TranslatingHeadFormat" xml:space="preserve"><value>Traduction de {0} variables via {1} …</value></data>
+  <data name="Save_TranslatingProgressFormat" xml:space="preserve"><value>Traduit {0}/{1} …</value></data>
+  <data name="Save_TranslationDoneFormat" xml:space="preserve"><value>Traduction terminée : {0} descriptions.</value></data>
+  <data name="Save_TranslationFailed" xml:space="preserve"><value>Échec de la traduction.</value></data>
+  <data name="Save_ChangedFormat" xml:space="preserve"><value>{0} modifiés</value></data>
+  <data name="Save_VariablesCountFormat" xml:space="preserve"><value>{0} variables</value></data>
+  <data name="Msg_SaveLoadFailed_Title" xml:space="preserve"><value>Impossible de charger la sauvegarde</value></data>
+  <data name="Msg_SaveInvalidValue_Title" xml:space="preserve"><value>Entrée invalide</value></data>
+  <data name="Msg_SaveInvalidValue_Body_Format" xml:space="preserve"><value>Impossible de convertir une valeur dans le type cible :
+{0}</value></data>
+  <data name="Msg_SaveCopySaved_Title" xml:space="preserve"><value>Terminé</value></data>
+  <data name="Msg_SaveCopySaved_Body_Format" xml:space="preserve"><value>Copie enregistrée :
+{0}</value></data>
+  <data name="Msg_SaveFailed_Title" xml:space="preserve"><value>Échec de l'enregistrement</value></data>
+  <data name="Msg_DiscardDirty_Title" xml:space="preserve"><value>Modifications non enregistrées</value></data>
+  <data name="Msg_DiscardDirty_Body_Format" xml:space="preserve"><value>Vous avez {0} modification(s) non enregistrée(s). Abandonner tout de même ?</value></data>
+  <data name="Msg_AiNotConfigured_Title" xml:space="preserve"><value>IA non configurée</value></data>
+  <data name="Msg_AiNotConfigured_Body" xml:space="preserve"><value>Choisissez un fournisseur d'IA dans les paramètres et saisissez les identifiants requis (clé API pour les fournisseurs cloud).</value></data>
+  <data name="Msg_TranslateFailed_Title" xml:space="preserve"><value>Échec de la traduction</value></data>
+
+  <data name="Settings_TestingConnection" xml:space="preserve"><value>Test de la connexion …</value></data>
+  <data name="Settings_TestNoProvider" xml:space="preserve"><value>Aucun fournisseur actif (clé API manquante ?).</value></data>
+  <data name="Settings_TestOkFormat" xml:space="preserve"><value>OK — traduction de test : money → "{0}"</value></data>
+  <data name="Settings_TestEmpty" xml:space="preserve"><value>Le fournisseur a répondu mais la réponse était vide. Essayer un autre modèle ?</value></data>
+  <data name="Settings_TestFailedFormat" xml:space="preserve"><value>Échec du test : {0}</value></data>
+  <data name="Settings_QueryingOllama" xml:space="preserve"><value>Interrogation d'Ollama pour les modèles installés …</value></data>
+  <data name="Settings_OllamaEmpty" xml:space="preserve"><value>Ollama joignable, mais aucun modèle installé. Utilisez le bouton de téléchargement.</value></data>
+  <data name="Settings_OllamaCountFormat" xml:space="preserve"><value>{0} modèle(s) installé(s).</value></data>
+  <data name="Settings_OllamaUnreachableFormat" xml:space="preserve"><value>Ollama injoignable : {0}</value></data>
+  <data name="Settings_PullNoModelName" xml:space="preserve"><value>Saisissez d'abord un nom de modèle (p. ex. gemma3:1b).</value></data>
+</root>

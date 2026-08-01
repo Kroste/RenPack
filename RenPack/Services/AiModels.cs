@@ -29,10 +29,13 @@ public sealed record AiProviderConfig(string Endpoint, string Model, string? Api
 
 /// <summary>Persistente KI-Konfiguration der App. Die API-Keys werden vor dem
 /// Speichern per <see cref="SecretProtection"/> verschlüsselt und liegen NICHT
-/// im Klartext in der JSON-Datei.</summary>
+/// im Klartext in der JSON-Datei. <see cref="UiCulture"/> steuert die Sprache
+/// der Bedienoberfläche (unabhängig von <see cref="TargetLanguage"/>, das die
+/// Zielsprache für die KI-Übersetzung von Save-Variablennamen ist).</summary>
 public sealed record AiSettings(
     AiProviderType Provider,
     string TargetLanguage,
+    string UiCulture,
     AiProviderConfig Ollama,
     AiProviderConfig Anthropic,
     AiProviderConfig OpenAi,
@@ -53,16 +56,25 @@ public sealed record AiSettings(
     };
 
     /// <summary>Sinnvolle Defaults für frische Installationen (Ollama lokal,
-    /// keine Keys, System-Sprache).</summary>
+    /// keine Keys, System-Sprache für Übersetzungsziel + UI).</summary>
     public static AiSettings Default => new(
         Provider: AiProviderType.None,
         TargetLanguage: DetectSystemLanguageName(),
+        UiCulture: DetectSystemUiCulture(),
         Ollama:            AiDefaults.Config(AiProviderType.Ollama),
         Anthropic:         AiDefaults.Config(AiProviderType.Anthropic),
         OpenAi:            AiDefaults.Config(AiProviderType.OpenAi),
         Gemini:            AiDefaults.Config(AiProviderType.Gemini),
         Mistral:           AiDefaults.Config(AiProviderType.Mistral),
         OpenAiCompatible:  AiDefaults.Config(AiProviderType.OpenAiCompatible));
+
+    /// <summary>ISO-Code der UI-Sprache passend zu den vorhandenen Resx-Files.
+    /// Unbekannte Systemsprachen → Englisch (Neutral-Fallback).</summary>
+    private static string DetectSystemUiCulture()
+    {
+        var iso = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        return iso is "de" or "fr" or "ru" ? iso : "en";
+    }
 
     private static string DetectSystemLanguageName()
     {

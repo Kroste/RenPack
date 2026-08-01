@@ -2,18 +2,19 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="using:RenPack.Views"
         xmlns:controls="using:RenPack.Controls"
+        xmlns:loc="using:RenPack.Localization"
         x:Class="RenPack.Views.MessageBox"
         Width="440" SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
         Background="{DynamicResource KrosteBackgroundBrush}">
     <DockPanel>
-        <controls:TitleBar x:Name="Bar" DockPanel.Dock="Top" Title="RenPack" />
+        <controls:TitleBar x:Name="Bar" DockPanel.Dock="Top" Title="{loc:Tr App_Title}" />
         <StackPanel Margin="20" Spacing="18">
             <TextBlock x:Name="MessageText" TextWrapping="Wrap" Foreground="#E6E9ED" />
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-                <Button x:Name="CancelButton" Content="Abbrechen" IsVisible="False" />
-                <Button x:Name="OkButton" Classes="accent" Content="OK" IsDefault="True" />
+                <Button x:Name="CancelButton" Content="{loc:Tr Settings_Cancel}" IsVisible="False" />
+                <Button x:Name="OkButton" Classes="accent" Content="{loc:Tr Common_Ok}" IsDefault="True" />
             </StackPanel>
         </StackPanel>
     </DockPanel>

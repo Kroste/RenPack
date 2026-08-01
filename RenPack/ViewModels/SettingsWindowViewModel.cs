@@ -3,6 +3,7 @@ using System.Net.Http;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NLog;
+using RenPack.Localization;
 using RenPack.Services;
 
 namespace RenPack.ViewModels;
@@ -27,6 +28,8 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         var s = settingsService.Current;
         _selectedProvider = s.Provider;
         _targetLanguage = s.TargetLanguage;
+        _selectedUiCulture = SupportedUiCultures.FirstOrDefault(c => c.Iso == s.UiCulture)
+                             ?? SupportedUiCultures[0];
         _ollamaEndpoint = s.Ollama.Endpoint;
         _ollamaModel = s.Ollama.Model;
         _anthropicEndpoint = s.Anthropic.Endpoint;
@@ -64,6 +67,29 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     public ObservableCollection<string> Languages { get; } =
         ["Deutsch", "Englisch", "Französisch", "Spanisch", "Italienisch",
          "Russisch", "Portugiesisch", "Niederländisch", "Polnisch", "Japanisch", "Chinesisch"];
+
+    /// <summary>UI-Sprachen (Anzeige-Reihenfolge = wie in
+    /// <see cref="LocalizationService.SupportedCultures"/>).
+    /// Element-Typ ist der Tupel <c>(Iso, Display)</c>, damit die ComboBox
+    /// den nativen Sprachnamen zeigt (English, Deutsch, Français, Русский)
+    /// unabhaengig von der aktuell aktiven UI-Sprache.</summary>
+    public IReadOnlyList<UiCultureOption> SupportedUiCultures { get; } =
+        LocalizationService.SupportedCultures
+            .Select(c => new UiCultureOption(c.Iso, c.Display))
+            .ToList();
+
+    /// <summary>Aktuell in der ComboBox ausgewaehlte UI-Sprache. Setter
+    /// wechselt die Sprache SOFORT (Live-Wechsel via
+    /// <see cref="LocalizationService"/>), damit der Nutzer die
+    /// Aenderung direkt sieht — persistiert wird sie erst beim Klick
+    /// auf "Speichern".</summary>
+    [ObservableProperty]
+    private UiCultureOption _selectedUiCulture = new("en", "English");
+
+    partial void OnSelectedUiCultureChanged(UiCultureOption value)
+    {
+        LocalizationService.Instance.SetCulture(value.Iso);
+    }
 
     public ObservableCollection<string> AvailableOllamaModels { get; } = [];
     public ObservableCollection<OllamaCuratedModel> CuratedOllamaModels { get; } =
@@ -154,7 +180,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private async Task RefreshOllamaModelsAsync()
     {
         IsBusy = true;
-        StatusText = "Frage Ollama nach installierten Modellen …";
+        StatusText = L.T("Settings_QueryingOllama");
         try
         {
             var provider = new OllamaProvider(_httpFactory.CreateClient("ai"), OllamaEndpoint, OllamaModel);
@@ -162,13 +188,13 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             AvailableOllamaModels.Clear();
             foreach (var m in models) AvailableOllamaModels.Add(m);
             StatusText = models.Count == 0
-                ? "Ollama erreichbar, aber noch keine Modelle installiert. Nutze den Pull-Button."
-                : $"{models.Count} Modell(e) installiert.";
+                ? L.T("Settings_OllamaEmpty")
+                : L.F("Settings_OllamaCountFormat", models.Count);
         }
         catch (Exception ex)
         {
             Log.Warn(ex, "Ollama-Modellliste konnte nicht geladen werden");
-            StatusText = $"Ollama nicht erreichbar: {ex.Message}";
+            StatusText = L.F("Settings_OllamaUnreachableFormat", ex.Message);
         }
         finally { IsBusy = false; }
     }
@@ -183,7 +209,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(OllamaModel))
         {
-            StatusText = "Bitte zuerst einen Modell-Namen eintragen (z. B. gemma3:1b).";
+            StatusText = L.T("Settings_PullNoModelName");
             return;
         }
         RequestOllamaPull?.Invoke(OllamaModel);
@@ -206,7 +232,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private async Task TestConnectionAsync()
     {
         IsBusy = true;
-        StatusText = "Teste Verbindung …";
+        StatusText = L.T("Settings_TestingConnection");
         try
         {
             // Aktuelle UI-Werte als Settings zusammenbauen, ohne zu speichern.
@@ -214,18 +240,18 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             var provider = _factory.Create(tempSettings);
             if (provider is null)
             {
-                StatusText = "Kein Provider aktiv (fehlt API-Key?).";
+                StatusText = L.T("Settings_TestNoProvider");
                 return;
             }
             var probe = await provider.TranslateBatchAsync(["money"], TargetLanguage);
             StatusText = probe.TryGetValue("money", out var t)
-                ? $"OK — Testübersetzung: money → \"{t}\""
-                : "Provider antwortet, aber die Antwort war leer. Anderes Modell probieren?";
+                ? L.F("Settings_TestOkFormat", t)
+                : L.T("Settings_TestEmpty");
         }
         catch (Exception ex)
         {
             Log.Warn(ex, "Testverbindung fehlgeschlagen");
-            StatusText = $"Test fehlgeschlagen: {ex.Message}";
+            StatusText = L.F("Settings_TestFailedFormat", ex.Message);
         }
         finally { IsBusy = false; }
     }
@@ -243,6 +269,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private AiSettings BuildSettings() => new(
         Provider: SelectedProvider,
         TargetLanguage: TargetLanguage,
+        UiCulture: SelectedUiCulture.Iso,
         Ollama: new AiProviderConfig(OllamaEndpoint.Trim(), OllamaModel.Trim()),
         Anthropic: new AiProviderConfig(AnthropicEndpoint.Trim(), AnthropicModel.Trim(), NullIfEmpty(AnthropicApiKey)),
         OpenAi: new AiProviderConfig(OpenAiEndpoint.Trim(), OpenAiModel.Trim(), NullIfEmpty(OpenAiApiKey)),
@@ -259,6 +286,15 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
 public interface ISettingsUi
 {
     void Close(bool saved);
+}
+
+/// <summary>Anzeige-Eintrag fuer den UI-Sprach-Selektor in den Einstellungen.
+/// <see cref="Display"/> ist der native Sprachname
+/// (English/Deutsch/Français/Русский), damit die ComboBox unabhaengig von
+/// der aktuell aktiven Sprache alle Optionen lesbar zeigt.</summary>
+public sealed record UiCultureOption(string Iso, string Display)
+{
+    public override string ToString() => Display;
 }
 
 /// <summary>Nur für den XAML-Designer-Konstruktor.</summary>

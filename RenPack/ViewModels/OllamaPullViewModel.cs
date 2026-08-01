@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NLog;
+using RenPack.Localization;
 using RenPack.Services;
 
 namespace RenPack.ViewModels;
@@ -30,10 +31,12 @@ public sealed partial class OllamaPullViewModel : ObservableObject
 
     public event Action<bool>? PullFinished; // bool = success
 
-    [ObservableProperty] private string _modelName;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LoadingHeadline))]
+    private string _modelName;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StatusText))]
-    private string _phase = "Bereit.";
+    private string _phase = "";
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StatusText))]
     [NotifyPropertyChangedFor(nameof(ProgressValue))]
@@ -57,11 +60,14 @@ public sealed partial class OllamaPullViewModel : ObservableObject
     public double ProgressValue =>
         HasProgress ? (double)CompletedBytes!.Value / TotalBytes!.Value * 100.0 : 0.0;
 
+    public string LoadingHeadline =>
+        string.Format(LocalizationService.Instance["OllamaPull_LoadingFormat"], ModelName);
+
     public string StatusText => State switch
     {
-        PullState.Cancelled => "Abgebrochen.",
-        PullState.Failed => ErrorMessage ?? "Fehler.",
-        PullState.Succeeded => "Fertig!",
+        PullState.Cancelled => LocalizationService.Instance["Status_Cancelled"],
+        PullState.Failed => ErrorMessage ?? LocalizationService.Instance["Status_ErrorFormat"],
+        PullState.Succeeded => LocalizationService.Instance["Status_Done"],
         _ when HasProgress =>
             $"{Phase} — {CompletedBytes!.Value / 1024.0 / 1024.0:F0} / {TotalBytes!.Value / 1024.0 / 1024.0:F0} MB",
         _ => Phase,
@@ -70,7 +76,7 @@ public sealed partial class OllamaPullViewModel : ObservableObject
     public async Task StartAsync()
     {
         State = PullState.Running;
-        Phase = "Starte Pull …";
+        Phase = LocalizationService.Instance["OllamaPull_Starting"];
         try
         {
             await foreach (var evt in _provider.PullAsync(ModelName, _cts.Token))

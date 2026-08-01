@@ -5,11 +5,12 @@
         xmlns:views="using:RenPack.Views"
         xmlns:controls="using:RenPack.Controls"
         xmlns:vm="using:RenPack.ViewModels"
+        xmlns:loc="using:RenPack.Localization"
         mc:Ignorable="d" d:DesignWidth="960" d:DesignHeight="680"
         x:Class="RenPack.Views.SaveWindow"
         x:DataType="vm:SaveWindowViewModel"
         Width="960" Height="700" MinWidth="720" MinHeight="500"
-        Title="RenPack — Save-Editor"
+        Title="{loc:Tr Window_SaveEditor}"
         WindowStartupLocation="CenterOwner"
         DragDrop.AllowDrop="True"
         Background="{DynamicResource KrosteBackgroundBrush}">
@@ -19,9 +20,8 @@
     </Design.DataContext>
 
     <DockPanel>
-        <controls:TitleBar DockPanel.Dock="Top" Title="RenPack — Save-Editor" />
+        <controls:TitleBar DockPanel.Dock="Top" Title="{loc:Tr Window_SaveEditor}" />
 
-        <!-- Statuszeile unten -->
         <Border DockPanel.Dock="Bottom" Padding="18,10"
                 BorderBrush="{DynamicResource KrosteBorderBrush}" BorderThickness="0,1,0,0"
                 Background="{DynamicResource KrosteTitleBarBrush}">
@@ -29,57 +29,54 @@
                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
         </Border>
 
-        <!-- Fehler-Banner: bleibt ganz oben, weil kritisch für den Nutzer. -->
         <Border DockPanel.Dock="Top" Background="#3A2020" Padding="18,10"
                 BorderBrush="#5A3030" BorderThickness="0,0,0,1"
                 IsVisible="{Binding HasLogError}">
             <TextBlock Foreground="#FFD1D1" TextWrapping="Wrap"
-                       Text="{Binding LogErrorText, StringFormat='⚠ Log konnte nicht dekodiert werden: {0}. Metadaten und Screenshot sind trotzdem verfügbar; Editieren nicht möglich.'}" />
+                       Text="{Binding LogErrorText}" />
         </Border>
 
         <Grid Margin="18" RowDefinitions="Auto,Auto,Auto,Auto,*">
 
-            <!-- Header -->
             <StackPanel Grid.Row="0" Margin="0,0,0,16">
-                <TextBlock Text="Save-Editor" Classes="h1" />
-                <TextBlock Text="Ren'Py-Save-Dateien lesen und Store-Variablen byte-preserving editieren"
+                <TextBlock Text="{loc:Tr Window_SaveEditor}" Classes="h1" />
+                <TextBlock Text="{loc:Tr Save_Subtitle}"
                            Classes="muted" FontSize="12" Margin="0,2,0,0" />
             </StackPanel>
 
-            <!-- Aktionen: 3 Gruppen -->
             <Border Grid.Row="1" Classes="card" Margin="0,0,0,12">
                 <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*">
                     <StackPanel Grid.Column="0" Spacing="8">
-                        <TextBlock Text="DATEI" Classes="section-label" />
-                        <Button Classes="accent" Content="💾 Save öffnen"
+                        <TextBlock Text="{loc:Tr Save_Section_File}" Classes="section-label" />
+                        <Button Classes="accent" Content="{loc:Tr Save_Open}"
                                 Command="{Binding OpenSaveCommand}"
-                                ToolTip.Tip="Ren'Py-Save-Datei (.save) öffnen" />
+                                ToolTip.Tip="{loc:Tr Save_Open_Tip}" />
                     </StackPanel>
 
                     <Rectangle Grid.Column="1" Classes="divider-v" Margin="16,4" />
 
                     <StackPanel Grid.Column="2" Spacing="8">
-                        <TextBlock Text="ÄNDERUNGEN" Classes="section-label" />
+                        <TextBlock Text="{loc:Tr Save_Section_Changes}" Classes="section-label" />
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button Content="💾 Speichern"
+                            <Button Content="{loc:Tr Save_Save}"
                                     Command="{Binding SaveCommand}"
-                                    ToolTip.Tip="Änderungen in die Original-Datei zurückschreiben" />
-                            <Button Content="💾 Speichern unter …"
+                                    ToolTip.Tip="{loc:Tr Save_Save_Tip}" />
+                            <Button Content="{loc:Tr Save_SaveAs}"
                                     Command="{Binding SaveAsCommand}"
-                                    ToolTip.Tip="Änderungen in eine neue Datei schreiben" />
-                            <Button Classes="danger" Content="↩ Verwerfen"
+                                    ToolTip.Tip="{loc:Tr Save_SaveAs_Tip}" />
+                            <Button Classes="danger" Content="{loc:Tr Save_Revert}"
                                     Command="{Binding RevertCommand}"
-                                    ToolTip.Tip="Alle Änderungen zurückrollen" />
+                                    ToolTip.Tip="{loc:Tr Save_Revert_Tip}" />
                         </StackPanel>
                     </StackPanel>
 
                     <Rectangle Grid.Column="3" Classes="divider-v" Margin="16,4" />
 
                     <StackPanel Grid.Column="4" Spacing="8">
-                        <TextBlock Text="KI" Classes="section-label" />
-                        <Button Content="🌐 Übersetzen"
+                        <TextBlock Text="{loc:Tr Save_Section_Ai}" Classes="section-label" />
+                        <Button Content="{loc:Tr Save_Translate}"
                                 Command="{Binding TranslateCommand}"
-                                ToolTip.Tip="Variablennamen per KI in die Zielsprache übersetzen (Einstellungen prüfen)" />
+                                ToolTip.Tip="{loc:Tr Save_Translate_Tip}" />
                     </StackPanel>
 
                     <StackPanel Grid.Column="5" Orientation="Horizontal"
@@ -87,14 +84,13 @@
                         <TextBlock Text="{Binding DirtySummary}"
                                    Foreground="{DynamicResource KrosteGoldBrush}"
                                    VerticalAlignment="Center" />
-                        <CheckBox Content="Interne (_) anzeigen"
+                        <CheckBox Content="{loc:Tr Save_ShowInternal}"
                                   IsChecked="{Binding ShowInternal}"
                                   VerticalAlignment="Center" Foreground="{DynamicResource KrosteSecondaryTextBrush}" />
                     </StackPanel>
                 </Grid>
             </Border>
 
-            <!-- Kopfzeile mit Save-Info + Filter -->
             <Border Grid.Row="2" Classes="card" Padding="14,10" Margin="0,0,0,12"
                     IsVisible="{Binding HasSave}">
                 <TextBlock Text="{Binding SaveSummary}" Foreground="{DynamicResource KrosteGoldBrush}"
@@ -102,11 +98,10 @@
             </Border>
 
             <TextBox Grid.Row="3" Margin="0,0,0,12"
-                     PlaceholderText="🔍  Variablen filtern nach Name …"
+                     PlaceholderText="{loc:Tr Save_Filter_Placeholder}"
                      Text="{Binding FilterText}"
                      IsVisible="{Binding HasSave}" />
 
-            <!-- Hauptbereich: Screenshot links, Variablen rechts -->
             <Grid Grid.Row="4" ColumnDefinitions="Auto,*" ColumnSpacing="12">
                 <Border Grid.Column="0" Classes="card-flat" Width="280" MinHeight="180"
                         ClipToBounds="True" VerticalAlignment="Top"
@@ -122,16 +117,29 @@
                               GridLinesVisibility="Horizontal"
                               Background="Transparent">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="NAME" Width="*" IsReadOnly="True"
-                                Binding="{Binding Name}" />
-                            <DataGridTextColumn Header="BESCHREIBUNG" Width="*" IsReadOnly="True"
-                                Binding="{Binding Description}" />
-                            <DataGridTextColumn Header="TYP" Width="110" IsReadOnly="True"
-                                Binding="{Binding TypeName}" />
-                            <!-- Wert-Spalte: editierbar, wenn IsEditable=true.
-                                 Visueller Marker ● bei Dirty. -->
-                            <DataGridTemplateColumn Header="WERT" Width="2*" CanUserSort="True"
+                            <DataGridTextColumn Width="*" IsReadOnly="True"
+                                Binding="{Binding Name}">
+                                <DataGridTextColumn.Header>
+                                    <TextBlock Text="{loc:Tr Save_Column_Name}" />
+                                </DataGridTextColumn.Header>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Width="*" IsReadOnly="True"
+                                Binding="{Binding Description}">
+                                <DataGridTextColumn.Header>
+                                    <TextBlock Text="{loc:Tr Save_Column_Description}" />
+                                </DataGridTextColumn.Header>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Width="110" IsReadOnly="True"
+                                Binding="{Binding TypeName}">
+                                <DataGridTextColumn.Header>
+                                    <TextBlock Text="{loc:Tr Save_Column_Type}" />
+                                </DataGridTextColumn.Header>
+                            </DataGridTextColumn>
+                            <DataGridTemplateColumn Width="2*" CanUserSort="True"
                                                     SortMemberPath="EditableValue">
+                                <DataGridTemplateColumn.Header>
+                                    <TextBlock Text="{loc:Tr Save_Column_Value}" />
+                                </DataGridTemplateColumn.Header>
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate DataType="vm:SaveVariableViewModel">
                                         <Grid ColumnDefinitions="*,Auto" Margin="4,0">

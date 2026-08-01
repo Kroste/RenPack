@@ -2,18 +2,19 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="using:RenPack.Views"
         xmlns:controls="using:RenPack.Controls"
+        xmlns:loc="using:RenPack.Localization"
         x:Class="RenPack.Views.AboutWindow"
         Width="420" SizeToContent="Height"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
-        Title="Über RenPack"
+        Title="{loc:Tr Window_About}"
         Background="{DynamicResource KrosteBackgroundBrush}">
     <DockPanel>
-        <controls:TitleBar DockPanel.Dock="Top" Title="Über RenPack" />
+        <controls:TitleBar DockPanel.Dock="Top" Title="{loc:Tr Window_About}" />
         <StackPanel Margin="24" Spacing="16">
             <StackPanel Spacing="4">
-                <TextBlock Text="RenPack" Classes="h1" FontSize="22" />
-                <TextBlock Text="Ren'Py-Archive · Save-Editor · .rpyc-Decompiler"
+                <TextBlock Text="{loc:Tr App_Title}" Classes="h1" FontSize="22" />
+                <TextBlock Text="{loc:Tr About_Subtitle}"
                            Classes="secondary" TextWrapping="Wrap" />
                 <TextBlock x:Name="VersionText" Classes="muted" FontSize="12" Margin="0,4,0,0" />
             </StackPanel>
@@ -21,16 +22,16 @@
             <Rectangle Classes="divider-h" />
 
             <StackPanel Orientation="Horizontal" Spacing="10">
-                <Button x:Name="UpdateButton" Classes="accent" Content="Auf Updates prüfen" />
+                <Button x:Name="UpdateButton" Classes="accent" Content="{loc:Tr About_CheckUpdates}" />
                 <TextBlock x:Name="UpdateResult" VerticalAlignment="Center" Classes="secondary" />
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" Spacing="10">
-                <Button x:Name="GithubButton" Content="GitHub" />
-                <Button x:Name="BmcButton" Content="☕ Buy me a coffee" />
+                <Button x:Name="GithubButton" Content="{loc:Tr About_GitHub}" />
+                <Button x:Name="BmcButton" Content="{loc:Tr About_BuyMeCoffee}" />
             </StackPanel>
 
-            <TextBlock Text="MIT-Lizenz · © 2026 Lars Krügel (Kroste)"
+            <TextBlock Text="{loc:Tr About_License}"
                        Foreground="#6B7280" FontSize="11" />
         </StackPanel>
     </DockPanel>

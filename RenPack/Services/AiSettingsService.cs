@@ -58,6 +58,7 @@ public sealed class AiSettingsService
     private sealed record PersistedSettings(
         AiProviderType Provider,
         string TargetLanguage,
+        string? UiCulture, // Nullable, damit alte Configs ohne Feld lesbar bleiben
         PersistedConfig Ollama,
         PersistedConfig Anthropic,
         PersistedConfig OpenAi,
@@ -106,6 +107,7 @@ public sealed class AiSettingsService
     private static PersistedSettings ToPersisted(AiSettings s) => new(
         Provider: s.Provider,
         TargetLanguage: s.TargetLanguage,
+        UiCulture: s.UiCulture,
         Ollama:            ToPersisted(s.Ollama),
         Anthropic:         ToPersisted(s.Anthropic),
         OpenAi:            ToPersisted(s.OpenAi),
@@ -116,6 +118,7 @@ public sealed class AiSettingsService
     private static AiSettings FromPersisted(PersistedSettings p) => new(
         Provider: p.Provider,
         TargetLanguage: string.IsNullOrEmpty(p.TargetLanguage) ? AiSettings.Default.TargetLanguage : p.TargetLanguage,
+        UiCulture: string.IsNullOrEmpty(p.UiCulture) ? AiSettings.Default.UiCulture : p.UiCulture,
         Ollama:            FromPersisted(p.Ollama,           AiProviderType.Ollama),
         Anthropic:         FromPersisted(p.Anthropic,        AiProviderType.Anthropic),
         OpenAi:            FromPersisted(p.OpenAi,           AiProviderType.OpenAi),

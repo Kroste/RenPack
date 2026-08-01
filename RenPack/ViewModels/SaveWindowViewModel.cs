@@ -6,6 +6,7 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NLog;
+using RenPack.Localization;
 using RenPack.Services;
 
 namespace RenPack.ViewModels;
@@ -55,7 +56,7 @@ public sealed partial class SaveWindowViewModel : ObservableObject
     private SaveInfo? _save;
 
     [ObservableProperty] private Bitmap? _screenshot;
-    [ObservableProperty] private string _statusText = "Kein Save geladen.";
+    [ObservableProperty] private string _statusText = L.T("Status_SaveNone");
 
     // WICHTIG: _isBusy muss ALLE Commands notifiy'en, deren CanExecute-Methode
     // !IsBusy prüft. Sonst bleibt der Button nach LoadSaveAsync grau, weil der
@@ -88,8 +89,8 @@ public sealed partial class SaveWindowViewModel : ObservableObject
     public bool HasSave => Save is not null;
     public bool HasScreenshot => Screenshot is not null;
     public bool HasLogError => Save?.LogError is not null;
-    public string LogErrorText => Save?.LogError ?? "";
-    public string DirtySummary => DirtyCount > 0 ? $"{DirtyCount} geändert" : "";
+    public string LogErrorText => Save?.LogError is null ? "" : L.F("Save_LogError_Format", Save.LogError);
+    public string DirtySummary => DirtyCount > 0 ? L.F("Save_ChangedFormat", DirtyCount) : "";
 
     public string SaveSummary
     {
@@ -101,7 +102,7 @@ public sealed partial class SaveWindowViewModel : ObservableObject
             if (!string.IsNullOrEmpty(m.SaveName)) parts.Add(m.SaveName);
             if (m.SaveTime is { } t) parts.Add(t.ToString("g", CultureInfo.CurrentCulture));
             if (!string.IsNullOrEmpty(m.RenpyVersion)) parts.Add($"Ren'Py {m.RenpyVersion}");
-            if (Save.LogError is null) parts.Add($"{_allVariables.Count} Variablen");
+            if (Save.LogError is null) parts.Add(L.F("Save_VariablesCountFormat", _allVariables.Count));
             return string.Join("  ·  ", parts);
         }
     }
@@ -123,7 +124,7 @@ public sealed partial class SaveWindowViewModel : ObservableObject
         if (Ui is null) return;
         if (!await ConfirmDiscardDirtyAsync()) return;
         IsBusy = true;
-        StatusText = "Lese Save …";
+        StatusText = L.T("Save_Reading");
         try
         {
             var info = await Task.Run(() => _saveService.Read(path));
@@ -135,20 +136,17 @@ public sealed partial class SaveWindowViewModel : ObservableObject
             {
                 var vm = new SaveVariableViewModel(v);
                 vm.PropertyChanged += OnVariableChanged;
-                // Cache-Hits sofort füllen — dann steht die Übersetzung auch beim
-                // Neu-Öffnen einer weiteren Save-Datei desselben Spiels direkt da.
                 if (_translation is not null && _translation.TryGetCached(v.Name, out var cached))
                     vm.Description = cached;
                 _allVariables.Add(vm);
             }
             DirtyCount = 0;
-            // Variablen-Count ist Teil der Enable-Bedingung; neu bewerten.
             TranslateCommand.NotifyCanExecuteChanged();
             ApplyFilter();
 
             StatusText = info.LogError is null
-                ? $"Geladen: {System.IO.Path.GetFileName(path)}"
-                : $"Metadaten geladen, Log unlesbar: {System.IO.Path.GetFileName(path)}";
+                ? L.F("Status_SaveLoadedFormat", System.IO.Path.GetFileName(path), info.Variables.Count)
+                : L.F("Save_MetadataOnlyFormat", System.IO.Path.GetFileName(path));
             OnPropertyChanged(nameof(SaveSummary));
             Log.Info("Save geladen: {path} ({count} Variablen, LogError={err})",
                 path, info.Variables.Count, info.LogError);
@@ -160,8 +158,8 @@ public sealed partial class SaveWindowViewModel : ObservableObject
             Screenshot = null;
             _allVariables.Clear();
             Variables.Clear();
-            StatusText = "Fehler beim Laden.";
-            await Ui.ShowMessageAsync("Save konnte nicht geladen werden", ex.Message);
+            StatusText = L.T("Status_LoadFailed");
+            await Ui.ShowMessageAsync(L.T("Msg_SaveLoadFailed_Title"), ex.Message);
         }
         finally
         {
@@ -172,8 +170,8 @@ public sealed partial class SaveWindowViewModel : ObservableObject
     private async Task<bool> ConfirmDiscardDirtyAsync()
     {
         if (Ui is null || DirtyCount == 0) return true;
-        return await Ui.ConfirmAsync("Ungespeicherte Änderungen",
-            $"Du hast {DirtyCount} ungespeicherte Änderung(en). Trotzdem verwerfen?");
+        return await Ui.ConfirmAsync(L.T("Msg_DiscardDirty_Title"),
+            L.F("Msg_DiscardDirty_Body_Format", DirtyCount));
     }
 
     // ---- Speichern ---------------------------------------------------------
@@ -197,7 +195,7 @@ public sealed partial class SaveWindowViewModel : ObservableObject
         foreach (var v in _allVariables)
             if (v.IsDirty) v.EditableValue = v.OriginalValue;
         DirtyCount = 0;
-        StatusText = "Änderungen verworfen.";
+        StatusText = L.T("Status_SaveReverted");
     }
 
     private async Task SaveToAsync(string target, bool overwriteOriginal)
@@ -207,7 +205,7 @@ public sealed partial class SaveWindowViewModel : ObservableObject
         if (dirtyVars.Count == 0) return;
 
         IsBusy = true;
-        StatusText = "Sammle Änderungen …";
+        StatusText = L.T("Save_CollectingChanges");
         var edits = new List<SaveEdit>(dirtyVars.Count);
         try
         {
@@ -217,9 +215,9 @@ public sealed partial class SaveWindowViewModel : ObservableObject
         catch (Exception ex)
         {
             IsBusy = false;
-            StatusText = "Ungültiger Wert.";
-            await Ui.ShowMessageAsync("Ungültige Eingabe",
-                $"Konnte einen Wert nicht in den passenden Typ konvertieren:\n{ex.Message}");
+            StatusText = L.T("Save_InvalidValue");
+            await Ui.ShowMessageAsync(L.T("Msg_SaveInvalidValue_Title"),
+                L.F("Msg_SaveInvalidValue_Body_Format", ex.Message));
             return;
         }
 
@@ -228,19 +226,19 @@ public sealed partial class SaveWindowViewModel : ObservableObject
             string source = Save.SavePath;
             await Task.Run(() => _saveService.Write(source, target, edits));
             StatusText = overwriteOriginal
-                ? $"Gespeichert: {System.IO.Path.GetFileName(target)}"
-                : $"Kopie gespeichert: {System.IO.Path.GetFileName(target)}";
+                ? L.F("Save_SavedFormat", System.IO.Path.GetFileName(target))
+                : L.F("Save_CopySavedFormat", System.IO.Path.GetFileName(target));
             Log.Info("Save geschrieben: {target} ({count} Änderungen)", target, edits.Count);
-            // Original neu laden, um DirtyCount zu resetten und aktuelle Baseline zu haben.
             await LoadSaveAsync(overwriteOriginal ? target : source);
             if (!overwriteOriginal)
-                await Ui.ShowMessageAsync("Fertig", $"Kopie gespeichert:\n{target}");
+                await Ui.ShowMessageAsync(L.T("Msg_SaveCopySaved_Title"),
+                    L.F("Msg_SaveCopySaved_Body_Format", target));
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Save konnte nicht geschrieben werden: {target}", target);
-            StatusText = "Fehler beim Speichern.";
-            await Ui.ShowMessageAsync("Speichern fehlgeschlagen", ex.Message);
+            StatusText = L.T("Save_SaveFailed");
+            await Ui.ShowMessageAsync(L.T("Msg_SaveFailed_Title"), ex.Message);
         }
         finally
         {
@@ -258,9 +256,8 @@ public sealed partial class SaveWindowViewModel : ObservableObject
         var provider = _providerFactory.Create(settings);
         if (provider is null)
         {
-            await Ui.ShowMessageAsync("KI nicht konfiguriert",
-                "Wähle in den Einstellungen einen KI-Anbieter und trage die nötigen " +
-                "Zugangsdaten ein (bei Cloud-Providern den API-Key).");
+            await Ui.ShowMessageAsync(L.T("Msg_AiNotConfigured_Title"),
+                L.T("Msg_AiNotConfigured_Body"));
             return;
         }
 
@@ -269,26 +266,26 @@ public sealed partial class SaveWindowViewModel : ObservableObject
         if (toTranslate.Count == 0) return;
 
         IsBusy = true;
-        StatusText = $"Übersetze {toTranslate.Count} Variablen via {provider.Name} …";
+        StatusText = L.F("Save_TranslatingHeadFormat", toTranslate.Count, provider.Name);
         try
         {
             _translation.ResetCacheIfNeeded(provider.Name, settings.TargetLanguage);
             var progress = new Progress<(int done, int total)>(p =>
-                StatusText = $"Übersetzt {p.done}/{p.total} …");
+                StatusText = L.F("Save_TranslatingProgressFormat", p.done, p.total));
             var result = await _translation.TranslateAsync(provider, toTranslate,
                 settings.TargetLanguage, progress);
 
             foreach (var vm in _allVariables)
                 if (result.TryGetValue(vm.Name, out var t)) vm.Description = t;
 
-            StatusText = $"Übersetzung fertig: {result.Count} Beschreibungen.";
+            StatusText = L.F("Save_TranslationDoneFormat", result.Count);
             Log.Info("Übersetzung fertig: {count}/{req}", result.Count, toTranslate.Count);
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Übersetzung fehlgeschlagen");
-            StatusText = "Übersetzung fehlgeschlagen.";
-            await Ui.ShowMessageAsync("Übersetzung fehlgeschlagen", ex.Message);
+            StatusText = L.T("Save_TranslationFailed");
+            await Ui.ShowMessageAsync(L.T("Msg_TranslateFailed_Title"), ex.Message);
         }
         finally
         {

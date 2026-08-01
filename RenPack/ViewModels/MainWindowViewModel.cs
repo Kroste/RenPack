@@ -3,9 +3,20 @@ using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NLog;
+using RenPack.Localization;
 using RenPack.Services;
 
 namespace RenPack.ViewModels;
+
+/// <summary>Kurzform fuer <c>LocalizationService.Instance[key]</c> — die
+/// StatusTexte und Message-Titel gehen durch die Resx-Ressourcen, damit die
+/// UI-Sprache konsistent bleibt.</summary>
+internal static class L
+{
+    public static string T(string key) => LocalizationService.Instance[key];
+    public static string F(string key, params object?[] args)
+        => string.Format(LocalizationService.Instance[key], args);
+}
 
 public sealed partial class MainWindowViewModel : ObservableObject
 {
@@ -42,7 +53,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(CreateArchiveCommand))]
     private bool _isBusy;
 
-    [ObservableProperty] private string _statusText = "Kein Archiv geladen.";
+    [ObservableProperty] private string _statusText = L.T("Status_ArchiveEmpty");
     [ObservableProperty] private double _progress;
     [ObservableProperty] private bool _progressIndeterminate;
 
@@ -62,9 +73,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public string ArchiveSummary => Archive is null
         ? ""
-        : $"{Archive.Version.ToDisplay()}  ·  {_allEntries.Count} Dateien  ·  {ArchiveEntryViewModel.FormatSize(Archive.TotalSize)}";
+        : $"{Archive.Version.ToDisplay()}  ·  {_allEntries.Count} {L.T("Common_Files")}  ·  {ArchiveEntryViewModel.FormatSize(Archive.TotalSize)}";
 
-    public string SelectedSummary => SelectedCount > 0 ? $"{SelectedCount} ausgewählt" : "";
+    public string SelectedSummary => SelectedCount > 0 ? L.F("Status_SelectedFormat", SelectedCount) : "";
 
     // ---- Öffnen -------------------------------------------------------------
 
@@ -82,7 +93,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (Ui is null) return;
         IsBusy = true;
         ProgressIndeterminate = true;
-        StatusText = "Lese Archiv …";
+        StatusText = L.T("Status_ArchiveLoading");
         try
         {
             var info = await Task.Run(() => _archiveService.ReadIndex(path));
@@ -96,7 +107,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             }
             SelectedCount = 0;
             ApplyFilter();
-            StatusText = $"Geladen: {System.IO.Path.GetFileName(path)}";
+            StatusText = L.F("Status_ArchiveLoadedFormat", System.IO.Path.GetFileName(path), info.Entries.Count);
             Log.Info("Archiv geladen: {path} ({count} Einträge)", path, info.Entries.Count);
         }
         catch (Exception ex)
@@ -105,8 +116,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             Archive = null;
             _allEntries.Clear();
             Entries.Clear();
-            StatusText = "Fehler beim Laden.";
-            await Ui.ShowMessageAsync("Archiv konnte nicht geladen werden", ex.Message);
+            StatusText = L.T("Status_LoadFailed");
+            await Ui.ShowMessageAsync(L.T("Msg_ArchiveLoadFailed_Title"), ex.Message);
         }
         finally
         {
@@ -118,16 +129,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
     // ---- Extrahieren --------------------------------------------------------
 
     [RelayCommand(CanExecute = nameof(CanExtractAll))]
-    private Task ExtractAllAsync() => ExtractAsync(_allEntries.Select(e => e.Entry).ToList(), "Alle Dateien");
+    private Task ExtractAllAsync() => ExtractAsync(_allEntries.Select(e => e.Entry).ToList(), all: true);
 
     [RelayCommand(CanExecute = nameof(CanExtractSelected))]
     private Task ExtractSelectedAsync() =>
-        ExtractAsync(_allEntries.Where(e => e.IsSelected).Select(e => e.Entry).ToList(), "Auswahl");
+        ExtractAsync(_allEntries.Where(e => e.IsSelected).Select(e => e.Entry).ToList(), all: false);
 
-    private async Task ExtractAsync(IReadOnlyList<RpaEntry> entries, string what)
+    private async Task ExtractAsync(IReadOnlyList<RpaEntry> entries, bool all)
     {
         if (Ui is null || Archive is null || entries.Count == 0) return;
-        string? dest = await Ui.PickFolderAsync($"Zielordner für {what.ToLowerInvariant()}");
+        string what = L.T(all ? "Extract_All" : "Extract_Selection");
+        string? dest = await Ui.PickFolderAsync(L.F("Msg_PickDestFormat", what));
         if (dest is null) return;
 
         var archive = Archive;
@@ -136,20 +148,20 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var progress = new Progress<RpaProgress>(p =>
         {
             Progress = p.Fraction;
-            StatusText = $"Entpacke {p.Current}/{p.Total}: {p.CurrentFile}";
+            StatusText = L.F("Status_ExtractingProgressFormat", p.Current, p.Total, p.CurrentFile);
         });
         try
         {
             int count = await Task.Run(() => _archiveService.Extract(archive, entries, dest, progress));
-            StatusText = $"{count} Datei(en) entpackt nach {dest}";
+            StatusText = L.F("Status_ExtractDoneFormat", count, dest);
             Log.Info("{count} Datei(en) entpackt nach {dest}", count, dest);
-            await Ui.ShowMessageAsync("Fertig", $"{count} Datei(en) entpackt nach:\n{dest}");
+            await Ui.ShowMessageAsync(L.T("Msg_ExtractDone_Title"), L.F("Msg_ExtractDone_Body_Format", count, dest));
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Fehler beim Entpacken");
-            StatusText = "Fehler beim Entpacken.";
-            await Ui.ShowMessageAsync("Fehler beim Entpacken", ex.Message);
+            StatusText = L.T("Status_ExtractFailed");
+            await Ui.ShowMessageAsync(L.T("Msg_ExtractFailed_Title"), ex.Message);
         }
         finally
         {
@@ -164,7 +176,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private async Task CreateArchiveAsync()
     {
         if (Ui is null) return;
-        string? sourceDir = await Ui.PickFolderAsync("Ordner zum Verpacken auswählen");
+        string? sourceDir = await Ui.PickFolderAsync(L.T("Msg_PickSourceFolder"));
         if (sourceDir is null) return;
         string? target = await Ui.PickSaveArchiveAsync("archive.rpa");
         if (target is null) return;
@@ -174,23 +186,23 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var progress = new Progress<RpaProgress>(p =>
         {
             Progress = p.Fraction;
-            StatusText = $"Packe {p.Current}/{p.Total}: {p.CurrentFile}";
+            StatusText = L.F("Status_PackingProgressFormat", p.Current, p.Total, p.CurrentFile);
         });
         try
         {
             int count = await Task.Run(() =>
                 _archiveService.Create(target, sourceDir, RpaVersion.V3_0, RenpyArchiveService.DefaultKey, progress));
-            StatusText = $"{count} Datei(en) in {System.IO.Path.GetFileName(target)} gepackt.";
+            StatusText = L.F("Status_PackDoneFormat", count, System.IO.Path.GetFileName(target));
             Log.Info("{count} Datei(en) gepackt: {target}", count, target);
-            bool open = await Ui.ConfirmAsync("Archiv erstellt",
-                $"{count} Datei(en) in RPA-3.0-Archiv gepackt:\n{target}\n\nDas neue Archiv jetzt öffnen?");
+            bool open = await Ui.ConfirmAsync(L.T("Msg_ArchiveCreated_Title"),
+                L.F("Msg_ArchiveCreated_Body_Format", count, target));
             if (open) await LoadArchiveAsync(target);
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Fehler beim Erstellen des Archivs");
-            StatusText = "Fehler beim Packen.";
-            await Ui.ShowMessageAsync("Fehler beim Erstellen", ex.Message);
+            StatusText = L.T("Status_PackFailed");
+            await Ui.ShowMessageAsync(L.T("Msg_CreateFailed_Title"), ex.Message);
         }
         finally
         {

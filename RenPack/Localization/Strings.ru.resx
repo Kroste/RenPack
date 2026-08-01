@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="App_Title" xml:space="preserve"><value>RenPack</value></data>
+  <data name="Window_SaveEditor" xml:space="preserve"><value>RenPack — Редактор сохранений</value></data>
+  <data name="Window_Settings" xml:space="preserve"><value>RenPack — Настройки</value></data>
+  <data name="Window_About" xml:space="preserve"><value>О программе RenPack</value></data>
+  <data name="Window_OllamaPull" xml:space="preserve"><value>Загрузка модели Ollama</value></data>
+
+  <data name="Main_Subtitle" xml:space="preserve"><value>Открытие, упаковка и распаковка архивов Ren'Py · Редактор сохранений · Декомпилятор .rpyc</value></data>
+  <data name="Section_Archive" xml:space="preserve"><value>АРХИВ</value></data>
+  <data name="Section_Tools" xml:space="preserve"><value>ИНСТРУМЕНТЫ</value></data>
+  <data name="Section_Configuration" xml:space="preserve"><value>НАСТРОЙКИ</value></data>
+  <data name="Main_OpenArchive" xml:space="preserve"><value>📂 Открыть</value></data>
+  <data name="Main_OpenArchive_Tip" xml:space="preserve"><value>Открыть архив Ren'Py (.rpa) — также поддерживается перетаскивание</value></data>
+  <data name="Main_CreateArchive" xml:space="preserve"><value>📦 Упаковать …</value></data>
+  <data name="Main_CreateArchive_Tip" xml:space="preserve"><value>Упаковать папку в архив RPA-3.0</value></data>
+  <data name="Main_OpenSave" xml:space="preserve"><value>💾 Редактор сохранений</value></data>
+  <data name="Main_OpenSave_Tip" xml:space="preserve"><value>Просмотр и редактирование файла сохранения Ren'Py (.save)</value></data>
+  <data name="Main_DecompileFile" xml:space="preserve"><value>🔓 .rpyc → .rpy</value></data>
+  <data name="Main_DecompileFile_Tip" xml:space="preserve"><value>Декомпилировать один или несколько файлов .rpyc в .rpy</value></data>
+  <data name="Main_DecompileFolder" xml:space="preserve"><value>🔓 Папка …</value></data>
+  <data name="Main_DecompileFolder_Tip" xml:space="preserve"><value>Рекурсивно декомпилировать все файлы .rpyc в папке</value></data>
+  <data name="Main_Settings" xml:space="preserve"><value>⚙ Настройки</value></data>
+  <data name="Main_Settings_Tip" xml:space="preserve"><value>Настроить провайдер ИИ, модель, целевой язык и язык интерфейса</value></data>
+  <data name="Main_SelectAll" xml:space="preserve"><value>Все</value></data>
+  <data name="Main_SelectAll_Tip" xml:space="preserve"><value>Выбрать все записи</value></data>
+  <data name="Main_SelectNone" xml:space="preserve"><value>Ничего</value></data>
+  <data name="Main_SelectNone_Tip" xml:space="preserve"><value>Снять выделение</value></data>
+  <data name="Main_ExtractAll" xml:space="preserve"><value>⬇ Распаковать всё</value></data>
+  <data name="Main_ExtractAll_Tip" xml:space="preserve"><value>Распаковать всё содержимое архива в целевую папку</value></data>
+  <data name="Main_ExtractSelected" xml:space="preserve"><value>⬇ Распаковать выбранное</value></data>
+  <data name="Main_ExtractSelected_Tip" xml:space="preserve"><value>Распаковать только отмеченные записи</value></data>
+  <data name="Main_Filter_Placeholder" xml:space="preserve"><value>🔍  Фильтр по имени файла …</value></data>
+  <data name="Main_Column_File" xml:space="preserve"><value>ФАЙЛ</value></data>
+  <data name="Main_Column_Size" xml:space="preserve"><value>РАЗМЕР</value></data>
+  <data name="About_Tip" xml:space="preserve"><value>О программе RenPack</value></data>
+
+  <data name="Save_Subtitle" xml:space="preserve"><value>Чтение файлов сохранений Ren'Py и редактирование переменных с сохранением байтов</value></data>
+  <data name="Save_Section_File" xml:space="preserve"><value>ФАЙЛ</value></data>
+  <data name="Save_Section_Changes" xml:space="preserve"><value>ИЗМЕНЕНИЯ</value></data>
+  <data name="Save_Section_Ai" xml:space="preserve"><value>ИИ</value></data>
+  <data name="Save_Open" xml:space="preserve"><value>💾 Открыть сохранение</value></data>
+  <data name="Save_Open_Tip" xml:space="preserve"><value>Открыть файл сохранения Ren'Py (.save)</value></data>
+  <data name="Save_Save" xml:space="preserve"><value>💾 Сохранить</value></data>
+  <data name="Save_Save_Tip" xml:space="preserve"><value>Записать изменения обратно в исходный файл</value></data>
+  <data name="Save_SaveAs" xml:space="preserve"><value>💾 Сохранить как …</value></data>
+  <data name="Save_SaveAs_Tip" xml:space="preserve"><value>Записать изменения в новый файл</value></data>
+  <data name="Save_Revert" xml:space="preserve"><value>↩ Отменить</value></data>
+  <data name="Save_Revert_Tip" xml:space="preserve"><value>Откатить все изменения</value></data>
+  <data name="Save_Translate" xml:space="preserve"><value>🌐 Перевести</value></data>
+  <data name="Save_Translate_Tip" xml:space="preserve"><value>Перевести имена переменных через ИИ на целевой язык (проверьте настройки)</value></data>
+  <data name="Save_ShowInternal" xml:space="preserve"><value>Показывать внутренние (_)</value></data>
+  <data name="Save_Filter_Placeholder" xml:space="preserve"><value>🔍  Фильтр переменных по имени …</value></data>
+  <data name="Save_Column_Name" xml:space="preserve"><value>ИМЯ</value></data>
+  <data name="Save_Column_Description" xml:space="preserve"><value>ОПИСАНИЕ</value></data>
+  <data name="Save_Column_Type" xml:space="preserve"><value>ТИП</value></data>
+  <data name="Save_Column_Value" xml:space="preserve"><value>ЗНАЧЕНИЕ</value></data>
+  <data name="Save_LogError_Format" xml:space="preserve"><value>⚠ Не удалось декодировать журнал: {0}. Метаданные и снимок экрана всё ещё доступны; редактирование невозможно.</value></data>
+
+  <data name="Settings_Subtitle" xml:space="preserve"><value>Провайдер ИИ для перевода имён переменных в редакторе сохранений. Само имя переменной не меняется — оно является якорем при сохранении.</value></data>
+  <data name="Settings_Section_General" xml:space="preserve"><value>ОБЩИЕ</value></data>
+  <data name="Settings_Section_UiLanguage" xml:space="preserve"><value>ЯЗЫК ПРИЛОЖЕНИЯ</value></data>
+  <data name="Settings_Provider" xml:space="preserve"><value>Провайдер</value></data>
+  <data name="Settings_TargetLanguage" xml:space="preserve"><value>Целевой язык</value></data>
+  <data name="Settings_UiLanguage" xml:space="preserve"><value>Язык приложения</value></data>
+  <data name="Settings_UiLanguage_Hint" xml:space="preserve"><value>Изменения применяются сразу — перезапуск не требуется.</value></data>
+  <data name="Settings_TestConnection" xml:space="preserve"><value>Проверить соединение</value></data>
+  <data name="Settings_Cancel" xml:space="preserve"><value>Отмена</value></data>
+  <data name="Settings_Save" xml:space="preserve"><value>Сохранить</value></data>
+
+  <data name="Settings_Ollama_Section" xml:space="preserve"><value>OLLAMA · ЛОКАЛЬНО</value></data>
+  <data name="Settings_Ollama_Title" xml:space="preserve"><value>Ollama (локально)</value></data>
+  <data name="Settings_Ollama_Description" xml:space="preserve"><value>Дружелюбно к приватности, без API-ключа. Запустите Ollama локально (ollama serve), затем загружайте модели прямо из приложения.</value></data>
+  <data name="Settings_Endpoint" xml:space="preserve"><value>Endpoint</value></data>
+  <data name="Settings_Ollama_InstalledModel" xml:space="preserve"><value>Модель (установлена)</value></data>
+  <data name="Settings_Ollama_Refresh" xml:space="preserve"><value>↺ Обновить</value></data>
+  <data name="Settings_Ollama_InstalledPlaceholder" xml:space="preserve"><value>Запустите Ollama и нажмите ↺ …</value></data>
+  <data name="Settings_ModelManualHint" xml:space="preserve"><value>Или введите имя модели вручную:</value></data>
+  <data name="Settings_Ollama_Download" xml:space="preserve"><value>Загрузить модель</value></data>
+  <data name="Settings_Ollama_DownloadPlaceholder" xml:space="preserve"><value>Выберите рекомендованную модель …</value></data>
+  <data name="Settings_Ollama_DownloadButton" xml:space="preserve"><value>⬇ Загрузить</value></data>
+  <data name="Settings_Ollama_DownloadHint" xml:space="preserve"><value>Все предложения достаточно малы для скромного локального перевода.</value></data>
+
+  <data name="Settings_Anthropic_Section" xml:space="preserve"><value>ANTHROPIC · ОБЛАКО</value></data>
+  <data name="Settings_Anthropic_Title" xml:space="preserve"><value>Anthropic Claude</value></data>
+  <data name="Settings_ApiKey" xml:space="preserve"><value>API-ключ</value></data>
+  <data name="Settings_Model" xml:space="preserve"><value>Модель</value></data>
+  <data name="Settings_ModelPlaceholder" xml:space="preserve"><value>Выберите рекомендованную модель …</value></data>
+  <data name="Settings_EndpointProxyHint" xml:space="preserve"><value>Endpoint (изменяйте только при использовании собственного прокси)</value></data>
+
+  <data name="Settings_OpenAi_Section" xml:space="preserve"><value>OPENAI · ОБЛАКО</value></data>
+  <data name="Settings_OpenAi_Title" xml:space="preserve"><value>OpenAI ChatGPT</value></data>
+
+  <data name="Settings_Gemini_Section" xml:space="preserve"><value>GOOGLE · ОБЛАКО</value></data>
+  <data name="Settings_Gemini_Title" xml:space="preserve"><value>Google Gemini</value></data>
+
+  <data name="Settings_Mistral_Section" xml:space="preserve"><value>MISTRAL · ОБЛАКО</value></data>
+  <data name="Settings_Mistral_Title" xml:space="preserve"><value>Mistral</value></data>
+
+  <data name="Settings_Compatible_Section" xml:space="preserve"><value>СОВМЕСТИМ С OPENAI</value></data>
+  <data name="Settings_Compatible_Title" xml:space="preserve"><value>Groq, OpenRouter, LM Studio, …</value></data>
+  <data name="Settings_Compatible_Description" xml:space="preserve"><value>Для любого провайдера, поддерживающего OpenAI Chat Completions API.</value></data>
+  <data name="Settings_Compatible_BaseUrl" xml:space="preserve"><value>Base-URL</value></data>
+  <data name="Settings_Compatible_ApiKeyOptional" xml:space="preserve"><value>API-ключ (необязательный для локальных серверов)</value></data>
+
+  <data name="About_Subtitle" xml:space="preserve"><value>Архивы Ren'Py · Редактор сохранений · Декомпилятор .rpyc</value></data>
+  <data name="About_CheckUpdates" xml:space="preserve"><value>Проверить обновления</value></data>
+  <data name="About_GitHub" xml:space="preserve"><value>GitHub</value></data>
+  <data name="About_BuyMeCoffee" xml:space="preserve"><value>☕ Купи мне кофе</value></data>
+  <data name="About_License" xml:space="preserve"><value>Лицензия MIT · © 2026 Lars Krügel (Kroste)</value></data>
+
+  <data name="OllamaPull_Cancel" xml:space="preserve"><value>Отмена</value></data>
+  <data name="OllamaPull_Close" xml:space="preserve"><value>Закрыть</value></data>
+  <data name="OllamaPull_LoadingFormat" xml:space="preserve"><value>Загрузка модели: {0}</value></data>
+  <data name="OllamaPull_Starting" xml:space="preserve"><value>Начало загрузки …</value></data>
+  <data name="Status_Cancelled" xml:space="preserve"><value>Отменено.</value></data>
+  <data name="Status_Done" xml:space="preserve"><value>Готово.</value></data>
+
+  <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
+
+  <data name="Status_Ready" xml:space="preserve"><value>Готово.</value></data>
+  <data name="Status_ArchiveLoadedFormat" xml:space="preserve"><value>Загружено: {0} ({1} записей)</value></data>
+  <data name="Status_ArchiveEmpty" xml:space="preserve"><value>Архив не открыт.</value></data>
+  <data name="Status_SelectedFormat" xml:space="preserve"><value>{0} выбрано</value></data>
+  <data name="Status_ExtractingFormat" xml:space="preserve"><value>Распаковка: {0} из {1} …</value></data>
+  <data name="Status_ExtractDoneFormat" xml:space="preserve"><value>Распаковано: {0} файлов в {1}</value></data>
+  <data name="Status_PackingFormat" xml:space="preserve"><value>Упаковка: {0} из {1} …</value></data>
+  <data name="Status_PackDoneFormat" xml:space="preserve"><value>Упаковано: {0} файлов в {1}</value></data>
+  <data name="Status_DecompileFormat" xml:space="preserve"><value>Декомпиляция: {0} из {1} …</value></data>
+  <data name="Status_DecompileDoneFormat" xml:space="preserve"><value>Декомпилировано: {0} файлов</value></data>
+  <data name="Status_ErrorFormat" xml:space="preserve"><value>Ошибка: {0}</value></data>
+  <data name="Status_SaveLoadedFormat" xml:space="preserve"><value>Загружено: {0} ({1} переменных)</value></data>
+  <data name="Status_SaveNone" xml:space="preserve"><value>Сохранение не открыто.</value></data>
+  <data name="Status_SaveDirtyFormat" xml:space="preserve"><value>{0} изменено</value></data>
+  <data name="Status_SaveWritten" xml:space="preserve"><value>Файл сохранения записан.</value></data>
+  <data name="Status_SaveReverted" xml:space="preserve"><value>Изменения отменены.</value></data>
+  <data name="Status_TranslatingFormat" xml:space="preserve"><value>Перевод: {0} из {1} …</value></data>
+  <data name="Status_TranslateDone" xml:space="preserve"><value>Перевод завершён.</value></data>
+  <data name="Status_TranslateNotConfigured" xml:space="preserve"><value>Сначала настройте провайдер ИИ в настройках.</value></data>
+  <data name="Status_ConnectionOk" xml:space="preserve"><value>Соединение установлено.</value></data>
+  <data name="Status_ConnectionFailedFormat" xml:space="preserve"><value>Не удалось подключиться: {0}</value></data>
+  <data name="Status_SettingsSaved" xml:space="preserve"><value>Настройки сохранены.</value></data>
+
+  <data name="Common_Files" xml:space="preserve"><value>файлов</value></data>
+  <data name="Status_ArchiveLoading" xml:space="preserve"><value>Чтение архива …</value></data>
+  <data name="Status_ExtractingProgressFormat" xml:space="preserve"><value>Распаковка {0}/{1}: {2}</value></data>
+  <data name="Status_PackingProgressFormat" xml:space="preserve"><value>Упаковка {0}/{1}: {2}</value></data>
+  <data name="Status_LoadFailed" xml:space="preserve"><value>Ошибка загрузки.</value></data>
+  <data name="Status_ExtractFailed" xml:space="preserve"><value>Ошибка распаковки.</value></data>
+  <data name="Status_PackFailed" xml:space="preserve"><value>Ошибка упаковки.</value></data>
+  <data name="Extract_All" xml:space="preserve"><value>всех файлов</value></data>
+  <data name="Extract_Selection" xml:space="preserve"><value>выбранного</value></data>
+  <data name="Msg_ArchiveLoadFailed_Title" xml:space="preserve"><value>Не удалось загрузить архив</value></data>
+  <data name="Msg_PickDestFormat" xml:space="preserve"><value>Целевая папка для {0}</value></data>
+  <data name="Msg_PickSourceFolder" xml:space="preserve"><value>Выберите папку для упаковки</value></data>
+  <data name="Msg_ExtractDone_Title" xml:space="preserve"><value>Готово</value></data>
+  <data name="Msg_ExtractDone_Body_Format" xml:space="preserve"><value>Распаковано файлов: {0}
+{1}</value></data>
+  <data name="Msg_ExtractFailed_Title" xml:space="preserve"><value>Ошибка распаковки</value></data>
+  <data name="Msg_ArchiveCreated_Title" xml:space="preserve"><value>Архив создан</value></data>
+  <data name="Msg_ArchiveCreated_Body_Format" xml:space="preserve"><value>Упаковано {0} файл(ов) в архив RPA-3.0:
+{1}
+
+Открыть новый архив сейчас?</value></data>
+  <data name="Msg_CreateFailed_Title" xml:space="preserve"><value>Ошибка создания</value></data>
+
+  <data name="Save_Reading" xml:space="preserve"><value>Чтение сохранения …</value></data>
+  <data name="Save_MetadataOnlyFormat" xml:space="preserve"><value>Метаданные загружены, журнал нечитаем: {0}</value></data>
+  <data name="Save_CollectingChanges" xml:space="preserve"><value>Сбор изменений …</value></data>
+  <data name="Save_InvalidValue" xml:space="preserve"><value>Недопустимое значение.</value></data>
+  <data name="Save_SavedFormat" xml:space="preserve"><value>Сохранено: {0}</value></data>
+  <data name="Save_CopySavedFormat" xml:space="preserve"><value>Копия сохранена: {0}</value></data>
+  <data name="Save_SaveFailed" xml:space="preserve"><value>Ошибка сохранения.</value></data>
+  <data name="Save_TranslatingHeadFormat" xml:space="preserve"><value>Перевод {0} переменных через {1} …</value></data>
+  <data name="Save_TranslatingProgressFormat" xml:space="preserve"><value>Переведено {0}/{1} …</value></data>
+  <data name="Save_TranslationDoneFormat" xml:space="preserve"><value>Перевод завершён: {0} описаний.</value></data>
+  <data name="Save_TranslationFailed" xml:space="preserve"><value>Ошибка перевода.</value></data>
+  <data name="Save_ChangedFormat" xml:space="preserve"><value>{0} изменено</value></data>
+  <data name="Save_VariablesCountFormat" xml:space="preserve"><value>{0} переменных</value></data>
+  <data name="Msg_SaveLoadFailed_Title" xml:space="preserve"><value>Не удалось загрузить сохранение</value></data>
+  <data name="Msg_SaveInvalidValue_Title" xml:space="preserve"><value>Неверный ввод</value></data>
+  <data name="Msg_SaveInvalidValue_Body_Format" xml:space="preserve"><value>Не удалось преобразовать значение в целевой тип:
+{0}</value></data>
+  <data name="Msg_SaveCopySaved_Title" xml:space="preserve"><value>Готово</value></data>
+  <data name="Msg_SaveCopySaved_Body_Format" xml:space="preserve"><value>Копия сохранена:
+{0}</value></data>
+  <data name="Msg_SaveFailed_Title" xml:space="preserve"><value>Ошибка сохранения</value></data>
+  <data name="Msg_DiscardDirty_Title" xml:space="preserve"><value>Несохранённые изменения</value></data>
+  <data name="Msg_DiscardDirty_Body_Format" xml:space="preserve"><value>У вас есть {0} несохранённых изменений. Всё равно отменить?</value></data>
+  <data name="Msg_AiNotConfigured_Title" xml:space="preserve"><value>ИИ не настроен</value></data>
+  <data name="Msg_AiNotConfigured_Body" xml:space="preserve"><value>Выберите провайдер ИИ в настройках и введите необходимые учётные данные (API-ключ для облачных провайдеров).</value></data>
+  <data name="Msg_TranslateFailed_Title" xml:space="preserve"><value>Ошибка перевода</value></data>
+
+  <data name="Settings_TestingConnection" xml:space="preserve"><value>Проверка соединения …</value></data>
+  <data name="Settings_TestNoProvider" xml:space="preserve"><value>Нет активного провайдера (отсутствует API-ключ?).</value></data>
+  <data name="Settings_TestOkFormat" xml:space="preserve"><value>OK — тестовый перевод: money → "{0}"</value></data>
+  <data name="Settings_TestEmpty" xml:space="preserve"><value>Провайдер ответил, но ответ пуст. Попробуйте другую модель?</value></data>
+  <data name="Settings_TestFailedFormat" xml:space="preserve"><value>Тест не удался: {0}</value></data>
+  <data name="Settings_QueryingOllama" xml:space="preserve"><value>Запрос установленных моделей у Ollama …</value></data>
+  <data name="Settings_OllamaEmpty" xml:space="preserve"><value>Ollama доступна, но модели ещё не установлены. Используйте кнопку загрузки.</value></data>
+  <data name="Settings_OllamaCountFormat" xml:space="preserve"><value>Установлено моделей: {0}.</value></data>
+  <data name="Settings_OllamaUnreachableFormat" xml:space="preserve"><value>Ollama недоступна: {0}</value></data>
+  <data name="Settings_PullNoModelName" xml:space="preserve"><value>Сначала введите имя модели (например, gemma3:1b).</value></data>
+</root>

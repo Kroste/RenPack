@@ -6,11 +6,12 @@
         xmlns:controls="using:RenPack.Controls"
         xmlns:chrome="using:Avalonia.Controls.Chrome"
         xmlns:vm="using:RenPack.ViewModels"
+        xmlns:loc="using:RenPack.Localization"
         mc:Ignorable="d" d:DesignWidth="960" d:DesignHeight="660"
         x:Class="RenPack.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Width="960" Height="680" MinWidth="720" MinHeight="480"
-        Title="RenPack"
+        Title="{loc:Tr App_Title}"
         DragDrop.AllowDrop="True"
         Background="{DynamicResource KrosteBackgroundBrush}">
 
@@ -19,15 +20,15 @@
     </Design.DataContext>
 
     <DockPanel>
-        <controls:TitleBar DockPanel.Dock="Top" Title="RenPack">
+        <controls:TitleBar DockPanel.Dock="Top" Title="{loc:Tr App_Title}">
             <controls:TitleBar.RightContent>
-                <Button x:Name="AboutButton" Classes="chrome" Content="ⓘ" ToolTip.Tip="Über RenPack"
+                <Button x:Name="AboutButton" Classes="chrome" Content="ⓘ"
+                        ToolTip.Tip="{loc:Tr About_Tip}"
                         chrome:WindowDecorationProperties.ElementRole="User" />
             </controls:TitleBar.RightContent>
         </controls:TitleBar>
 
-        <!-- Statuszeile unten: linker Text + rechts Progress. Border ohne
-             starke Farbe, nur dünner Divider zum Content-Bereich. -->
+        <!-- Statuszeile unten: linker Text + rechts Progress. -->
         <Border DockPanel.Dock="Bottom" Padding="18,10"
                 BorderBrush="{DynamicResource KrosteBorderBrush}" BorderThickness="0,1,0,0"
                 Background="{DynamicResource KrosteTitleBarBrush}">
@@ -42,61 +43,55 @@
             </Grid>
         </Border>
 
-        <!-- Content-Bereich mit einheitlichem Padding. Grid teilt in Header,
-             Toolbar, Filter und Dateiliste. -->
         <Grid Margin="18" RowDefinitions="Auto,Auto,Auto,Auto,*">
 
-            <!-- Header: Titel + Untertitel -->
+            <!-- Header -->
             <StackPanel Grid.Row="0" Margin="0,0,0,16">
-                <TextBlock Text="RenPack" Classes="h1" />
-                <TextBlock Text="Ren'Py-Archive öffnen, packen und entpacken · Save-Editor · .rpyc-Decompiler"
+                <TextBlock Text="{loc:Tr App_Title}" Classes="h1" />
+                <TextBlock Text="{loc:Tr Main_Subtitle}"
                            Classes="muted" FontSize="12" Margin="0,2,0,0" />
             </StackPanel>
 
-            <!-- Aktions-Karte: 3 semantische Gruppen nebeneinander. -->
+            <!-- Aktions-Karte -->
             <Border Grid.Row="1" Classes="card" Margin="0,0,0,12">
                 <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto" HorizontalAlignment="Left">
-                    <!-- Gruppe: Archiv -->
                     <StackPanel Grid.Column="0" Spacing="8">
-                        <TextBlock Text="ARCHIV" Classes="section-label" />
+                        <TextBlock Text="{loc:Tr Section_Archive}" Classes="section-label" />
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button Classes="accent" Content="📂 Öffnen"
+                            <Button Classes="accent" Content="{loc:Tr Main_OpenArchive}"
                                     Command="{Binding OpenArchiveCommand}"
-                                    ToolTip.Tip="Ren'Py-Archiv (.rpa) öffnen — auch per Drag &amp; Drop" />
-                            <Button Content="📦 Packen …"
+                                    ToolTip.Tip="{loc:Tr Main_OpenArchive_Tip}" />
+                            <Button Content="{loc:Tr Main_CreateArchive}"
                                     Command="{Binding CreateArchiveCommand}"
-                                    ToolTip.Tip="Ordner zu einem RPA-3.0-Archiv packen" />
+                                    ToolTip.Tip="{loc:Tr Main_CreateArchive_Tip}" />
                         </StackPanel>
                     </StackPanel>
 
                     <Rectangle Grid.Column="1" Classes="divider-v" Margin="16,4" />
 
-                    <!-- Gruppe: Werkzeuge -->
                     <StackPanel Grid.Column="2" Spacing="8">
-                        <TextBlock Text="WERKZEUGE" Classes="section-label" />
+                        <TextBlock Text="{loc:Tr Section_Tools}" Classes="section-label" />
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button x:Name="OpenSaveButton" Content="💾 Save-Editor"
-                                    ToolTip.Tip="Ren'Py-Save-Datei inspizieren und editieren (.save)" />
-                            <Button x:Name="DecompileFileButton" Content="🔓 .rpyc → .rpy"
-                                    ToolTip.Tip="Einzelne oder mehrere .rpyc-Dateien zu .rpy dekompilieren" />
-                            <Button x:Name="DecompileFolderButton" Content="🔓 Ordner …"
-                                    ToolTip.Tip="Alle .rpyc-Dateien in einem Ordner rekursiv dekompilieren" />
+                            <Button x:Name="OpenSaveButton" Content="{loc:Tr Main_OpenSave}"
+                                    ToolTip.Tip="{loc:Tr Main_OpenSave_Tip}" />
+                            <Button x:Name="DecompileFileButton" Content="{loc:Tr Main_DecompileFile}"
+                                    ToolTip.Tip="{loc:Tr Main_DecompileFile_Tip}" />
+                            <Button x:Name="DecompileFolderButton" Content="{loc:Tr Main_DecompileFolder}"
+                                    ToolTip.Tip="{loc:Tr Main_DecompileFolder_Tip}" />
                         </StackPanel>
                     </StackPanel>
 
                     <Rectangle Grid.Column="3" Classes="divider-v" Margin="16,4" />
 
-                    <!-- Gruppe: KI / Einstellungen -->
                     <StackPanel Grid.Column="4" Spacing="8">
-                        <TextBlock Text="KONFIGURATION" Classes="section-label" />
-                        <Button x:Name="SettingsButton" Content="⚙ Einstellungen"
-                                ToolTip.Tip="KI-Anbieter, Modell und Zielsprache konfigurieren" />
+                        <TextBlock Text="{loc:Tr Section_Configuration}" Classes="section-label" />
+                        <Button x:Name="SettingsButton" Content="{loc:Tr Main_Settings}"
+                                ToolTip.Tip="{loc:Tr Main_Settings_Tip}" />
                     </StackPanel>
                 </Grid>
             </Border>
 
-            <!-- Extraktions-Aktionen + Archiv-Info: zusammen als schmale Zeile,
-                 damit klar wird, dass sie sich auf die geladene Datei beziehen. -->
+            <!-- Extraktions-Aktionen + Archiv-Info -->
             <Border Grid.Row="2" Classes="card" Padding="14,10" Margin="0,0,0,12">
                 <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto">
                     <TextBlock Grid.Column="0" Text="{Binding ArchiveSummary}"
@@ -105,27 +100,27 @@
                     <TextBlock Grid.Column="1" Text="{Binding SelectedSummary}"
                                Foreground="{DynamicResource KrosteGoldBrush}"
                                VerticalAlignment="Center" Margin="12,0" FontSize="12" />
-                    <Button Grid.Column="2" Classes="ghost" Content="Alle" Padding="10,4"
+                    <Button Grid.Column="2" Classes="ghost" Content="{loc:Tr Main_SelectAll}" Padding="10,4"
                             Command="{Binding SelectAllCommand}"
-                            ToolTip.Tip="Alle Einträge auswählen" />
-                    <Button Grid.Column="3" Classes="ghost" Content="Keine" Padding="10,4"
+                            ToolTip.Tip="{loc:Tr Main_SelectAll_Tip}" />
+                    <Button Grid.Column="3" Classes="ghost" Content="{loc:Tr Main_SelectNone}" Padding="10,4"
                             Command="{Binding DeselectAllCommand}"
-                            ToolTip.Tip="Auswahl aufheben" />
+                            ToolTip.Tip="{loc:Tr Main_SelectNone_Tip}" />
                     <Rectangle Grid.Column="4" Classes="divider-v" Margin="8,4" />
                     <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8">
-                        <Button Content="⬇ Alles entpacken"
+                        <Button Content="{loc:Tr Main_ExtractAll}"
                                 Command="{Binding ExtractAllCommand}"
-                                ToolTip.Tip="Kompletten Archiv-Inhalt in einen Zielordner entpacken" />
-                        <Button Classes="accent" Content="⬇ Auswahl entpacken"
+                                ToolTip.Tip="{loc:Tr Main_ExtractAll_Tip}" />
+                        <Button Classes="accent" Content="{loc:Tr Main_ExtractSelected}"
                                 Command="{Binding ExtractSelectedCommand}"
-                                ToolTip.Tip="Nur die markierten Einträge entpacken" />
+                                ToolTip.Tip="{loc:Tr Main_ExtractSelected_Tip}" />
                     </StackPanel>
                 </Grid>
             </Border>
 
             <!-- Filter-Zeile -->
             <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
-                <TextBox Grid.Column="0" PlaceholderText="🔍  Dateien filtern nach Name …"
+                <TextBox Grid.Column="0" PlaceholderText="{loc:Tr Main_Filter_Placeholder}"
                          Text="{Binding FilterText}" />
             </Grid>
 
@@ -140,10 +135,18 @@
                     <DataGrid.Columns>
                         <DataGridCheckBoxColumn Header="✓" Width="42"
                             Binding="{Binding IsSelected}" />
-                        <DataGridTextColumn Header="DATEI" Width="*" IsReadOnly="True"
-                            Binding="{Binding Path}" />
-                        <DataGridTextColumn Header="GRÖSSE" Width="120" IsReadOnly="True"
-                            Binding="{Binding SizeDisplay}" />
+                        <DataGridTextColumn Width="*" IsReadOnly="True"
+                            Binding="{Binding Path}">
+                            <DataGridTextColumn.Header>
+                                <TextBlock Text="{loc:Tr Main_Column_File}" />
+                            </DataGridTextColumn.Header>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Width="120" IsReadOnly="True"
+                            Binding="{Binding SizeDisplay}">
+                            <DataGridTextColumn.Header>
+                                <TextBlock Text="{loc:Tr Main_Column_Size}" />
+                            </DataGridTextColumn.Header>
+                        </DataGridTextColumn>
                     </DataGrid.Columns>
                 </DataGrid>
             </Border>

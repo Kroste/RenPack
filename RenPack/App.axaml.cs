@@ -3,6 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
 using NLog;
+using RenPack.Localization;
 using RenPack.Services;
 using RenPack.ViewModels;
 using RenPack.Views;
@@ -21,6 +22,12 @@ public partial class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         Services = ConfigureServices();
+
+        // UI-Sprache aus den persistierten Einstellungen aktivieren, bevor
+        // das erste Fenster gebaut wird — sonst zeigt es kurz die
+        // System-Sprache und flackert dann auf die gewaehlte um.
+        var settings = Services.GetRequiredService<AiSettingsService>().Current;
+        LocalizationService.Instance.SetCulture(settings.UiCulture);
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {

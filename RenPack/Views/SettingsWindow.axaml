@@ -6,11 +6,12 @@
         xmlns:controls="using:RenPack.Controls"
         xmlns:vm="using:RenPack.ViewModels"
         xmlns:svc="using:RenPack.Services"
-        mc:Ignorable="d" d:DesignWidth="680" d:DesignHeight="720"
+        xmlns:loc="using:RenPack.Localization"
+        mc:Ignorable="d" d:DesignWidth="680" d:DesignHeight="760"
         x:Class="RenPack.Views.SettingsWindow"
         x:DataType="vm:SettingsWindowViewModel"
-        Width="680" Height="760" MinWidth="560" MinHeight="500"
-        Title="RenPack — Einstellungen"
+        Width="680" Height="800" MinWidth="560" MinHeight="500"
+        Title="{loc:Tr Window_Settings}"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource KrosteBackgroundBrush}">
 
@@ -19,10 +20,8 @@
     </Design.DataContext>
 
     <DockPanel>
-        <controls:TitleBar DockPanel.Dock="Top" Title="RenPack — Einstellungen" />
+        <controls:TitleBar DockPanel.Dock="Top" Title="{loc:Tr Window_Settings}" />
 
-        <!-- Footer: Statustext + Aktionen. Der Speichern-Button ist die
-             primäre Aktion und liegt rechts (Kroste-Konvention). -->
         <Border DockPanel.Dock="Bottom" Padding="18,12"
                 BorderBrush="{DynamicResource KrosteBorderBrush}" BorderThickness="0,1,0,0"
                 Background="{DynamicResource KrosteTitleBarBrush}">
@@ -30,11 +29,11 @@
                 <TextBlock Grid.Column="0" Text="{Binding StatusText}"
                            Foreground="{DynamicResource KrosteGoldBrush}"
                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                <Button Grid.Column="1" Classes="ghost" Content="Verbindung testen"
+                <Button Grid.Column="1" Classes="ghost" Content="{loc:Tr Settings_TestConnection}"
                         Command="{Binding TestConnectionCommand}" />
-                <Button Grid.Column="2" Content="Abbrechen"
+                <Button Grid.Column="2" Content="{loc:Tr Settings_Cancel}"
                         Command="{Binding CancelCommand}" />
-                <Button Grid.Column="3" Classes="accent" Content="Speichern"
+                <Button Grid.Column="3" Classes="accent" Content="{loc:Tr Settings_Save}"
                         Command="{Binding SaveCommand}" />
             </Grid>
         </Border>
@@ -42,26 +41,41 @@
         <ScrollViewer>
             <StackPanel Margin="24" Spacing="18">
 
-                <!-- Header -->
                 <StackPanel>
-                    <TextBlock Text="Einstellungen" Classes="h1" />
+                    <TextBlock Text="{loc:Tr Window_Settings}" Classes="h1" />
                     <TextBlock Classes="muted" FontSize="12" Margin="0,2,0,0" TextWrapping="Wrap"
-                               Text="KI-Anbieter für die Übersetzung der Variablennamen im Save-Editor.
-                               Der Variablenname selbst bleibt unverändert — er ist der Splice-Anker beim Speichern." />
+                               Text="{loc:Tr Settings_Subtitle}" />
                 </StackPanel>
 
-                <!-- Anbieter + Zielsprache -->
+                <!-- UI-Sprache (neu, ganz oben — der Nutzer soll die App
+                     zuerst in seine Sprache umschalten koennen). -->
                 <Border Classes="card">
                     <StackPanel Spacing="10">
-                        <TextBlock Text="ALLGEMEIN" Classes="section-label" />
+                        <TextBlock Text="{loc:Tr Settings_Section_UiLanguage}" Classes="section-label" />
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="{loc:Tr Settings_UiLanguage}" Classes="secondary" />
+                            <ComboBox ItemsSource="{Binding SupportedUiCultures}"
+                                      SelectedItem="{Binding SelectedUiCulture}"
+                                      DisplayMemberBinding="{Binding Display}"
+                                      HorizontalAlignment="Stretch" />
+                            <TextBlock Text="{loc:Tr Settings_UiLanguage_Hint}"
+                                       Classes="muted" FontSize="11" Margin="0,4,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Anbieter + Zielsprache (fuer die KI-Uebersetzung) -->
+                <Border Classes="card">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="{loc:Tr Settings_Section_General}" Classes="section-label" />
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                             <StackPanel Grid.Column="0" Spacing="6">
-                                <TextBlock Text="Anbieter" Classes="secondary" />
+                                <TextBlock Text="{loc:Tr Settings_Provider}" Classes="secondary" />
                                 <ComboBox ItemsSource="{Binding Providers}" SelectedItem="{Binding SelectedProvider}"
                                           HorizontalAlignment="Stretch" />
                             </StackPanel>
                             <StackPanel Grid.Column="1" Spacing="6">
-                                <TextBlock Text="Zielsprache" Classes="secondary" />
+                                <TextBlock Text="{loc:Tr Settings_TargetLanguage}" Classes="secondary" />
                                 <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding TargetLanguage}"
                                           HorizontalAlignment="Stretch" />
                             </StackPanel>
@@ -69,38 +83,36 @@
                     </StackPanel>
                 </Border>
 
-                <!-- OLLAMA -->
                 <Border Classes="card" IsVisible="{Binding IsOllama}">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="OLLAMA · LOKAL" Classes="section-label" />
-                        <TextBlock Text="Ollama (lokal)" Classes="h2" />
+                        <TextBlock Text="{loc:Tr Settings_Ollama_Section}" Classes="section-label" />
+                        <TextBlock Text="{loc:Tr Settings_Ollama_Title}" Classes="h2" />
                         <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
-                                   Text="Datenschutzfreundlich, kein API-Key. Ollama lokal starten (ollama serve),
-                                   dann Modelle direkt aus der App laden." />
+                                   Text="{loc:Tr Settings_Ollama_Description}" />
 
-                        <TextBlock Text="Endpunkt" Classes="secondary" Margin="0,6,0,0" />
+                        <TextBlock Text="{loc:Tr Settings_Endpoint}" Classes="secondary" Margin="0,6,0,0" />
                         <TextBox Text="{Binding OllamaEndpoint}" PlaceholderText="http://localhost:11434" />
 
                         <Grid ColumnDefinitions="*,Auto" Margin="0,10,0,0">
-                            <TextBlock Grid.Column="0" Text="Modell (installiert)"
+                            <TextBlock Grid.Column="0" Text="{loc:Tr Settings_Ollama_InstalledModel}"
                                        Classes="secondary" VerticalAlignment="Bottom" />
-                            <Button Grid.Column="1" Classes="ghost" Content="↺ Aktualisieren" Padding="10,4"
+                            <Button Grid.Column="1" Classes="ghost" Content="{loc:Tr Settings_Ollama_Refresh}" Padding="10,4"
                                     Command="{Binding RefreshOllamaModelsCommand}" />
                         </Grid>
                         <ComboBox ItemsSource="{Binding AvailableOllamaModels}"
                                   SelectedItem="{Binding SelectedInstalledOllamaModel}"
-                                  PlaceholderText="Ollama starten und ↺ klicken …"
+                                  PlaceholderText="{loc:Tr Settings_Ollama_InstalledPlaceholder}"
                                   HorizontalAlignment="Stretch" />
-                        <TextBlock Text="Oder Modell-Namen manuell eintragen:" Classes="muted"
+                        <TextBlock Text="{loc:Tr Settings_ModelManualHint}" Classes="muted"
                                    FontSize="11" Margin="0,6,0,0" />
                         <TextBox Text="{Binding OllamaModel}" PlaceholderText="z. B. gemma3:1b" />
 
-                        <TextBlock Text="Modell herunterladen" Classes="h2" Margin="0,14,0,0" />
+                        <TextBlock Text="{loc:Tr Settings_Ollama_Download}" Classes="h2" Margin="0,14,0,0" />
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                             <ComboBox Grid.Column="0"
                                       ItemsSource="{Binding CuratedOllamaModels}"
                                       SelectedItem="{Binding SelectedRecommendedModel}"
-                                      PlaceholderText="Empfohlenes Modell wählen …"
+                                      PlaceholderText="{loc:Tr Settings_Ollama_DownloadPlaceholder}"
                                       HorizontalAlignment="Stretch">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="svc:OllamaCuratedModel">
@@ -118,118 +130,113 @@
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
-                            <Button Grid.Column="1" Classes="accent" Content="⬇ Herunterladen"
+                            <Button Grid.Column="1" Classes="accent" Content="{loc:Tr Settings_Ollama_DownloadButton}"
                                     Command="{Binding PullRecommendedModelCommand}"
                                     IsEnabled="{Binding SelectedRecommendedModel, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         </Grid>
                         <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
-                                   Text="Alle Vorschläge sind klein genug für unauffälliges lokales Übersetzen." />
+                                   Text="{loc:Tr Settings_Ollama_DownloadHint}" />
                     </StackPanel>
                 </Border>
 
-                <!-- ANTHROPIC -->
                 <Border Classes="card" IsVisible="{Binding IsAnthropic}">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="ANTHROPIC · CLOUD" Classes="section-label" />
-                        <TextBlock Text="Anthropic Claude" Classes="h2" />
-                        <TextBlock Text="API-Key" Classes="secondary" Margin="0,6,0,0" />
+                        <TextBlock Text="{loc:Tr Settings_Anthropic_Section}" Classes="section-label" />
+                        <TextBlock Text="{loc:Tr Settings_Anthropic_Title}" Classes="h2" />
+                        <TextBlock Text="{loc:Tr Settings_ApiKey}" Classes="secondary" Margin="0,6,0,0" />
                         <TextBox Text="{Binding AnthropicApiKey}" PasswordChar="•"
                                  PlaceholderText="sk-ant-…" />
-                        <TextBlock Text="Modell" Classes="secondary" Margin="0,6,0,0" />
+                        <TextBlock Text="{loc:Tr Settings_Model}" Classes="secondary" Margin="0,6,0,0" />
                         <ComboBox ItemsSource="{Binding AnthropicModels}"
                                   SelectedItem="{Binding SelectedAnthropicModel}"
-                                  PlaceholderText="Empfohlenes Modell wählen …"
+                                  PlaceholderText="{loc:Tr Settings_ModelPlaceholder}"
                                   HorizontalAlignment="Stretch" />
-                        <TextBlock Text="Oder Modell-Namen manuell eintragen:" Classes="muted"
+                        <TextBlock Text="{loc:Tr Settings_ModelManualHint}" Classes="muted"
                                    FontSize="11" Margin="0,4,0,0" />
                         <TextBox Text="{Binding AnthropicModel}" PlaceholderText="claude-…" />
-                        <TextBlock Text="Endpunkt (nur ändern, wenn eigener Proxy)" Classes="muted"
+                        <TextBlock Text="{loc:Tr Settings_EndpointProxyHint}" Classes="muted"
                                    FontSize="11" Margin="0,6,0,0" />
                         <TextBox Text="{Binding AnthropicEndpoint}"
                                  PlaceholderText="https://api.anthropic.com/v1" />
                     </StackPanel>
                 </Border>
 
-                <!-- OPENAI -->
                 <Border Classes="card" IsVisible="{Binding IsOpenAi}">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="OPENAI · CLOUD" Classes="section-label" />
-                        <TextBlock Text="OpenAI ChatGPT" Classes="h2" />
-                        <TextBlock Text="API-Key" Classes="secondary" Margin="0,6,0,0" />
+                        <TextBlock Text="{loc:Tr Settings_OpenAi_Section}" Classes="section-label" />
+                        <TextBlock Text="{loc:Tr Settings_OpenAi_Title}" Classes="h2" />
+                        <TextBlock Text="{loc:Tr Settings_ApiKey}" Classes="secondary" Margin="0,6,0,0" />
                         <TextBox Text="{Binding OpenAiApiKey}" PasswordChar="•"
                                  PlaceholderText="sk-…" />
-                        <TextBlock Text="Modell" Classes="secondary" Margin="0,6,0,0" />
+                        <TextBlock Text="{loc:Tr Settings_Model}" Classes="secondary" Margin="0,6,0,0" />
                         <ComboBox ItemsSource="{Binding OpenAiModels}"
                                   SelectedItem="{Binding SelectedOpenAiModel}"
-                                  PlaceholderText="Empfohlenes Modell wählen …"
+                                  PlaceholderText="{loc:Tr Settings_ModelPlaceholder}"
                                   HorizontalAlignment="Stretch" />
-                        <TextBlock Text="Oder Modell-Namen manuell eintragen:" Classes="muted"
+                        <TextBlock Text="{loc:Tr Settings_ModelManualHint}" Classes="muted"
                                    FontSize="11" Margin="0,4,0,0" />
                         <TextBox Text="{Binding OpenAiModel}" PlaceholderText="gpt-…" />
-                        <TextBlock Text="Endpunkt" Classes="muted" FontSize="11" Margin="0,6,0,0" />
+                        <TextBlock Text="{loc:Tr Settings_Endpoint}" Classes="muted" FontSize="11" Margin="0,6,0,0" />
                         <TextBox Text="{Binding OpenAiEndpoint}"
                                  PlaceholderText="https://api.openai.com/v1" />
                     </StackPanel>
                 </Border>
 
-                <!-- GEMINI -->
                 <Border Classes="card" IsVisible="{Binding IsGemini}">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="GOOGLE · CLOUD" Classes="section-label" />
-                        <TextBlock Text="Google Gemini" Classes="h2" />
-                        <TextBlock Text="API-Key" Classes="secondary" Margin="0,6,0,0" />
+                        <TextBlock Text="{loc:Tr Settings_Gemini_Section}" Classes="section-label" />
+                        <TextBlock Text="{loc:Tr Settings_Gemini_Title}" Classes="h2" />
+                        <TextBlock Text="{loc:Tr Settings_ApiKey}" Classes="secondary" Margin="0,6,0,0" />
                         <TextBox Text="{Binding GeminiApiKey}" PasswordChar="•"
                                  PlaceholderText="AIza…" />
-                        <TextBlock Text="Modell" Classes="secondary" Margin="0,6,0,0" />
+                        <TextBlock Text="{loc:Tr Settings_Model}" Classes="secondary" Margin="0,6,0,0" />
                         <ComboBox ItemsSource="{Binding GeminiModels}"
                                   SelectedItem="{Binding SelectedGeminiModel}"
-                                  PlaceholderText="Empfohlenes Modell wählen …"
+                                  PlaceholderText="{loc:Tr Settings_ModelPlaceholder}"
                                   HorizontalAlignment="Stretch" />
-                        <TextBlock Text="Oder Modell-Namen manuell eintragen:" Classes="muted"
+                        <TextBlock Text="{loc:Tr Settings_ModelManualHint}" Classes="muted"
                                    FontSize="11" Margin="0,4,0,0" />
                         <TextBox Text="{Binding GeminiModel}" PlaceholderText="gemini-…" />
-                        <TextBlock Text="Endpunkt" Classes="muted" FontSize="11" Margin="0,6,0,0" />
+                        <TextBlock Text="{loc:Tr Settings_Endpoint}" Classes="muted" FontSize="11" Margin="0,6,0,0" />
                         <TextBox Text="{Binding GeminiEndpoint}"
                                  PlaceholderText="https://generativelanguage.googleapis.com/v1beta" />
                     </StackPanel>
                 </Border>
 
-                <!-- MISTRAL -->
                 <Border Classes="card" IsVisible="{Binding IsMistral}">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="MISTRAL · CLOUD" Classes="section-label" />
-                        <TextBlock Text="Mistral" Classes="h2" />
-                        <TextBlock Text="API-Key" Classes="secondary" Margin="0,6,0,0" />
+                        <TextBlock Text="{loc:Tr Settings_Mistral_Section}" Classes="section-label" />
+                        <TextBlock Text="{loc:Tr Settings_Mistral_Title}" Classes="h2" />
+                        <TextBlock Text="{loc:Tr Settings_ApiKey}" Classes="secondary" Margin="0,6,0,0" />
                         <TextBox Text="{Binding MistralApiKey}" PasswordChar="•"
                                  PlaceholderText="…" />
-                        <TextBlock Text="Modell" Classes="secondary" Margin="0,6,0,0" />
+                        <TextBlock Text="{loc:Tr Settings_Model}" Classes="secondary" Margin="0,6,0,0" />
                         <ComboBox ItemsSource="{Binding MistralModels}"
                                   SelectedItem="{Binding SelectedMistralModel}"
-                                  PlaceholderText="Empfohlenes Modell wählen …"
+                                  PlaceholderText="{loc:Tr Settings_ModelPlaceholder}"
                                   HorizontalAlignment="Stretch" />
-                        <TextBlock Text="Oder Modell-Namen manuell eintragen:" Classes="muted"
+                        <TextBlock Text="{loc:Tr Settings_ModelManualHint}" Classes="muted"
                                    FontSize="11" Margin="0,4,0,0" />
                         <TextBox Text="{Binding MistralModel}" PlaceholderText="mistral-…" />
-                        <TextBlock Text="Endpunkt" Classes="muted" FontSize="11" Margin="0,6,0,0" />
+                        <TextBlock Text="{loc:Tr Settings_Endpoint}" Classes="muted" FontSize="11" Margin="0,6,0,0" />
                         <TextBox Text="{Binding MistralEndpoint}"
                                  PlaceholderText="https://api.mistral.ai/v1" />
                     </StackPanel>
                 </Border>
 
-                <!-- OpenAI-kompatibel (Groq, OpenRouter, LM Studio, …) -->
                 <Border Classes="card" IsVisible="{Binding IsOpenAiCompatible}">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="OPENAI-KOMPATIBEL" Classes="section-label" />
-                        <TextBlock Text="Groq, OpenRouter, LM Studio, …" Classes="h2" />
+                        <TextBlock Text="{loc:Tr Settings_Compatible_Section}" Classes="section-label" />
+                        <TextBlock Text="{loc:Tr Settings_Compatible_Title}" Classes="h2" />
                         <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
-                                   Text="Für alle Anbieter, die die OpenAI-Chat-Completions-API sprechen." />
-                        <TextBlock Text="Base-URL" Classes="secondary" Margin="0,6,0,0" />
+                                   Text="{loc:Tr Settings_Compatible_Description}" />
+                        <TextBlock Text="{loc:Tr Settings_Compatible_BaseUrl}" Classes="secondary" Margin="0,6,0,0" />
                         <TextBox Text="{Binding OpenAiCompatibleEndpoint}"
                                  PlaceholderText="http://localhost:8080/v1" />
-                        <TextBlock Text="Modell" Classes="secondary" Margin="0,6,0,0" />
+                        <TextBlock Text="{loc:Tr Settings_Model}" Classes="secondary" Margin="0,6,0,0" />
                         <TextBox Text="{Binding OpenAiCompatibleModel}"
                                  PlaceholderText="z. B. mixtral-8x7b, deepseek-r1, …" />
-                        <TextBlock Text="API-Key (optional bei lokalen Servern)" Classes="secondary"
+                        <TextBlock Text="{loc:Tr Settings_Compatible_ApiKeyOptional}" Classes="secondary"
                                    Margin="0,6,0,0" />
                         <TextBox Text="{Binding OpenAiCompatibleApiKey}" PasswordChar="•" />
                     </StackPanel>
