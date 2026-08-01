@@ -165,7 +165,13 @@ public sealed partial class PreviewViewModel : ObservableObject
     {
         if (_media is null || !_media.IsAvailable)
         {
-            Placeholder = L.T("Preview_MediaUnavailable");
+            // Bei Init-Fehler die konkrete Diagnose-Message anzeigen —
+            // hilft massiv bei "libvlc.so nicht gefunden auf Bazzite/
+            // Distrobox"-Faellen.
+            var detail = _media?.InitErrorMessage;
+            Placeholder = string.IsNullOrEmpty(detail)
+                ? L.T("Preview_MediaUnavailable")
+                : L.T("Preview_MediaUnavailable") + "\n\n" + detail;
             return;
         }
 
