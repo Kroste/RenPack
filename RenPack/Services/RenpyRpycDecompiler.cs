@@ -47,7 +47,20 @@ public sealed class RenpyRpycDecompiler
         // ihn zur Laufzeit als NameError aufmachen.
         _transformParamNames = CollectTransformParamNames(statements);
 
-        EmitBlock(sb, statements, indent: 0);
+        // Compiler-Artefakt: Ren'Py haengt implizit ein `return` als letzten
+        // Top-Level-Statement an jede .rpy an (repraesentiert das File-Ende).
+        // User schreibt das nicht — bei uns wuerde es als leeres `return` am
+        // Dateiende landen. Wenn wir es finden: weg damit.
+        var effective = statements;
+        if (statements.Count > 0
+            && statements[^1] is ClassDict lastNode
+            && lastNode.ClassName == "renpy.ast.Return"
+            && lastNode.GetValueOrDefault("expression") is null)
+        {
+            effective = statements.Take(statements.Count - 1).ToList();
+        }
+
+        EmitBlock(sb, effective, indent: 0);
         return sb.ToString();
     }
 
@@ -412,16 +425,36 @@ public sealed class RenpyRpycDecompiler
 
     private static bool IsUnsupported(ClassDict node) => !KnownNodeClasses.Contains(node.ClassName);
 
+    /// <summary>Prueft ob ein <c>Init(N, [single-statement])</c>-Wrapper
+    /// weggelassen werden kann — Ren'Py-Compiler wraps viele Top-Level-
+    /// Statements (image/screen/style/transform/define/default) implizit
+    /// in Init-Bloecke mit den jeweiligen Default-Prioritaeten. Der User
+    /// hat sie nackt geschrieben.
+    ///
+    /// Default-Prioritaeten:
+    /// <list type="bullet">
+    ///   <item><c>image</c> → 500</item>
+    ///   <item><c>screen/style/transform/define/default</c> → 0</item>
+    /// </list>
+    /// Bei anderen Prioritaeten wird der Init-Wrap beibehalten, aber ggf.
+    /// die kompakte Prefix-Form emittiert (siehe <see cref="EmitInit"/>).</summary>
     private static bool TryUnwrapSingletonInit(ClassDict init, out ClassDict child)
     {
         child = null!;
         int prio = init.GetValueOrDefault("priority") is int p ? p : 0;
-        if (prio != 0) return false;
         if (init.GetValueOrDefault("block") is not IEnumerable block) return false;
         var kids = block.Cast<object?>().ToList();
         if (kids.Count != 1) return false;
         if (kids[0] is not ClassDict k) return false;
-        if (k.ClassName is not ("renpy.ast.Define" or "renpy.ast.Default")) return false;
+        // Nur unwrappen wenn Prio dem impliziten Ren'Py-Default entspricht.
+        bool defaultForType = k.ClassName switch
+        {
+            "renpy.ast.Image" => prio == 500,
+            "renpy.ast.Screen" or "renpy.ast.Style" or "renpy.ast.Transform"
+                or "renpy.ast.Define" or "renpy.ast.Default" => prio == 0,
+            _ => false,
+        };
+        if (!defaultForType) return false;
         child = k;
         return true;
     }
@@ -808,6 +841,46 @@ public sealed class RenpyRpycDecompiler
                 foreach (var line in code.Split('\n'))
                     AppendIndented(sb, indent + 1, line);
                 return;
+            }
+        }
+
+        // Modern-Kompakt-Form auch fuer Screen/Style/Transform/Image bei
+        // non-default Prio: `init -500 screen X:` statt `init -500:\n  screen X:`.
+        // Bei Default-Prio wird der Init-Wrap sowieso in TryUnwrapSingletonInit
+        // komplett entfernt — hier decken wir also nur die verbliebenen
+        // non-default Faelle ab (z.B. `init -500 screen`).
+        if (kids.Count == 1 && kids[0] is ClassDict single)
+        {
+            string? keyword = single.ClassName switch
+            {
+                "renpy.ast.Screen" => "screen",
+                "renpy.ast.Style" => "style",
+                "renpy.ast.Transform" => "transform",
+                _ => null,
+            };
+            if (keyword is not null)
+            {
+                // Wir emittieren den Init-Prefix und rufen dann den normalen
+                // EmitNode auf — der Node-Emitter fuegt "screen X:" etc. hinzu.
+                // Kompakter Weg: an den Prefix „init N " ranhaengen und dann
+                // den Body des Statements normal emittieren.
+                // Da unsere Screen/Style/Transform-Emitter ihre eigenen
+                // `screen X:` etc. Zeilen produzieren, koennen wir den init-
+                // Prefix nicht in-line einfuegen — wir schreiben stattdessen
+                // die vollstaendige `init N <keyword> …:` Zeile selbst.
+                var childOut = new StringBuilder();
+                EmitNode(childOut, single, indent);
+                var childText = childOut.ToString();
+                // Erste Zeile bekommt den init-Prefix davor
+                int nl = childText.IndexOf('\n');
+                if (nl > 0)
+                {
+                    string first = childText[..nl].TrimStart();
+                    string rest = childText[nl..];
+                    for (int i = 0; i < indent; i++) sb.Append(Indent);
+                    sb.Append($"init {priority} ").Append(first).Append(rest);
+                    return;
+                }
             }
         }
 

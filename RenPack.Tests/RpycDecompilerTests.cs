@@ -223,14 +223,77 @@ public sealed class RpycDecompilerTests
     }
 
     [Fact]
-    public void Emits_return_without_expression()
+    public void Emits_return_without_expression_inside_label()
     {
+        // Standalone Return am Top-Level ist Compiler-Artefakt (Ren'Py haengt
+        // implizit `return` als letztes File-Statement an) und wird v0.11.1
+        // unterdrueckt. In einem Label bleibt `return` als echte User-Syntax.
         var script = new object[]
         {
+            Node("renpy.ast.Label", ("_name", "reset"),
+                ("block", new ArrayList { Node("renpy.ast.Return") })),
+        };
+        var text = _dec.Decompile(script);
+        text.Should().Contain("label reset:");
+        text.Should().Contain("    return");
+    }
+
+    [Fact]
+    public void Suppresses_trailing_top_level_return_as_compiler_artefact()
+    {
+        // Ren'Py-Compiler haengt implizit einen leeren Return-Node an jede
+        // .rpy an — der ist im User-Source nie da. Wir muessen ihn beim
+        // Decompilen wieder unterdruecken.
+        var script = new object[]
+        {
+            Node("renpy.ast.Say", ("what", "Hallo Welt")),
             Node("renpy.ast.Return"),
         };
         var text = _dec.Decompile(script);
-        text.Should().MatchRegex(@"^return\s*$|(\breturn\s*$)");
+        text.Should().Contain("\"Hallo Welt\"");
+        text.Split('\n').Should().NotContain(l => l.Trim() == "return");
+    }
+
+    [Fact]
+    public void Init_wrap_around_default_priority_screen_is_unwrapped()
+    {
+        // Ren'Py-Compiler wrapped `screen X: ...` implizit in `init 0:`.
+        // Wir sollten das beim Decompilen wieder auspacken — sonst wird die
+        // .rpy unlesbar mit doppelter Einrueckung ueberall.
+        var screen = Node("renpy.ast.Screen",
+            ("screen", new ClassDict("renpy.sl2.slast", "SLScreen")));
+        var init = Node("renpy.ast.Init", ("priority", 0),
+            ("block", new ArrayList { screen }));
+        var text = _dec.Decompile(new object[] { init });
+        text.Should().NotContain("init 0:");
+    }
+
+    [Fact]
+    public void Init_wrap_around_default_priority_image_is_unwrapped()
+    {
+        // image hat Ren'Py-Default-Prio 500.
+        var img = Node("renpy.ast.Image",
+            ("imgname", new object[] { "hero" }),
+            ("code", new ClassDict("renpy.ast", "PyCode")));
+        var init = Node("renpy.ast.Init", ("priority", 500),
+            ("block", new ArrayList { img }));
+        var text = _dec.Decompile(new object[] { init });
+        text.Should().NotContain("init 500:");
+    }
+
+    [Fact]
+    public void Non_default_priority_screen_uses_compact_init_prefix()
+    {
+        // `init -500 screen X:` statt `init -500:\n  screen X:` — kompakter
+        // Prefix wenn genau EIN Screen/Style/Transform im Block ist.
+        var screen = Node("renpy.ast.Screen",
+            ("screen", new ClassDict("renpy.sl2.slast", "SLScreen")));
+        var init = Node("renpy.ast.Init", ("priority", -500),
+            ("block", new ArrayList { screen }));
+        var text = _dec.Decompile(new object[] { init });
+        text.Should().Contain("init -500 screen");
+        // NICHT die verschachtelte Form
+        text.Should().NotContain("init -500:\n    screen");
     }
 
     [Fact]
