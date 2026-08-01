@@ -35,15 +35,24 @@ public sealed partial class MainWindowViewModel : ObservableObject
     /// <summary>MRU-Liste der zuletzt geoeffneten Archive — im Dropdown
     /// neben dem "Oeffnen"-Button gebunden.</summary>
     public System.Collections.ObjectModel.ObservableCollection<string> RecentArchives { get; } = [];
+    public System.Collections.ObjectModel.ObservableCollection<string> RecentDecompileFolders { get; } = [];
 
     public bool HasRecentArchives => RecentArchives.Count > 0;
+    public bool HasRecentDecompileFolders => RecentDecompileFolders.Count > 0;
+
+    /// <summary>Fuer die Decompile-Folder-Dropdown-Anbindung im MainWindow-
+    /// Codebehind (der Batch-Decompile-Aufruf liegt dort).</summary>
+    public RecentFilesService? RecentService => _recent;
 
     private void RefreshRecent()
     {
         if (_recent is null) return;
         RecentArchives.Clear();
+        RecentDecompileFolders.Clear();
         foreach (var p in _recent.Archives) RecentArchives.Add(p);
+        foreach (var p in _recent.DecompileFolders) RecentDecompileFolders.Add(p);
         OnPropertyChanged(nameof(HasRecentArchives));
+        OnPropertyChanged(nameof(HasRecentDecompileFolders));
     }
 
     [RelayCommand]
@@ -51,6 +60,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         if (string.IsNullOrEmpty(path)) return;
         await LoadArchiveAsync(path);
+    }
+
+    /// <summary>Der eigentliche Decompile-Ordner-Batch-Call laeuft im
+    /// MainWindow-Codebehind (StorageProvider-Zugriff, MessageBox).
+    /// Der Command feuert nur — die View haengt sich an das Event.</summary>
+    public event Action<string>? DecompileFolderRequested;
+
+    [RelayCommand]
+    private void OpenRecentDecompileFolder(string path)
+    {
+        if (!string.IsNullOrEmpty(path)) DecompileFolderRequested?.Invoke(path);
     }
 
     /// <summary>Die aktuell gefilterte, angezeigte Dateiliste.</summary>
@@ -85,6 +105,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string _statusText = L.T("Status_ArchiveEmpty");
     [ObservableProperty] private double _progress;
     [ObservableProperty] private bool _progressIndeterminate;
+
+    /// <summary>Toast fuer den Update-Check-Treffer (nicht blockierend).
+    /// UI zeigt eine kleine Karte oben rechts, Klick oeffnet das About-
+    /// Fenster ueber den AboutButton.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUpdateToast))]
+    private string? _updateToast;
+    public bool HasUpdateToast => !string.IsNullOrEmpty(UpdateToast);
+
+    [RelayCommand]
+    private void DismissUpdateToast() => UpdateToast = null;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SelectedSummary))]

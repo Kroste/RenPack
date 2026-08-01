@@ -168,13 +168,37 @@ public sealed class RenpyArchiveService : IRenpyArchiveService
         IProgress<RpaProgress>? progress = null, CancellationToken cancellationToken = default)
         => Extract(archive, archive.Entries, destinationDirectory, progress, cancellationToken);
 
+    /// <summary>Typische Dev-Artefakte, die niemand in einem Ren'Py-Archiv
+    /// haben will. Beim Packen ueberspringen — spart Verwirrung
+    /// ("warum ist .DS_Store im Archiv?").</summary>
+    public static readonly HashSet<string> DefaultIgnoreNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".DS_Store", "Thumbs.db", "desktop.ini", ".gitignore", ".gitattributes",
+    };
+    public static readonly HashSet<string> DefaultIgnoreDirs = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "__pycache__", ".git", ".svn", ".hg", ".vs", ".idea", "node_modules",
+    };
+
+    /// <summary>True, wenn ein Datei-Pfad einem Ignore-Muster entspricht
+    /// (Datei-Name oder ein Segment im Pfad ist in den Ignore-Listen).</summary>
+    public static bool ShouldIgnore(string relativePath)
+    {
+        if (DefaultIgnoreNames.Contains(Path.GetFileName(relativePath))) return true;
+        foreach (var seg in relativePath.Replace('\\', '/').Split('/'))
+            if (DefaultIgnoreDirs.Contains(seg)) return true;
+        return false;
+    }
+
     public int Create(string archivePath, string sourceDirectory,
         RpaVersion version = RpaVersion.V3_0, uint key = DefaultKey,
         IProgress<RpaProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         if (version == RpaVersion.V2_0) key = 0; // 2.0 kennt keinen Key
 
+        string srcRootProbe = Path.GetFullPath(sourceDirectory);
         var files = Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories)
+            .Where(f => !ShouldIgnore(Path.GetRelativePath(srcRootProbe, Path.GetFullPath(f))))
             .OrderBy(static f => f, StringComparer.Ordinal)
             .ToList();
         Log.Info("Erstelle {ver}-Archiv {path} aus {count} Datei(en) unter {src}",

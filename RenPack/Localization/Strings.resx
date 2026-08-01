@@ -180,6 +180,8 @@
 {1}</value></data>
   <data name="Msg_BatchExtractDoneWithErrors_Body_Format" xml:space="preserve"><value>{0} of {1} archives succeeded, {2} failed:</value></data>
   <data name="Main_Recent_Tip" xml:space="preserve"><value>Recently opened archives</value></data>
+  <data name="Main_RecentFolders_Tip" xml:space="preserve"><value>Recently decompiled folders</value></data>
+  <data name="Save_Recent_Tip" xml:space="preserve"><value>Recently opened save files</value></data>
   <data name="About_InstallUpdate" xml:space="preserve"><value>⬇ Install update</value></data>
   <data name="Update_Checking" xml:space="preserve"><value>Checking …</value></data>
   <data name="Update_AvailableFormat" xml:space="preserve"><value>Version {0} available!</value></data>

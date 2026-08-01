@@ -33,6 +33,9 @@
         <KeyBinding Gesture="Escape" Command="{Binding ClearFilterCommand}" />
     </views:ChromeWindow.KeyBindings>
 
+    <Panel>
+    <!-- Basis-Layout unten, Toast-Overlay oben rechts. Panel stapelt
+         die beiden ohne sich in den Weg zu kommen. -->
     <DockPanel>
         <controls:TitleBar DockPanel.Dock="Top" Title="{loc:Tr App_Title}">
             <controls:TitleBar.RightContent>
@@ -112,8 +115,26 @@
                                     ToolTip.Tip="{loc:Tr Main_OpenSave_Tip}" />
                             <Button x:Name="DecompileFileButton" Content="{loc:Tr Main_DecompileFile}"
                                     ToolTip.Tip="{loc:Tr Main_DecompileFile_Tip}" />
-                            <Button x:Name="DecompileFolderButton" Content="{loc:Tr Main_DecompileFolder}"
-                                    ToolTip.Tip="{loc:Tr Main_DecompileFolder_Tip}" />
+                            <StackPanel Orientation="Horizontal" Spacing="0">
+                                <Button x:Name="DecompileFolderButton" Content="{loc:Tr Main_DecompileFolder}"
+                                        CornerRadius="6,0,0,6"
+                                        ToolTip.Tip="{loc:Tr Main_DecompileFolder_Tip}" />
+                                <Button Content="▾" Padding="10,7" CornerRadius="0,6,6,0"
+                                        ToolTip.Tip="{loc:Tr Main_RecentFolders_Tip}"
+                                        IsVisible="{Binding HasRecentDecompileFolders}">
+                                    <Button.Flyout>
+                                        <MenuFlyout ItemsSource="{Binding RecentDecompileFolders}">
+                                            <MenuFlyout.ItemTemplate>
+                                                <DataTemplate>
+                                                    <MenuItem Header="{Binding}"
+                                                              Command="{Binding $parent[views:ChromeWindow].DataContext.OpenRecentDecompileFolderCommand}"
+                                                              CommandParameter="{Binding}" />
+                                                </DataTemplate>
+                                            </MenuFlyout.ItemTemplate>
+                                        </MenuFlyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </StackPanel>
                         </StackPanel>
                     </StackPanel>
 
@@ -285,4 +306,24 @@
             </Grid>
         </Grid>
     </DockPanel>
+
+    <!-- Update-Toast: kleine Card oben rechts, klick oeffnet About. -->
+    <Border IsVisible="{Binding HasUpdateToast}"
+            HorizontalAlignment="Right" VerticalAlignment="Top"
+            Margin="0,52,18,0"
+            Background="{DynamicResource KrosteAccentBrush}"
+            CornerRadius="6" Padding="14,10"
+            BoxShadow="0 4 12 0 #66000000">
+        <StackPanel Orientation="Horizontal" Spacing="12">
+            <TextBlock Text="{Binding UpdateToast}" Foreground="#F5F7FA"
+                       VerticalAlignment="Center" />
+            <Button Content="ⓘ" Padding="6,2" Background="Transparent"
+                    BorderThickness="0" Foreground="#F5F7FA"
+                    x:Name="ToastAboutButton" ToolTip.Tip="{loc:Tr About_Tip}" />
+            <Button Content="✕" Padding="6,2" Background="Transparent"
+                    BorderThickness="0" Foreground="#F5F7FA"
+                    Command="{Binding DismissUpdateToastCommand}" />
+        </StackPanel>
+    </Border>
+    </Panel>
 </views:ChromeWindow>

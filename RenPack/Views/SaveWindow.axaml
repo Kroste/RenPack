@@ -56,9 +56,27 @@
                 <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*">
                     <StackPanel Grid.Column="0" Spacing="8">
                         <TextBlock Text="{loc:Tr Save_Section_File}" Classes="section-label" />
-                        <Button Classes="accent" Content="{loc:Tr Save_Open}"
-                                Command="{Binding OpenSaveCommand}"
-                                ToolTip.Tip="{loc:Tr Save_Open_Tip}" />
+                        <StackPanel Orientation="Horizontal" Spacing="0">
+                            <Button Classes="accent" Content="{loc:Tr Save_Open}"
+                                    Command="{Binding OpenSaveCommand}"
+                                    ToolTip.Tip="{loc:Tr Save_Open_Tip}"
+                                    CornerRadius="6,0,0,6" />
+                            <Button Content="▾" Padding="10,7" CornerRadius="0,6,6,0"
+                                    ToolTip.Tip="{loc:Tr Save_Recent_Tip}"
+                                    IsVisible="{Binding HasRecentSaves}">
+                                <Button.Flyout>
+                                    <MenuFlyout ItemsSource="{Binding RecentSaves}">
+                                        <MenuFlyout.ItemTemplate>
+                                            <DataTemplate>
+                                                <MenuItem Header="{Binding}"
+                                                          Command="{Binding $parent[views:ChromeWindow].DataContext.OpenRecentSaveCommand}"
+                                                          CommandParameter="{Binding}" />
+                                            </DataTemplate>
+                                        </MenuFlyout.ItemTemplate>
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+                        </StackPanel>
                     </StackPanel>
 
                     <Rectangle Grid.Column="1" Classes="divider-v" Margin="16,4" />

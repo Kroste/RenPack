@@ -19,6 +19,7 @@ public partial class MainWindow : ChromeWindow, IUiInteractions
     {
         InitializeComponent();
         AboutButton.Click += OnAbout;
+        ToastAboutButton.Click += OnAbout;
         OpenSaveButton.Click += OnOpenSave;
         SettingsButton.Click += OnSettings;
         DecompileFileButton.Click += OnDecompileFiles;
@@ -55,7 +56,10 @@ public partial class MainWindow : ChromeWindow, IUiInteractions
     {
         base.OnDataContextChanged(e);
         if (DataContext is MainWindowViewModel vm)
+        {
             vm.Ui = this;
+            vm.DecompileFolderRequested += async path => await RunFolderDecompileAsync(path);
+        }
     }
 
     protected override async void OnOpened(EventArgs e)
@@ -67,7 +71,7 @@ public partial class MainWindow : ChromeWindow, IUiInteractions
             var update = App.Services.GetRequiredService<UpdateService>();
             var result = await update.CheckForUpdateAsync();
             if (result.UpdateAvailable && DataContext is MainWindowViewModel vm)
-                vm.StatusText = $"Update verfügbar: Version {result.LatestVersion} (ⓘ öffnen).";
+                vm.UpdateToast = L.F("Update_AvailableFormat", result.LatestVersion ?? "?");
         }
         catch (Exception ex)
         {
@@ -173,6 +177,23 @@ public partial class MainWindow : ChromeWindow, IUiInteractions
             if (folders.Count == 0) return;
             var root = folders[0].TryGetLocalPath();
             if (root is null) return;
+            await RunFolderDecompileAsync(root);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Ordner-Dekompilierung fehlgeschlagen");
+            SetBusy(false, L.T("Decompile_FolderFailed"));
+        }
+    }
+
+    /// <summary>Ruft die eigentliche Batch-Dekompilierung fuer einen
+    /// gewaehlten Ordner auf. Wird sowohl vom Ordner-Picker als auch
+    /// vom Recent-Dropdown genutzt.</summary>
+    private async Task RunFolderDecompileAsync(string root)
+    {
+        try
+        {
+            (DataContext as MainWindowViewModel)?.RecentService?.AddDecompileFolder(root);
 
             // Bestehende .rpy neben .rpyc? Dann "nur neuere"-Modus anbieten,
             // das spart bei Re-Runs Minuten.
@@ -223,11 +244,58 @@ public partial class MainWindow : ChromeWindow, IUiInteractions
     {
         if (DataContext is not MainWindowViewModel vm) return;
         if (!e.DataTransfer.Formats.Contains(DataFormat.File)) return;
-        var files = e.DataTransfer.TryGetFiles();
-        var first = files?.OfType<IStorageFile>().FirstOrDefault();
+        var files = e.DataTransfer.TryGetFiles()?.OfType<IStorageFile>().ToList();
+        var first = files?.FirstOrDefault();
         string? path = first?.TryGetLocalPath();
-        if (path is not null)
-            await vm.LoadArchiveAsync(path);
+        if (path is null) return;
+
+        // Nach Extension weiterleiten: .rpa in die eigene Archiv-Anzeige,
+        // .save direkt in den Save-Editor, .rpyc als Ein-Datei-Decompile.
+        // Mehrere .rpyc: Batch.
+        string ext = Path.GetExtension(path).ToLowerInvariant();
+        if (ext == ".save")
+        {
+            var svm = App.Services.GetRequiredService<SaveWindowViewModel>();
+            var win = new SaveWindow { DataContext = svm };
+            _ = svm.LoadSaveAsync(path); // laeuft parallel zum ShowDialog
+            await win.ShowDialog(this);
+            return;
+        }
+        if (ext == ".rpyc")
+        {
+            var rpycPaths = files!.Select(f => f.TryGetLocalPath())
+                .Where(p => p is not null && Path.GetExtension(p).Equals(".rpyc", StringComparison.OrdinalIgnoreCase))
+                .Cast<string>().ToList();
+            await DecompileRpycListAsync(rpycPaths);
+            return;
+        }
+        // Default: als Archiv laden (.rpa oder alles Andere).
+        await vm.LoadArchiveAsync(path);
+    }
+
+    /// <summary>Dekompiliert eine Liste bereits ausgewaehlter .rpyc-Pfade
+    /// (Drag&amp;Drop oder Datei-Picker), mit Fortschrittsstatus.</summary>
+    private async Task DecompileRpycListAsync(IReadOnlyList<string> paths)
+    {
+        if (paths.Count == 0) return;
+        var batch = App.Services.GetRequiredService<RpycBatchService>();
+        SetBusy(true, L.F("Decompile_ProgressFormat", 0, paths.Count, ""));
+        int ok = 0, failed = 0;
+        var errors = new List<string>();
+        await Task.Run(() =>
+        {
+            for (int i = 0; i < paths.Count; i++)
+            {
+                var f = paths[i];
+                try { batch.DecompileFile(f); ok++; }
+                catch (Exception ex) { failed++; errors.Add($"{Path.GetFileName(f)}: {ex.Message}"); }
+            }
+        });
+        SetBusy(false, L.F("Decompile_DoneStatusFormat", ok, paths.Count, failed, 0));
+        var msg = failed == 0
+            ? L.F("Decompile_DoneMsgFormat", ok, paths.Count, 0, "")
+            : string.Join("\n", errors.Take(10));
+        await MessageBox.ShowAsync(this, L.T("Decompile_DoneTitle"), msg);
     }
 
     // ---- IUiInteractions ----------------------------------------------------

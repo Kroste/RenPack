@@ -19,21 +19,23 @@ public sealed partial class SaveWindowViewModel : ObservableObject
     private readonly AiSettingsService? _aiSettings;
     private readonly AiProviderFactory? _providerFactory;
     private readonly TranslationService? _translation;
+    private readonly RecentFilesService? _recent;
     private readonly List<SaveVariableViewModel> _allVariables = [];
 
     /// <summary>Von der View gesetzt (Datei-Dialoge, Meldungen).</summary>
     public ISaveUi? Ui { get; set; }
 
     public SaveWindowViewModel(IRenpySaveService saveService, AiSettingsService aiSettings,
-        AiProviderFactory providerFactory, TranslationService translation)
+        AiProviderFactory providerFactory, TranslationService translation,
+        RecentFilesService recent)
     {
         _saveService = saveService;
         _aiSettings = aiSettings;
         _providerFactory = providerFactory;
         _translation = translation;
-        // Wenn der Nutzer die KI-Einstellungen nach dem Öffnen des Save-Fensters
-        // konfiguriert, muss der Übersetzen-Button neu bewertet werden. Sonst
-        // bleibt er grau, obwohl KI jetzt läuft.
+        _recent = recent;
+        RecentSaves = new(_recent.Saves);
+        _recent.Changed += (_, _) => RefreshRecent();
         _aiSettings.SettingsChanged += OnAiSettingsChanged;
     }
 
@@ -42,7 +44,28 @@ public sealed partial class SaveWindowViewModel : ObservableObject
 
     // Designer-Konstruktor
     public SaveWindowViewModel() : this(new RenpySaveService(), new AiSettingsService(),
-        new AiProviderFactory(new SingleHttpClientFactory()), new TranslationService()) { }
+        new AiProviderFactory(new SingleHttpClientFactory()), new TranslationService(),
+        new RecentFilesService()) { }
+
+    /// <summary>MRU-Liste der zuletzt geoeffneten Save-Files — im
+    /// Dropdown neben dem "Save oeffnen"-Button gebunden.</summary>
+    public System.Collections.ObjectModel.ObservableCollection<string> RecentSaves { get; } = [];
+    public bool HasRecentSaves => RecentSaves.Count > 0;
+
+    private void RefreshRecent()
+    {
+        if (_recent is null) return;
+        RecentSaves.Clear();
+        foreach (var p in _recent.Saves) RecentSaves.Add(p);
+        OnPropertyChanged(nameof(HasRecentSaves));
+    }
+
+    [RelayCommand]
+    private async Task OpenRecentSaveAsync(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return;
+        await LoadSaveAsync(path);
+    }
 
     public ObservableCollection<SaveVariableViewModel> Variables { get; } = [];
 
@@ -166,6 +189,7 @@ public sealed partial class SaveWindowViewModel : ObservableObject
             StatusText = info.LogError is null
                 ? L.F("Status_SaveLoadedFormat", System.IO.Path.GetFileName(path), info.Variables.Count)
                 : L.F("Save_MetadataOnlyFormat", System.IO.Path.GetFileName(path));
+            _recent?.AddSave(path);
             OnPropertyChanged(nameof(SaveSummary));
             Log.Info("Save geladen: {path} ({count} Variablen, LogError={err})",
                 path, info.Variables.Count, info.LogError);
