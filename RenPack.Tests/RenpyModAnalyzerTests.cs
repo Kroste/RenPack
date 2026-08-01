@@ -248,4 +248,59 @@ public sealed class RenpyModAnalyzerTests : IDisposable
         result.VariableConsumers.Should().NotContainKey("and");
         result.VariableConsumers.Should().NotContainKey("not");
     }
+
+    // ---- v0.9.3: Menu-Header-Location + Choice-Impact ---------------------
+
+    [Fact]
+    public void Menu_locations_track_header_line_and_affected_vars()
+    {
+        Write("day22.rpy", """
+            label day22_scene:
+                menu:
+                    "Be nice":
+                        $ love += 3
+                    "Be rude":
+                        $ love -= 2
+                        $ anger = True
+            """);
+        var result = _analyzer.Analyze(_tmp);
+        result.MenuLocations.Should().HaveCount(1);
+        var m = result.MenuLocations[0];
+        m.SourceFile.Should().Be("day22.rpy");
+        m.MenuHeaderLine.Should().Be(2, "Zeile 2 = 'menu:'");
+        m.VariablesAffected.Should().BeEquivalentTo(new[] { "love", "anger" });
+    }
+
+    [Fact]
+    public void Choice_records_its_menu_header_line_for_runtime_match()
+    {
+        Write("day22.rpy", """
+            label x:
+                "prelude"
+                menu:
+                    "A":
+                        $ love += 1
+            """);
+        var result = _analyzer.Analyze(_tmp);
+        result.Choices.Should().HaveCount(1);
+        // Zeile 1 = label, Zeile 2 = say, Zeile 3 = menu:
+        result.Choices[0].MenuHeaderLine.Should().Be(3);
+    }
+
+    [Fact]
+    public void Menus_without_var_changing_choices_are_excluded_from_locations()
+    {
+        // Ein reines Dialog-Menu (keine $-Statements) ist fuer den Hint
+        // uninteressant — der Player sieht keinen Impact.
+        Write("day22.rpy", """
+            label x:
+                menu:
+                    "A":
+                        "you said A"
+                    "B":
+                        "you said B"
+            """);
+        var result = _analyzer.Analyze(_tmp);
+        result.MenuLocations.Should().BeEmpty();
+    }
 }

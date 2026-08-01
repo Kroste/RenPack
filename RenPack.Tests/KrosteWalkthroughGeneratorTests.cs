@@ -25,7 +25,7 @@ public sealed class KrosteWalkthroughGeneratorTests : IDisposable
     [Fact]
     public void Formats_hint_from_numeric_and_bool_deltas()
     {
-        var choice = new RpyChoice("script.rpy", 1, "start", 0, 0, "Say hi",
+        var choice = new RpyChoice("script.rpy", 1, "start", 0, 0, 0, "Say hi",
             Condition: null,
             Deltas: new[]
             {
@@ -50,7 +50,7 @@ public sealed class KrosteWalkthroughGeneratorTests : IDisposable
         // Regression-Test fuer v0.8.3-Bug: [ und ] duerfen im Hint NICHT
         // vorkommen — sonst interpretiert Ren'Py's Text-Substitution sie
         // als Python-Interpolation. Runde Klammern sind immun.
-        var choice = new RpyChoice("f.rpy", 1, "l", 0, 0, "t", null,
+        var choice = new RpyChoice("f.rpy", 1, "l", 0, 0, 0, "t", null,
             new[]
             {
                 new VarDelta("filthy", "+=", "1"),
@@ -64,7 +64,7 @@ public sealed class KrosteWalkthroughGeneratorTests : IDisposable
     [Fact]
     public void Empty_deltas_produce_empty_hint()
     {
-        var choice = new RpyChoice("f.rpy", 1, "l", 0, 0, "t", null, Array.Empty<VarDelta>());
+        var choice = new RpyChoice("f.rpy", 1, "l", 0, 0, 0, "t", null, Array.Empty<VarDelta>());
         KrosteWalkthroughGenerator.FormatHint(choice).Should().Be("");
     }
 

@@ -102,6 +102,7 @@ public sealed class RenpyModAnalyzer
         var chars = new List<RpyCharacter>();
         var files = new List<string>();
         var consumers = new Dictionary<string, List<VarConsumer>>(StringComparer.Ordinal);
+        var menuLocations = new List<(string file, int line)>();
 
         var root = Path.GetFullPath(rootDir);
         foreach (var file in Directory.EnumerateFiles(root, "*.rpy", SearchOption.AllDirectories)
@@ -113,7 +114,7 @@ public sealed class RenpyModAnalyzer
             if (rel.Split('/').Any(s => s.Equals("tl", StringComparison.OrdinalIgnoreCase)))
                 continue;
             files.Add(rel);
-            AnalyzeFile(file, rel, choices, vars, chars, consumers);
+            AnalyzeFile(file, rel, choices, vars, chars, consumers, menuLocations);
         }
 
         // Nachtraeglich: Choice-Conditions als MenuChoiceGate-Consumer erfassen.
@@ -136,10 +137,28 @@ public sealed class RenpyModAnalyzer
                 .ThenBy(c => c.SourceLine)
                 .ToList());
 
+        // Menu-Locations: pro (file, menuHeaderLine) alle Variables die
+        // von den Choices dieses Menus veraendert werden. Wir matchen Choices
+        // per (file, headerLine) → nehmen alle deren Deltas.
+        var menuList = new List<RpyMenuLocation>(menuLocations.Count);
+        foreach (var (mFile, mLine) in menuLocations)
+        {
+            var affectedVars = choices
+                .Where(c => c.SourceFile == mFile && c.MenuHeaderLine == mLine)
+                .SelectMany(c => c.Deltas)
+                .Select(d => d.Variable)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(v => v, StringComparer.Ordinal)
+                .ToList();
+            if (affectedVars.Count > 0)
+                menuList.Add(new RpyMenuLocation(mFile, mLine, affectedVars));
+        }
+
         Log.Info("Mod-Analyse: {files} .rpy-Dateien, {choices} Choices, "
-            + "{vars} Store-Variablen, {chars} Characters, {consumers} Variables mit Consumers",
-            files.Count, choices.Count, vars.Count, chars.Count, frozen.Count);
-        return new ModAnalysis(choices, vars, chars, files, frozen);
+            + "{vars} Store-Variablen, {chars} Characters, {consumers} Variables mit Consumers, "
+            + "{menus} Menu-Locations mit Impact",
+            files.Count, choices.Count, vars.Count, chars.Count, frozen.Count, menuList.Count);
+        return new ModAnalysis(choices, vars, chars, files, frozen, menuList);
     }
 
     private static void AddConsumer(Dictionary<string, List<VarConsumer>> dict,
@@ -167,7 +186,8 @@ public sealed class RenpyModAnalyzer
 
     private static void AnalyzeFile(string absPath, string relPath,
         List<RpyChoice> choices, List<RpyStoreVariable> vars, List<RpyCharacter> chars,
-        Dictionary<string, List<VarConsumer>> consumers)
+        Dictionary<string, List<VarConsumer>> consumers,
+        List<(string file, int line)> menuLocations)
     {
         var lines = File.ReadAllLines(absPath);
         string currentLabel = "";
@@ -212,7 +232,9 @@ public sealed class RenpyModAnalyzer
                     ChoiceIndent: -1, // wird beim ersten Choice gesetzt
                     ChoiceCount: 0,
                     LabelAtOpen: currentLabel,
-                    MenuIndex: menuIndexInLabel));
+                    MenuIndex: menuIndexInLabel,
+                    HeaderLine: i + 1));
+                menuLocations.Add((relPath, i + 1));
                 continue;
             }
 
@@ -240,6 +262,7 @@ public sealed class RenpyModAnalyzer
                             SourceLine: i + 1,
                             Label: ctx.LabelAtOpen,
                             MenuIndex: ctx.MenuIndex,
+                            MenuHeaderLine: ctx.HeaderLine,
                             ChoiceIndex: ctx.ChoiceCount,
                             Text: text,
                             Condition: condition,
@@ -381,5 +404,5 @@ public sealed class RenpyModAnalyzer
 
     private sealed record MenuContext(
         int MenuIndent, int ChoiceIndent, int ChoiceCount,
-        string LabelAtOpen, int MenuIndex);
+        string LabelAtOpen, int MenuIndex, int HeaderLine);
 }

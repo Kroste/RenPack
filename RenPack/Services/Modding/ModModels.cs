@@ -12,13 +12,31 @@ public enum ModTypeId { Walkthrough, Cheat, Rename }
 /// aller Stellen, wo die Variable geLESEN wird (in <c>if</c>/<c>elif</c>-
 /// Conditions, Menu-Choice-Conditions). Fuer den KrosteMod-Info-Screen
 /// (v0.9.0) wichtig — dem Spieler zeigen wo eine gerade veraenderte Variable
-/// spaeter Konsequenzen hat.</summary>
+/// spaeter Konsequenzen hat.
+///
+/// <see cref="MenuLocations"/> fuer v0.9.3: pro <c>menu:</c>-Header speichern
+/// wir Datei + Zeilennummer + Liste aller Variablen die die Choices im
+/// Menu setzen. Der ingame-Overlay-Screen kann ueber
+/// <c>renpy.get_filename_line()</c> das aktuelle Menu identifizieren und den
+/// „!"-Hint nur mit den relevanten Variablen anzeigen.</summary>
 public sealed record ModAnalysis(
     IReadOnlyList<RpyChoice> Choices,
     IReadOnlyList<RpyStoreVariable> StoreVariables,
     IReadOnlyList<RpyCharacter> Characters,
     IReadOnlyList<string> AnalyzedFiles,
-    IReadOnlyDictionary<string, IReadOnlyList<VarConsumer>> VariableConsumers);
+    IReadOnlyDictionary<string, IReadOnlyList<VarConsumer>> VariableConsumers,
+    IReadOnlyList<RpyMenuLocation> MenuLocations);
+
+/// <summary>Eine <c>menu:</c>-Stelle im Skript. <see cref="MenuHeaderLine"/>
+/// ist die 1-basierte Zeilennummer des <c>menu:</c> (bzw. <c>menu name:</c>)
+/// in der dekompilierten .rpy — mit dieser Zeile matched
+/// <c>renpy.get_filename_line()</c> zur Laufzeit. <see cref="VariablesAffected"/>
+/// ist die Union aller Variablen, die die Choices in diesem Menu via
+/// <c>$ var op value</c> aendern.</summary>
+public sealed record RpyMenuLocation(
+    string SourceFile,
+    int MenuHeaderLine,
+    IReadOnlyList<string> VariablesAffected);
 
 /// <summary>Eine Stelle im Skript, an der eine Variable GELESEN wird.
 /// Beispiel: <c>if love >= 5:</c> in <c>day22.rpy</c> Zeile 234, im Label
@@ -43,12 +61,17 @@ public enum VarConsumerKind
 /// <see cref="Text"/>-Property enthaelt den Choice-Text ohne umschlie-
 /// ssende Anfuehrungszeichen; die <see cref="Deltas"/>-Liste zeigt was
 /// der Choice mit Store-Variablen macht (aus <c>$ var += N</c> und
-/// aehnlichen Statements im Choice-Body).</summary>
+/// aehnlichen Statements im Choice-Body).
+///
+/// <see cref="MenuHeaderLine"/> ist die 1-basierte Zeile des umgebenden
+/// <c>menu:</c>-Headers — wird fuer den Runtime-Match des Overlay-Hints
+/// via <c>renpy.get_filename_line()</c> gebraucht (v0.9.3).</summary>
 public sealed record RpyChoice(
     string SourceFile,   // relativer Pfad ab dem Analyse-Root
     int SourceLine,      // 1-basiert, Zeile mit "text":
     string Label,        // Name des enthaltenden `label X:`, "" wenn top-level
     int MenuIndex,       // 0-basierter Index falls mehrere Menus im Label
+    int MenuHeaderLine,  // 1-basiert, Zeile des `menu:`-Headers
     int ChoiceIndex,     // 0-basierter Index innerhalb des Menus
     string Text,         // Choice-Text (ohne Quotes, ohne trailing colon)
     string? Condition,   // "if …"-Bedingung nach dem Choice-Text, falls vorhanden

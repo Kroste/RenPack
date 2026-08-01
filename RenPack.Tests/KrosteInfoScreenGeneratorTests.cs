@@ -19,13 +19,15 @@ public sealed class KrosteInfoScreenGeneratorTests : IDisposable
 
     private static ModAnalysis MakeAnalysis(
         IReadOnlyList<RpyStoreVariable>? vars = null,
-        Dictionary<string, IReadOnlyList<VarConsumer>>? consumers = null) =>
+        Dictionary<string, IReadOnlyList<VarConsumer>>? consumers = null,
+        IReadOnlyList<RpyMenuLocation>? menus = null) =>
         new(
             Choices: Array.Empty<RpyChoice>(),
             StoreVariables: vars ?? Array.Empty<RpyStoreVariable>(),
             Characters: Array.Empty<RpyCharacter>(),
             AnalyzedFiles: Array.Empty<string>(),
-            VariableConsumers: consumers ?? new Dictionary<string, IReadOnlyList<VarConsumer>>());
+            VariableConsumers: consumers ?? new Dictionary<string, IReadOnlyList<VarConsumer>>(),
+            MenuLocations: menus ?? Array.Empty<RpyMenuLocation>());
 
     [Fact]
     public void Emits_rpy_file_with_screen_and_keymap()
@@ -134,6 +136,41 @@ public sealed class KrosteInfoScreenGeneratorTests : IDisposable
         content.Should().Contain("return krostemod_escape(s)");
         // Snippet-Rendering muss auch escapen (entry[4])
         content.Should().Contain("krostemod_escape(entry[4])");
+    }
+
+    [Fact]
+    public void Emits_menu_hint_overlay_screen_with_impact_dict()
+    {
+        // v0.9.3: kontextueller "!"-Button oben rechts wenn ein Menu laueft.
+        var analysis = MakeAnalysis(menus: new[]
+        {
+            new RpyMenuLocation("scripts/day22.rpy", 42,
+                new[] { "love", "respect" }),
+        });
+        var path = _gen.Generate(_tmp, analysis);
+        var content = File.ReadAllText(path);
+
+        // Impact-Dict mit (file, line) → [vars]
+        content.Should().Contain("krostemod_menu_impact");
+        content.Should().Contain("(\"scripts/day22.rpy\", 42)");
+        content.Should().Contain("\"love\"");
+
+        // Runtime-Detection: renpy.get_screen('choice') + get_filename_line
+        content.Should().Contain("def krostemod_current_menu_vars");
+        content.Should().Contain("renpy.get_filename_line");
+        content.Should().Contain("renpy.get_screen('choice')");
+
+        // Overlay-Screen mit dem "!"-Button
+        content.Should().Contain("screen krostemod_menu_hint");
+        content.Should().Contain("krostemod_menu_hint_visible()");
+        content.Should().Contain("ToggleScreen(\"krostemod_context_info\")");
+
+        // Context-Info-Screen
+        content.Should().Contain("screen krostemod_context_info");
+        content.Should().Contain("krostemod_current_menu_vars()");
+
+        // Overlay-Registration
+        content.Should().Contain("config.overlay_screens.append('krostemod_menu_hint')");
     }
 
     [Fact]

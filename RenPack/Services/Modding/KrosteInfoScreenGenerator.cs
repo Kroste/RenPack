@@ -51,13 +51,17 @@ public sealed class KrosteInfoScreenGenerator
         var sb = new StringBuilder();
         WriteHeader(sb);
         WriteImpactData(sb, analysis);
+        WriteMenuImpactData(sb, analysis);
         WriteScreens(sb, analysis);
+        WriteMenuHintScreen(sb);
+        WriteContextInfoScreen(sb);
         WriteKeymap(sb);
 
         File.WriteAllText(target, sb.ToString());
-        Log.Info("KrosteMod-Info-Screen erzeugt: {path} ({vars} Vars, {consumers} Consumer-Refs)",
+        Log.Info("KrosteMod-Info-Screen erzeugt: {path} ({vars} Vars, {consumers} Consumer-Refs, {menus} Menu-Impact-Locations)",
             target, analysis.StoreVariables.Count,
-            analysis.VariableConsumers.Sum(kv => kv.Value.Count));
+            analysis.VariableConsumers.Sum(kv => kv.Value.Count),
+            analysis.MenuLocations.Count);
         return target;
     }
 
@@ -158,6 +162,50 @@ public sealed class KrosteInfoScreenGenerator
         sb.AppendLine();
     }
 
+    /// <summary>Emittiert das Menu-Impact-Dict:
+    /// <c>krostemod_menu_impact[(file, line)] = [var1, var2, …]</c>.
+    /// Wird vom Overlay-Screen genutzt, um zur Laufzeit via
+    /// <c>renpy.get_filename_line()</c> festzustellen ob das aktuelle Menu
+    /// verfolgte Variablen aendert — und den „!"-Button nur dann anzeigen.</summary>
+    private static void WriteMenuImpactData(StringBuilder sb, ModAnalysis analysis)
+    {
+        sb.AppendLine("init 991 python:");
+        sb.AppendLine("    krostemod_menu_impact = {");
+        foreach (var m in analysis.MenuLocations)
+        {
+            sb.Append("        (");
+            sb.Append(PyStr(m.SourceFile));
+            sb.Append(", ");
+            sb.Append(m.MenuHeaderLine.ToString(CultureInfo.InvariantCulture));
+            sb.Append("): [");
+            sb.Append(string.Join(", ", m.VariablesAffected.Select(PyStr)));
+            sb.AppendLine("],");
+        }
+        sb.AppendLine("    }");
+        sb.AppendLine();
+
+        // Runtime-Match: renpy.get_filename_line() liefert "game/scripts/..."
+        // (prefix), unsere Keys sind "scripts/..." (relativ zu game/).
+        // Endswith-Match ist robuster als exakter Vergleich.
+        sb.AppendLine("    def krostemod_current_menu_vars():");
+        sb.AppendLine("        try:");
+        sb.AppendLine("            fn, ln = renpy.get_filename_line()");
+        sb.AppendLine("        except Exception:");
+        sb.AppendLine("            return []");
+        sb.AppendLine("        if not fn: return []");
+        sb.AppendLine("        for (mf, mln), vs in krostemod_menu_impact.items():");
+        sb.AppendLine("            if ln == mln and (fn == mf or fn.endswith('/' + mf) or fn.endswith('\\\\' + mf)):");
+        sb.AppendLine("                return vs");
+        sb.AppendLine("        return []");
+        sb.AppendLine();
+        sb.AppendLine("    def krostemod_menu_hint_visible():");
+        sb.AppendLine("        # \"!\"-Button NUR sichtbar wenn ein Choice-Menu laueft UND");
+        sb.AppendLine("        # wir Impact-Daten fuer dieses Menu haben.");
+        sb.AppendLine("        if renpy.get_screen('choice') is None: return False");
+        sb.AppendLine("        return bool(krostemod_current_menu_vars())");
+        sb.AppendLine();
+    }
+
     /// <summary>Emittiert den <c>screen krostemod_info</c> und den unsichtbaren
     /// <c>screen krostemod_hotkey</c>, der nur den F10-Handler traegt (der
     /// overlay-screen-Trick — der eigentliche Info-Screen ist modal und wird
@@ -239,6 +287,90 @@ public sealed class KrosteInfoScreenGenerator
         sb.AppendLine();
         sb.AppendLine("    config.keymap.setdefault('krostemod_toggle', []).append('K_F10')");
         sb.AppendLine("    config.underlay.append(renpy.Keymap(krostemod_toggle=_krostemod_toggle_info))");
+        sb.AppendLine();
+        sb.AppendLine("    # Overlay-Screen fuer den Menu-Hint immer aktiv — er entscheidet");
+        sb.AppendLine("    # intern per krostemod_menu_hint_visible() ob der \"!\"-Button");
+        sb.AppendLine("    # gezeichnet wird. So bleibt er unsichtbar solange kein Menu laueft.");
+        sb.AppendLine("    if 'krostemod_menu_hint' not in config.overlay_screens:");
+        sb.AppendLine("        config.overlay_screens.append('krostemod_menu_hint')");
+    }
+
+    /// <summary>Emittiert den Overlay-Screen mit dem kleinen „!"-Button oben
+    /// rechts. Der Screen ist immer aktiv (via <c>config.overlay_screens</c>),
+    /// aber der Button ist nur sichtbar wenn ein Choice-Menu laueft UND wir
+    /// Impact-Daten fuer die aktuelle Menu-Location haben.</summary>
+    private static void WriteMenuHintScreen(StringBuilder sb)
+    {
+        sb.AppendLine("screen krostemod_menu_hint():");
+        sb.AppendLine("    zorder 150");
+        sb.AppendLine("    if krostemod_menu_hint_visible():");
+        sb.AppendLine("        button:");
+        sb.AppendLine("            xalign 0.985");
+        sb.AppendLine("            yalign 0.02");
+        sb.AppendLine("            xysize (44, 44)");
+        sb.AppendLine("            background \"#ffffff30\"");
+        sb.AppendLine("            hover_background \"#ffffffa0\"");
+        sb.AppendLine("            action ToggleScreen(\"krostemod_context_info\")");
+        sb.AppendLine("            tooltip \"KrosteMod: welche Story-Variablen setzen diese Choices?\"");
+        sb.AppendLine("            text \"!\" xalign 0.5 yalign 0.5 size 26 bold True color \"#000000\"");
+        sb.AppendLine();
+    }
+
+    /// <summary>Emittiert den kontextuellen Info-Screen — kleiner als der
+    /// Full-F10-Screen. Zeigt nur die Variablen die die Choices im aktuellen
+    /// Menu betreffen, mit Consumer-Impact wie der grosse Screen.</summary>
+    private static void WriteContextInfoScreen(StringBuilder sb)
+    {
+        sb.AppendLine("screen krostemod_context_info():");
+        sb.AppendLine("    modal True");
+        sb.AppendLine("    zorder 250");
+        sb.AppendLine("    key \"K_ESCAPE\" action Hide(\"krostemod_context_info\")");
+        sb.AppendLine();
+        sb.AppendLine("    frame:");
+        sb.AppendLine("        xalign 0.5");
+        sb.AppendLine("        yalign 0.5");
+        sb.AppendLine("        xsize 900");
+        sb.AppendLine("        ysize 620");
+        sb.AppendLine("        background \"#000000d0\"");
+        sb.AppendLine("        padding (18, 14)");
+        sb.AppendLine("        vbox:");
+        sb.AppendLine("            spacing 8");
+        sb.AppendLine($"            text \"Choice Impact\" size 22 color \"{GoldHex}\" bold True");
+        sb.AppendLine("            text \"Diese Variablen werden von den aktuellen Choices veraendert:\" size 12 color \"#bbbbbb\"");
+        sb.AppendLine("            null height 6");
+        sb.AppendLine();
+        sb.AppendLine("            $ ctxvars = krostemod_current_menu_vars()");
+        sb.AppendLine("            viewport:");
+        sb.AppendLine("                mousewheel True");
+        sb.AppendLine("                draggable True");
+        sb.AppendLine("                scrollbars \"vertical\"");
+        sb.AppendLine("                xsize 860");
+        sb.AppendLine("                ysize 470");
+        sb.AppendLine("                vbox:");
+        sb.AppendLine("                    spacing 8");
+        sb.AppendLine("                    if not ctxvars:");
+        sb.AppendLine("                        text \"(keine erkennbaren Variablen-Effekte fuer dieses Menu)\" size 12 color \"#888888\" italic True");
+        sb.AppendLine("                    for var_name in ctxvars:");
+        sb.AppendLine("                        vbox:");
+        sb.AppendLine("                            spacing 2");
+        sb.AppendLine("                            hbox:");
+        sb.AppendLine("                                spacing 8");
+        sb.AppendLine($"                                text \"[var_name]\" size 15 color \"{GoldHex}\" bold True");
+        sb.AppendLine("                                text \"=\" size 15 color \"#888888\"");
+        sb.AppendLine("                                text \"[krostemod_get_value(var_name)]\" size 15 color \"#8fcfff\"");
+        sb.AppendLine("                            if var_name in krostemod_impact and krostemod_impact[var_name]:");
+        sb.AppendLine("                                for entry in krostemod_impact[var_name]:");
+        sb.AppendLine("                                    text \"    -> [entry[3]] in [entry[2] or entry[0]] ([entry[0]]:[entry[1]]) : [krostemod_escape(entry[4])]\" size 11 color \"#999999\"");
+        sb.AppendLine("                            else:");
+        sb.AppendLine("                                text \"    (spaeter nirgends geprueft — Choice hat keinen weiteren Story-Impact)\" size 11 color \"#666666\" italic True");
+        sb.AppendLine("                            null height 4");
+        sb.AppendLine();
+        sb.AppendLine("            null height 6");
+        sb.AppendLine("            hbox:");
+        sb.AppendLine("                spacing 12");
+        sb.AppendLine("                textbutton \"Close (ESC)\" action Hide(\"krostemod_context_info\") text_size 14");
+        sb.AppendLine("                textbutton \"Full impact list (F10)\" action [Hide(\"krostemod_context_info\"), Show(\"krostemod_info\")] text_size 14");
+        sb.AppendLine();
     }
 
     /// <summary>Python-safe String-Literal — verwendet <c>repr()</c>-aehnliche
