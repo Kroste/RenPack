@@ -110,13 +110,18 @@ public sealed class UpdateService
 
     /// <summary>Linux: AppImage ersetzt sich selbst (cp -f, dann setsid).
     /// tar.gz wird ausgepackt nach BaseDirectory. Beide loggen in
-    /// <c>logs/update.log</c>.</summary>
+    /// <c>$XDG_STATE_HOME/RenPack/update.log</c> — <b>nicht</b> nach
+    /// <c>AppContext.BaseDirectory/logs/</c>, weil das beim AppImage im
+    /// read-only Squashfs-Mount liegen wuerde und <c>exec &gt;&gt;logfile</c>
+    /// im Bash-Skript sofort scheitern wuerde ("Read-only file system").
+    /// Das war real der Bug in v0.7.0: Update-Skript startete, Log-Pfad
+    /// nicht schreibbar, Skript brach ab, App wurde nie ersetzt.</summary>
     [System.Runtime.Versioning.SupportedOSPlatform("linux")]
     private static void ApplyUpdateLinux(string downloadedAssetPath)
     {
         string appImageEnv = Environment.GetEnvironmentVariable("APPIMAGE") ?? "";
         string ext = Path.GetExtension(downloadedAssetPath).ToLowerInvariant();
-        string logPath = Path.Combine(AppContext.BaseDirectory, "logs", "update.log");
+        string logPath = ResolveWritableLogPath();
         Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
 
         string script;
@@ -225,6 +230,20 @@ setsid {Escape(Path.Combine(baseDir, "RenPack"))} >/dev/null 2>&1 &
     }
 
     private static string Escape(string p) => "'" + p.Replace("'", "'\\''") + "'";
+
+    /// <summary>Sicher schreibbarer Log-Pfad, auch aus einem read-only
+    /// AppImage-Squashfs-Mount. Bevorzugt <c>$XDG_STATE_HOME/RenPack/</c>,
+    /// fallback <c>~/.local/state/RenPack/</c>, notfalls <c>/tmp/</c>.</summary>
+    private static string ResolveWritableLogPath()
+    {
+        string? xdg = Environment.GetEnvironmentVariable("XDG_STATE_HOME");
+        if (!string.IsNullOrEmpty(xdg))
+            return Path.Combine(xdg, "RenPack", "update.log");
+        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (!string.IsNullOrEmpty(home))
+            return Path.Combine(home, ".local", "state", "RenPack", "update.log");
+        return Path.Combine("/tmp", "renpack-update.log");
+    }
 
     /// <summary>Passendes Release-Asset fuer die laufende Plattform waehlen.
     /// Namensschema aus release.yml: <c>RenPack-X.Y.Z-{platform}</c>.</summary>

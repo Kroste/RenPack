@@ -87,8 +87,14 @@ public partial class AboutWindow : ChromeWindow
             // Kurz warten, damit der Installer starten kann, dann App beenden —
             // der Installer wartet mit kill -0/Wait-Process aufs Prozessende.
             await Task.Delay(500);
-            NLog.LogManager.Shutdown();
+            try { NLog.LogManager.Shutdown(); } catch { }
             Environment.Exit(0);
+            // Brutaler Fallback: wenn Environment.Exit haengt (Finalizer,
+            // Tray-Icon, Single-Instance-Guard-Thread), killt Process.Kill
+            // den Prozess garantiert — der Installer wartet mit kill -0 nur
+            // aufs Prozess-Ende, es muss nicht "sauber" sein.
+            await Task.Delay(1500);
+            System.Diagnostics.Process.GetCurrentProcess().Kill();
         }
         catch (Exception ex)
         {
