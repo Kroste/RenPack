@@ -84,6 +84,7 @@ public partial class App : Application
         services.AddSingleton<UpdateService>();
 
         services.AddSingleton<WindowStateService>();
+        services.AddSingleton<RecentFilesService>();
 
         // KI-Services (v0.4b — Multi-Provider)
         services.AddSingleton<AiSettingsService>();

@@ -13,19 +13,44 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
     private readonly IRenpyArchiveService _archiveService;
+    private readonly RecentFilesService? _recent;
     private readonly List<ArchiveEntryViewModel> _allEntries = [];
 
     /// <summary>Von der View gesetzt (Datei-/Ordnerdialoge, Meldungen).</summary>
     public IUiInteractions? Ui { get; set; }
 
-    public MainWindowViewModel(IRenpyArchiveService archiveService)
+    public MainWindowViewModel(IRenpyArchiveService archiveService, RecentFilesService recent)
     {
         _archiveService = archiveService;
+        _recent = recent;
         Preview = new PreviewViewModel(archiveService);
+        RecentArchives = new(_recent.Archives);
+        _recent.Changed += (_, _) => RefreshRecent();
     }
 
     // Designer-Konstruktor
-    public MainWindowViewModel() : this(new RenpyArchiveService()) { }
+    public MainWindowViewModel() : this(new RenpyArchiveService(), new RecentFilesService()) { }
+
+    /// <summary>MRU-Liste der zuletzt geoeffneten Archive — im Dropdown
+    /// neben dem "Oeffnen"-Button gebunden.</summary>
+    public System.Collections.ObjectModel.ObservableCollection<string> RecentArchives { get; } = [];
+
+    public bool HasRecentArchives => RecentArchives.Count > 0;
+
+    private void RefreshRecent()
+    {
+        if (_recent is null) return;
+        RecentArchives.Clear();
+        foreach (var p in _recent.Archives) RecentArchives.Add(p);
+        OnPropertyChanged(nameof(HasRecentArchives));
+    }
+
+    [RelayCommand]
+    private async Task OpenRecentAsync(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return;
+        await LoadArchiveAsync(path);
+    }
 
     /// <summary>Die aktuell gefilterte, angezeigte Dateiliste.</summary>
     public ObservableCollection<ArchiveEntryViewModel> Entries { get; } = [];
@@ -111,6 +136,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             SelectedCount = 0;
             ApplyFilter();
             StatusText = L.F("Status_ArchiveLoadedFormat", System.IO.Path.GetFileName(path), info.Entries.Count);
+            _recent?.AddArchive(path);
             Log.Info("Archiv geladen: {path} ({count} Einträge)", path, info.Entries.Count);
         }
         catch (Exception ex)

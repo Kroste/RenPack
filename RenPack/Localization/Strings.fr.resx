@@ -171,6 +171,7 @@
   <data name="Msg_BatchExtractDone_Body_Format" xml:space="preserve"><value>{0} archive(s) extraite(s) dans des sous-dossiers de :
 {1}</value></data>
   <data name="Msg_BatchExtractDoneWithErrors_Body_Format" xml:space="preserve"><value>{0} archives sur {1} réussies, {2} échouées :</value></data>
+  <data name="Main_Recent_Tip" xml:space="preserve"><value>Archives récemment ouvertes</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 

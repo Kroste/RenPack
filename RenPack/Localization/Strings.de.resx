@@ -171,6 +171,7 @@
   <data name="Msg_BatchExtractDone_Body_Format" xml:space="preserve"><value>{0} Archiv(e) in Unterordner entpackt unter:
 {1}</value></data>
   <data name="Msg_BatchExtractDoneWithErrors_Body_Format" xml:space="preserve"><value>{0} von {1} Archiven erfolgreich, {2} fehlgeschlagen:</value></data>
+  <data name="Main_Recent_Tip" xml:space="preserve"><value>Zuletzt geöffnete Archive</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 
