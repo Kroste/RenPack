@@ -137,6 +137,8 @@
   <data name="Pack_KeyReset" xml:space="preserve"><value>↺ Réinitialiser</value></data>
   <data name="Pack_KeyHint" xml:space="preserve"><value>Ren'Py utilise 0xDEADBEEF par défaut. À modifier uniquement si vous savez pourquoi.</value></data>
   <data name="Pack_InvalidKey" xml:space="preserve"><value>Valeur hexadécimale invalide.</value></data>
+  <data name="Save_Undo_Tip" xml:space="preserve"><value>Annuler (Ctrl+Z)</value></data>
+  <data name="Save_Redo_Tip" xml:space="preserve"><value>Rétablir (Ctrl+Y)</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 

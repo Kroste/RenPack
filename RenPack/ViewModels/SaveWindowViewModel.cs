@@ -58,6 +58,16 @@ public sealed partial class SaveWindowViewModel : ObservableObject
     [ObservableProperty] private Bitmap? _screenshot;
     [ObservableProperty] private string _statusText = L.T("Status_SaveNone");
 
+    // Undo/Redo — je ein Stack von Edit-Records. Beim Undo-Anwenden setzen
+    // wir _isRestoring, damit der eigene PropertyChanged-Listener den
+    // Restore nicht wieder als neuen Edit interpretiert (sonst Endlos-Loop).
+    private readonly Stack<EditRecord> _undo = new();
+    private readonly Stack<EditRecord> _redo = new();
+    private bool _isRestoring;
+    private readonly Dictionary<SaveVariableViewModel, string> _lastKnownValue = new();
+
+    private sealed record EditRecord(SaveVariableViewModel Var, string OldValue, string NewValue);
+
     // WICHTIG: _isBusy muss ALLE Commands notifiy'en, deren CanExecute-Methode
     // !IsBusy prüft. Sonst bleibt der Button nach LoadSaveAsync grau, weil der
     // finally-Block IsBusy=false setzt aber niemand mehr CanExecute neu abfragt.
@@ -67,6 +77,8 @@ public sealed partial class SaveWindowViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(SaveAsCommand))]
     [NotifyCanExecuteChangedFor(nameof(RevertCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenSaveCommand))]
+    [NotifyCanExecuteChangedFor(nameof(UndoCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RedoCommand))]
     private bool _isBusy;
 
     [ObservableProperty] private bool _showInternal;
@@ -132,6 +144,9 @@ public sealed partial class SaveWindowViewModel : ObservableObject
             Screenshot = LoadScreenshot(info.ScreenshotBytes);
 
             _allVariables.Clear();
+            _undo.Clear();
+            _redo.Clear();
+            _lastKnownValue.Clear();
             foreach (var v in info.Variables)
             {
                 var vm = new SaveVariableViewModel(v);
@@ -139,9 +154,12 @@ public sealed partial class SaveWindowViewModel : ObservableObject
                 if (_translation is not null && _translation.TryGetCached(v.Name, out var cached))
                     vm.Description = cached;
                 _allVariables.Add(vm);
+                _lastKnownValue[vm] = vm.EditableValue;
             }
             DirtyCount = 0;
             TranslateCommand.NotifyCanExecuteChanged();
+            UndoCommand.NotifyCanExecuteChanged();
+            RedoCommand.NotifyCanExecuteChanged();
             ApplyFilter();
 
             StatusText = info.LogError is null
@@ -306,12 +324,62 @@ public sealed partial class SaveWindowViewModel : ObservableObject
 
     private void OnVariableChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(SaveVariableViewModel.EditableValue))
+        {
+            // Undo-Historie: neuen Edit auf den Stack, Redo leeren —
+            // AUSSER wir sind gerade im Undo/Redo (dann kein Rekurs).
+            if (!_isRestoring && sender is SaveVariableViewModel v)
+            {
+                var oldValue = _lastKnownValue.TryGetValue(v, out var lk) ? lk : v.OriginalValue;
+                if (!string.Equals(oldValue, v.EditableValue, StringComparison.Ordinal))
+                {
+                    _undo.Push(new EditRecord(v, oldValue, v.EditableValue));
+                    _redo.Clear();
+                    _lastKnownValue[v] = v.EditableValue;
+                    UndoCommand.NotifyCanExecuteChanged();
+                    RedoCommand.NotifyCanExecuteChanged();
+                }
+            }
+        }
         if (e.PropertyName == nameof(SaveVariableViewModel.EditableValue) ||
             e.PropertyName == nameof(SaveVariableViewModel.IsDirty))
         {
             DirtyCount = _allVariables.Count(v => v.IsDirty);
         }
     }
+
+    [RelayCommand(CanExecute = nameof(CanUndo))]
+    private void Undo()
+    {
+        if (_undo.Count == 0) return;
+        var rec = _undo.Pop();
+        _isRestoring = true;
+        try { rec.Var.EditableValue = rec.OldValue; }
+        finally { _isRestoring = false; }
+        _lastKnownValue[rec.Var] = rec.OldValue;
+        _redo.Push(rec);
+        DirtyCount = _allVariables.Count(v => v.IsDirty);
+        UndoCommand.NotifyCanExecuteChanged();
+        RedoCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRedo))]
+    private void Redo()
+    {
+        if (_redo.Count == 0) return;
+        var rec = _redo.Pop();
+        _isRestoring = true;
+        try { rec.Var.EditableValue = rec.NewValue; }
+        finally { _isRestoring = false; }
+        _lastKnownValue[rec.Var] = rec.NewValue;
+        _undo.Push(rec);
+        DirtyCount = _allVariables.Count(v => v.IsDirty);
+        UndoCommand.NotifyCanExecuteChanged();
+        RedoCommand.NotifyCanExecuteChanged();
+    }
+
+    private bool CanUndo() => !IsBusy && _undo.Count > 0;
+    private bool CanRedo() => !IsBusy && _redo.Count > 0;
 
     private void ApplyFilter()
     {

@@ -137,6 +137,8 @@
   <data name="Pack_KeyReset" xml:space="preserve"><value>↺ Сброс</value></data>
   <data name="Pack_KeyHint" xml:space="preserve"><value>Ren'Py по умолчанию использует 0xDEADBEEF. Меняйте только осознанно.</value></data>
   <data name="Pack_InvalidKey" xml:space="preserve"><value>Неверное шестнадцатеричное значение.</value></data>
+  <data name="Save_Undo_Tip" xml:space="preserve"><value>Отменить (Ctrl+Z)</value></data>
+  <data name="Save_Redo_Tip" xml:space="preserve"><value>Повторить (Ctrl+Y)</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 

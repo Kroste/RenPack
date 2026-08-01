@@ -137,6 +137,8 @@
   <data name="Pack_KeyReset" xml:space="preserve"><value>↺ Zurücksetzen</value></data>
   <data name="Pack_KeyHint" xml:space="preserve"><value>Ren'Py nutzt standardmäßig 0xDEADBEEF. Nur ändern, wenn du weißt warum.</value></data>
   <data name="Pack_InvalidKey" xml:space="preserve"><value>Ungültiger Hex-Wert.</value></data>
+  <data name="Save_Undo_Tip" xml:space="preserve"><value>Rückgängig (Strg+Z)</value></data>
+  <data name="Save_Redo_Tip" xml:space="preserve"><value>Wiederholen (Strg+Y)</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 

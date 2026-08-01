@@ -19,6 +19,14 @@
         <vm:SaveWindowViewModel />
     </Design.DataContext>
 
+    <views:ChromeWindow.KeyBindings>
+        <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenSaveCommand}" />
+        <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}" />
+        <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand}" />
+        <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand}" />
+        <KeyBinding Gesture="Ctrl+Shift+Z" Command="{Binding RedoCommand}" />
+    </views:ChromeWindow.KeyBindings>
+
     <DockPanel>
         <controls:TitleBar DockPanel.Dock="Top" Title="{loc:Tr Window_SaveEditor}" />
 
@@ -58,6 +66,12 @@
                     <StackPanel Grid.Column="2" Spacing="8">
                         <TextBlock Text="{loc:Tr Save_Section_Changes}" Classes="section-label" />
                         <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Classes="ghost" Content="↶" Padding="10,4"
+                                    Command="{Binding UndoCommand}"
+                                    ToolTip.Tip="{loc:Tr Save_Undo_Tip}" />
+                            <Button Classes="ghost" Content="↷" Padding="10,4"
+                                    Command="{Binding RedoCommand}"
+                                    ToolTip.Tip="{loc:Tr Save_Redo_Tip}" />
                             <Button Content="{loc:Tr Save_Save}"
                                     Command="{Binding SaveCommand}"
                                     ToolTip.Tip="{loc:Tr Save_Save_Tip}" />
