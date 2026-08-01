@@ -161,4 +161,38 @@ public sealed class KrosteCheatGeneratorTests : IDisposable
         content.Should().Contain("krostemod_cheat_vars = [");
         content.Should().Contain("]"); // Liste geschlossen — leer, aber valide Python
     }
+
+    // ---- v0.10.1: Overlay-Icon (immer sichtbar oben rechts) --------------
+
+    [Fact]
+    public void Deploys_anonymous_mask_icon_png_and_wires_overlay_screen()
+    {
+        _gen.Generate(_tmp, MakeAnalysis());
+        var iconPath = Path.Combine(_tmp, KrosteCheatGenerator.CheatIconFileName);
+        File.Exists(iconPath).Should().BeTrue();
+        // PNG-Magic
+        var bytes = File.ReadAllBytes(iconPath);
+        bytes.Should().StartWith(new byte[] { 0x89, 0x50, 0x4E, 0x47 });
+    }
+
+    [Fact]
+    public void Overlay_screen_registers_as_always_on_and_uses_imagebutton()
+    {
+        var path = _gen.Generate(_tmp, MakeAnalysis());
+        var content = File.ReadAllText(path);
+
+        // Overlay-Screen mit imagebutton (nicht conditional!) — Cheat-Icon
+        // ist immer sichtbar, im Gegensatz zum Info-\"!\".
+        content.Should().Contain("screen krostemod_cheat_overlay");
+        content.Should().Contain("imagebutton");
+        content.Should().Contain("krostemod_cheat.png");
+        content.Should().Contain("ToggleScreen(\"krostemod_cheat\")");
+
+        // Registration im overlay_screens-List
+        content.Should().Contain("config.overlay_screens.append('krostemod_cheat_overlay')");
+
+        // Positioning: yalign 0.09 = direkt unter dem Info-\"!\"-Icon
+        // (das bei yalign 0.02 sitzt) → keine Kollision.
+        content.Should().Contain("yalign 0.09");
+    }
 }

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Reflection;
 using System.Text;
 using NLog;
 
@@ -29,6 +30,12 @@ public sealed class KrosteCheatGenerator
     /// (Scrollen wird zur Qual, Overview geht verloren).</summary>
     private const int MaxCheatVars = 40;
 
+    /// <summary>Dateiname des Cheat-Overlay-Icons im Spielordner.</summary>
+    public const string CheatIconFileName = "krostemod_cheat.png";
+
+    /// <summary>Manifest-Resource-Name des eingebetteten PNG.</summary>
+    private const string CheatIconResource = "RenPack.Assets.krostemod_cheat.png";
+
     /// <summary>Schreibt die <c>krostemod_cheat.rpy</c> nach
     /// <paramref name="destDir"/>. Gibt den erzeugten absoluten Pfad zurueck.</summary>
     public string Generate(string destDir, ModAnalysis analysis)
@@ -45,10 +52,24 @@ public sealed class KrosteCheatGenerator
         WriteCheatData(sb, cheatVars);
         WriteHelpers(sb);
         WriteScreen(sb);
+        WriteOverlayIconScreen(sb);
         WriteKeymap(sb);
 
         File.WriteAllText(target, sb.ToString());
+        ExtractCheatIcon(destDir);
         return target;
+    }
+
+    private static void ExtractCheatIcon(string destDir)
+    {
+        var iconPath = Path.Combine(destDir, CheatIconFileName);
+        var assembly = typeof(KrosteCheatGenerator).Assembly;
+        using var stream = assembly.GetManifestResourceStream(CheatIconResource)
+            ?? throw new InvalidOperationException(
+                $"Embedded resource '{CheatIconResource}' nicht gefunden. " +
+                "Ist Assets/krostemod_cheat.png in RenPack.csproj als <EmbeddedResource> deklariert?");
+        using var fs = File.Create(iconPath);
+        stream.CopyTo(fs);
     }
 
     /// <summary>Filtert die interessanten Cheat-Kandidaten aus der Analyse.
@@ -268,6 +289,35 @@ public sealed class KrosteCheatGenerator
         sb.AppendLine();
         sb.AppendLine("    config.keymap.setdefault('krostemod_cheat_toggle', []).append('K_F11')");
         sb.AppendLine("    config.underlay.append(renpy.Keymap(krostemod_cheat_toggle=_krostemod_toggle_cheat))");
+        sb.AppendLine();
+        sb.AppendLine("    # Overlay-Screen fuer den Cheat-Icon immer aktiv registrieren.");
+        sb.AppendLine("    # Der Icon-Button selbst ist immer sichtbar (Cheat kann jederzeit");
+        sb.AppendLine("    # aufgerufen werden — im Gegensatz zum \"!\"-Info-Icon, das nur bei");
+        sb.AppendLine("    # Choice-Menus erscheint).");
+        sb.AppendLine("    if 'krostemod_cheat_overlay' not in config.overlay_screens:");
+        sb.AppendLine("        config.overlay_screens.append('krostemod_cheat_overlay')");
+    }
+
+    /// <summary>Emittiert den Overlay-Screen mit dem Anonymous-Icon oben
+    /// rechts. Position: <c>yalign 0.09</c> — direkt UNTER dem Info-\"!\"
+    /// (das bei <c>yalign 0.02</c> sitzt). So kollidieren beide Icons
+    /// nicht wenn Walkthrough+Cheat parallel installiert sind.
+    ///
+    /// **Warum immer sichtbar (nicht conditional)?** Cheat kann der User
+    /// jederzeit brauchen — nicht nur bei Menus wie der Info-Screen. Er ist
+    /// die dauerhaft-verfuegbare Toolbox.</summary>
+    private static void WriteOverlayIconScreen(StringBuilder sb)
+    {
+        sb.AppendLine("screen krostemod_cheat_overlay():");
+        sb.AppendLine("    zorder 149");
+        sb.AppendLine("    imagebutton:");
+        sb.AppendLine("        xalign 0.985");
+        sb.AppendLine("        yalign 0.09");
+        sb.AppendLine($"        idle Transform(\"{CheatIconFileName}\", alpha=0.75)");
+        sb.AppendLine($"        hover Transform(\"{CheatIconFileName}\", alpha=1.0, zoom=1.08)");
+        sb.AppendLine("        action ToggleScreen(\"krostemod_cheat\")");
+        sb.AppendLine("        tooltip \"KrosteMod Cheat Menu (F11) — Story-Variablen bearbeiten\"");
+        sb.AppendLine();
     }
 
     private static string PyStr(string? s)

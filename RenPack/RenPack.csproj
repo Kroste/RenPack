@@ -15,6 +15,8 @@
          KrosteInfoScreenGenerator zur Runtime extrahiert und im
          Mod-Deploy neben die krostemod_info.rpy gelegt. -->
     <EmbeddedResource Include="Assets/krostemod_hint.png" />
+    <!-- Cheat-Icon analog fuer den KrosteCheatGenerator (F11-Overlay). -->
+    <EmbeddedResource Include="Assets/krostemod_cheat.png" />
     <None Update="nlog.config" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
