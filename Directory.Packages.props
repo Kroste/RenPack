@@ -29,12 +29,11 @@
     <!-- Python-Pickle lesen/schreiben (Ren'Py-Index). MIT-Lizenz. -->
     <PackageVersion Include="Razorvine.Pickle" Version="1.5.0" />
 
-    <!-- Media-Playback (Video/Audio in der Preview-Pane).
-         LibVLC-Binaries kommen als eigenes Paket nur fuer Windows mit —
-         auf Linux erwartet libVLC im System-PATH (VLC-Installation). -->
-    <PackageVersion Include="LibVLCSharp" Version="3.10.0" />
-    <PackageVersion Include="LibVLCSharp.Avalonia" Version="3.10.0" />
-    <PackageVersion Include="VideoLAN.LibVLC.Windows" Version="3.0.23.1" />
+    <!-- Media-Preview: kein LibVLC (deployment-Chaos, Airspace-Probleme
+         im UI, siehe Spektiv-Kommentar zum selben Trade-off). Stattdessen
+         ffmpeg als externer Subprocess fuer Standbild-Frame-Grab, und
+         Process.Start(useShellExecute) fuer echtes Playback im System-
+         Default-Player. Kein NuGet noetig. -->
 
     <!-- Versionierung -->
     <PackageVersion Include="MinVer" Version="7.0.0" />

@@ -26,16 +26,6 @@
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
     <PackageReference Include="NLog" />
     <PackageReference Include="Razorvine.Pickle" />
-
-    <!-- Media-Playback in der Preview-Pane (Video/Audio) -->
-    <PackageReference Include="LibVLCSharp" />
-    <PackageReference Include="LibVLCSharp.Avalonia" />
-  </ItemGroup>
-
-  <!-- LibVLC-Binaries nur beim Windows-Publish mitpacken. Auf Linux
-       muss libVLC systemweit installiert sein (VLC-Paket der Distro). -->
-  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64' Or '$(RuntimeIdentifier)' == ''">
-    <PackageReference Include="VideoLAN.LibVLC.Windows" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
   </ItemGroup>
 
   <!-- DevTools nur im Debug-Build -->

@@ -10,15 +10,16 @@ namespace RenPack.ViewModels;
 
 /// <summary>
 /// Vorschau-Panel neben der Dateiliste im MainWindow. Zeigt Text, Bild,
-/// Video und Audio direkt an, damit man ohne Entpacken schnell reinschauen
-/// bzw. reinhoeren kann. Unbekannte Formate: „Kein Preview" + Dateigroesse.
+/// Video-Standbild und Audio-Placeholder. Fuer echte Wiedergabe kommt
+/// der System-Default-Player (VLC/mpv/QuickTime/Windows Media Player)
+/// per <c>Process.Start(useShellExecute)</c> zum Zug — kein
+/// Inline-Media-Widget, kein LibVLC-Deployment-Chaos.
 ///
-/// Limits: 512 KB fuer Text, 50 MB fuer Bilder, 500 MB fuer Video/Audio
-/// (die groesseren Cutscenes in Ren'Py-Games sind selten drueber).
+/// Fuer Video wird per ffmpeg das erste Frame gegrabbt und als Standbild
+/// angezeigt; damit hat man sofort ein visuelles Feedback ohne die
+/// ganze Datei zu extrahieren.
 ///
-/// Video/Audio-Playback: LibVLC braucht einen Datei-Pfad, deshalb
-/// extrahieren wir das Archiv-Entry ins Temp-Verzeichnis fuer die Dauer
-/// der Preview. <see cref="Clear"/> raeumt die Temp-Datei wieder auf.
+/// Limits: 512 KB Text, 50 MB Bilder, 500 MB Video/Audio.
 /// </summary>
 public sealed partial class PreviewViewModel : ObservableObject
 {
@@ -48,31 +49,25 @@ public sealed partial class PreviewViewModel : ObservableObject
 
     private readonly IRenpyArchiveService _archiveService;
     private readonly MediaPlaybackService? _media;
-    private string? _currentTempPath;
+    private string? _currentMediaTempPath;
 
     [ObservableProperty] private string _headline = "";
     [ObservableProperty] private string? _textContent;
     [ObservableProperty] private Bitmap? _imageContent;
     [ObservableProperty] private string? _placeholder;
     [ObservableProperty] private bool _hasContent;
-    [ObservableProperty] private bool _isVideoPlaying;
-    [ObservableProperty] private bool _isAudioActive;
-    [ObservableProperty] private bool _isVideoActive;
+
+    /// <summary>Video oder Audio erkannt — Extern-Player-Button anzeigen.</summary>
+    [ObservableProperty] private bool _isMedia;
+    [ObservableProperty] private bool _isAudioOnly;
 
     public bool IsText => TextContent is not null;
     public bool IsImage => ImageContent is not null;
     public bool IsPlaceholder => Placeholder is not null;
-    public bool IsMedia => IsVideoActive || IsAudioActive;
-
-    /// <summary>Der LibVLC-Player, damit die View direkt daran binden kann
-    /// (VideoView.MediaPlayer). Kann null sein wenn LibVLC nicht verfuegbar.</summary>
-    public LibVLCSharp.Shared.MediaPlayer? MediaPlayer => _media?.Player;
 
     partial void OnTextContentChanged(string? value) { OnPropertyChanged(nameof(IsText)); OnPropertyChanged(nameof(IsPlaceholder)); }
     partial void OnImageContentChanged(Bitmap? value) { OnPropertyChanged(nameof(IsImage)); OnPropertyChanged(nameof(IsPlaceholder)); }
     partial void OnPlaceholderChanged(string? value) => OnPropertyChanged(nameof(IsPlaceholder));
-    partial void OnIsAudioActiveChanged(bool value) => OnPropertyChanged(nameof(IsMedia));
-    partial void OnIsVideoActiveChanged(bool value) => OnPropertyChanged(nameof(IsMedia));
 
     public PreviewViewModel(IRenpyArchiveService archiveService, MediaPlaybackService? media = null)
     {
@@ -83,32 +78,26 @@ public sealed partial class PreviewViewModel : ObservableObject
     // Designer-ctor
     public PreviewViewModel() : this(new RenpyArchiveService(), null) { }
 
-    /// <summary>Anzeige zuruecksetzen (kein Eintrag ausgewaehlt oder neu geladen).
-    /// Stoppt eine laufende Wiedergabe und loescht die Temp-Datei.</summary>
     public void Clear()
     {
-        try { _media?.Stop(); } catch { }
         TextContent = null;
         ImageContent = null;
         Placeholder = null;
         Headline = "";
         HasContent = false;
-        IsAudioActive = false;
-        IsVideoActive = false;
-        IsVideoPlaying = false;
-        CleanupTempFile();
+        IsMedia = false;
+        IsAudioOnly = false;
+        CleanupMediaTempFile();
     }
 
-    private void CleanupTempFile()
+    private void CleanupMediaTempFile()
     {
-        if (_currentTempPath is null) return;
-        try { if (File.Exists(_currentTempPath)) File.Delete(_currentTempPath); }
-        catch { /* nicht kritisch */ }
-        _currentTempPath = null;
+        if (_currentMediaTempPath is null) return;
+        try { if (File.Exists(_currentMediaTempPath)) File.Delete(_currentMediaTempPath); }
+        catch { }
+        _currentMediaTempPath = null;
     }
 
-    /// <summary>Laedt den Preview fuer einen Archiv-Eintrag. Async, damit
-    /// bei groesseren Dateien die UI nicht ruckelt.</summary>
     public async Task LoadAsync(string archivePath, RpaEntry entry)
     {
         Clear();
@@ -163,19 +152,11 @@ public sealed partial class PreviewViewModel : ObservableObject
 
     private async Task LoadMediaAsync(string archivePath, RpaEntry entry, bool isVideo)
     {
-        if (_media is null || !_media.IsAvailable)
-        {
-            // Bei Init-Fehler die konkrete Diagnose-Message anzeigen —
-            // hilft massiv bei "libvlc.so nicht gefunden auf Bazzite/
-            // Distrobox"-Faellen.
-            var detail = _media?.InitErrorMessage;
-            Placeholder = string.IsNullOrEmpty(detail)
-                ? L.T("Preview_MediaUnavailable")
-                : L.T("Preview_MediaUnavailable") + "\n\n" + detail;
-            return;
-        }
+        IsMedia = true;
+        IsAudioOnly = !isVideo;
 
-        // LibVLC will einen Pfad — Bytes ins Temp-Verzeichnis schreiben.
+        // Die Datei ins Temp-Verzeichnis extrahieren — brauchen wir sowohl
+        // fuer ffmpeg-Frame-Grab als auch fuer den externen Player.
         string tmp = Path.Combine(Path.GetTempPath(),
             $"renpack-media-{Guid.NewGuid():N}{Path.GetExtension(entry.Path)}");
         await Task.Run(() =>
@@ -186,28 +167,33 @@ public sealed partial class PreviewViewModel : ObservableObject
         if (!File.Exists(tmp))
         {
             Placeholder = L.T("Preview_LoadFailed");
+            IsMedia = false;
             return;
         }
+        _currentMediaTempPath = tmp;
 
-        _currentTempPath = tmp;
-        IsVideoActive = isVideo;
-        IsAudioActive = !isVideo;
-        _media.Play(tmp);
-        IsVideoPlaying = true;
+        // Video: erstes Frame per ffmpeg grabben und als Standbild anzeigen.
+        // Wenn ffmpeg nicht da ist oder das Grabben fehlschlaegt, kommt kein
+        // Bild — der Extern-Player-Button ist trotzdem sichtbar.
+        if (isVideo && _media is not null && _media.HasFfmpeg)
+        {
+            var frameBytes = await _media.GrabFirstFrameAsync(tmp);
+            if (frameBytes is not null)
+            {
+                using var ms = new MemoryStream(frameBytes);
+                ImageContent = new Bitmap(ms);
+            }
+        }
     }
 
+    /// <summary>Oeffnet die aktuelle Media-Datei im System-Default-Player.
+    /// Voraussetzung: die Datei wurde per <see cref="LoadAsync"/> in eine
+    /// Temp-Datei gelegt.</summary>
     [RelayCommand]
-    private void TogglePlay()
+    private void PlayExternal()
     {
-        _media?.TogglePause();
-        IsVideoPlaying = _media?.Player?.IsPlaying ?? false;
-    }
-
-    [RelayCommand]
-    private void StopMedia()
-    {
-        _media?.Stop();
-        IsVideoPlaying = false;
+        if (_media is null || _currentMediaTempPath is null) return;
+        _media.OpenExternal(_currentMediaTempPath);
     }
 
     private static string DecodeText(byte[] bytes)

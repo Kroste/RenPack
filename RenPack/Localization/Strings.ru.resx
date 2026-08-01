@@ -127,9 +127,8 @@
   <data name="Preview_UnsupportedFormat" xml:space="preserve"><value>Нет предпросмотра для файлов {0}.</value></data>
   <data name="Preview_TooLargeFormat" xml:space="preserve"><value>Файл {0} — слишком большой для предпросмотра (лимит: {1}).</value></data>
   <data name="Preview_LoadFailed" xml:space="preserve"><value>Не удалось загрузить предпросмотр.</value></data>
-  <data name="Preview_MediaUnavailable" xml:space="preserve"><value>Воспроизведение недоступно. Установите VLC (или libvlc) для видео/аудио в приложении.</value></data>
-  <data name="Preview_Media_TogglePlay" xml:space="preserve"><value>Воспр. / Пауза</value></data>
-  <data name="Preview_Media_Stop" xml:space="preserve"><value>Стоп</value></data>
+  <data name="Preview_PlayExternal" xml:space="preserve"><value>▶ Открыть в плеере системы</value></data>
+  <data name="Preview_PlayExternal_Tip" xml:space="preserve"><value>Открывает файл в системном плеере по умолчанию (VLC, mpv, Windows Media Player…)</value></data>
   <data name="Ctx_Extract" xml:space="preserve"><value>Распаковать этот файл…</value></data>
   <data name="Ctx_CopyPath" xml:space="preserve"><value>Скопировать путь</value></data>
   <data name="Status_PathCopiedFormat" xml:space="preserve"><value>Путь скопирован: {0}</value></data>
