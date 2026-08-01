@@ -160,9 +160,11 @@ public sealed class KrosteInfoScreenGeneratorTests : IDisposable
         content.Should().Contain("renpy.get_filename_line");
         content.Should().Contain("renpy.get_screen('choice')");
 
-        // Overlay-Screen mit dem "!"-Button
+        // Overlay-Screen mit dem PNG-Hint-Icon (kein Text mehr)
         content.Should().Contain("screen krostemod_menu_hint");
         content.Should().Contain("krostemod_menu_hint_visible()");
+        content.Should().Contain("imagebutton");
+        content.Should().Contain("krostemod_hint.png");
         content.Should().Contain("ToggleScreen(\"krostemod_context_info\")");
 
         // Context-Info-Screen
@@ -171,6 +173,19 @@ public sealed class KrosteInfoScreenGeneratorTests : IDisposable
 
         // Overlay-Registration
         content.Should().Contain("config.overlay_screens.append('krostemod_menu_hint')");
+    }
+
+    [Fact]
+    public void Deploys_hint_icon_png_alongside_the_rpy()
+    {
+        // v0.9.4: PNG-Asset wird aus Embedded Resource extrahiert.
+        _gen.Generate(_tmp, MakeAnalysis());
+        var iconPath = Path.Combine(_tmp, KrosteInfoScreenGenerator.HintIconFileName);
+        File.Exists(iconPath).Should().BeTrue("Hint-Icon muss deployed werden");
+        var bytes = File.ReadAllBytes(iconPath);
+        // PNG-Magic: 89 50 4E 47
+        bytes.Should().StartWith(new byte[] { 0x89, 0x50, 0x4E, 0x47 });
+        bytes.Length.Should().BeGreaterThan(500, "PNG sollte non-trivial gross sein");
     }
 
     [Fact]

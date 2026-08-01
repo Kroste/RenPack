@@ -183,6 +183,19 @@ public sealed class OneClickModBuilder
         if (File.Exists(readme))
             File.Copy(readme, Path.Combine(gameDir, "KROSTEMOD_README.md"), overwrite: true);
 
+        // Asset-Files (non-.rpy) direkt aus modOut/ ins gameDir/ kopieren —
+        // aktuell nur das Hint-Icon (krostemod_hint.png). Wir markieren die
+        // als DeployedFile mit .png-Suffix, damit Uninstall sie sauber loescht.
+        foreach (var asset in Directory.EnumerateFiles(modOutRoot, "*.png", SearchOption.TopDirectoryOnly))
+        {
+            ct.ThrowIfCancellationRequested();
+            var rel = Path.GetRelativePath(modOutRoot, asset);
+            var dst = Path.Combine(gameDir, rel);
+            bool preexisting = File.Exists(dst);
+            File.Copy(asset, dst, overwrite: true);
+            deployed.Add(new DeployedFile(rel, BackupCreated: false, PreexistingRpy: preexisting));
+        }
+
         // Manifest schreiben — die Basis fuer Uninstall.
         var manifest = new ModManifest(modType.ToString(), DateTime.UtcNow, deployed);
         var manifestPath = Path.Combine(gameDir, ManifestFileName);

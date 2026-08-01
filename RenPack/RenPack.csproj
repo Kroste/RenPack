@@ -11,6 +11,10 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets/**" />
+    <!-- Hint-Icon zusaetzlich als EmbeddedResource: wird vom
+         KrosteInfoScreenGenerator zur Runtime extrahiert und im
+         Mod-Deploy neben die krostemod_info.rpy gelegt. -->
+    <EmbeddedResource Include="Assets/krostemod_hint.png" />
     <None Update="nlog.config" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

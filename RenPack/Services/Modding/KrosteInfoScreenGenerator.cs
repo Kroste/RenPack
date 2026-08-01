@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Reflection;
 using System.Text;
 using NLog;
 
@@ -40,6 +41,15 @@ public sealed class KrosteInfoScreenGenerator
     /// Der Rest wird als „(+N more)" angezeigt.</summary>
     private const int MaxConsumersPerVar = 8;
 
+    /// <summary>Dateiname unter dem das Hint-Icon im Spiel-Ordner landet.
+    /// Wird vom Ren'Py-Screen ueber <c>add "krostemod_hint.png"</c> referenziert.</summary>
+    public const string HintIconFileName = "krostemod_hint.png";
+
+    /// <summary>Manifest-Resource-Name des eingebetteten PNG. Beim Build via
+    /// <c>&lt;EmbeddedResource Include="Assets/krostemod_hint.png" /&gt;</c>
+    /// eingebettet — .NET-Konvention: <c>DefaultNamespace.Assets.filename</c>.</summary>
+    private const string HintIconResource = "RenPack.Assets.krostemod_hint.png";
+
     /// <summary>Schreibt die <c>krostemod_info.rpy</c> nach
     /// <paramref name="destDir"/>. Gibt den erzeugten absoluten Pfad zurueck
     /// (fuer's Deploy-Manifest im <see cref="OneClickModBuilder"/>).</summary>
@@ -58,11 +68,29 @@ public sealed class KrosteInfoScreenGenerator
         WriteKeymap(sb);
 
         File.WriteAllText(target, sb.ToString());
+
+        // Hint-Icon-PNG mit ausschreiben — der Screen referenziert die Datei
+        // per `add "krostemod_hint.png"` (relativ zum Ren'Py-Loader-Root =
+        // game/-Ordner). Wir extrahieren die Embedded Resource jetzt.
+        ExtractHintIcon(destDir);
+
         Log.Info("KrosteMod-Info-Screen erzeugt: {path} ({vars} Vars, {consumers} Consumer-Refs, {menus} Menu-Impact-Locations)",
             target, analysis.StoreVariables.Count,
             analysis.VariableConsumers.Sum(kv => kv.Value.Count),
             analysis.MenuLocations.Count);
         return target;
+    }
+
+    private static void ExtractHintIcon(string destDir)
+    {
+        var iconPath = Path.Combine(destDir, HintIconFileName);
+        var assembly = typeof(KrosteInfoScreenGenerator).Assembly;
+        using var stream = assembly.GetManifestResourceStream(HintIconResource)
+            ?? throw new InvalidOperationException(
+                $"Embedded resource '{HintIconResource}' nicht gefunden. " +
+                "Ist Assets/krostemod_hint.png in RenPack.csproj als <EmbeddedResource> deklariert?");
+        using var fs = File.Create(iconPath);
+        stream.CopyTo(fs);
     }
 
     private static void WriteHeader(StringBuilder sb)
@@ -295,24 +323,24 @@ public sealed class KrosteInfoScreenGenerator
         sb.AppendLine("        config.overlay_screens.append('krostemod_menu_hint')");
     }
 
-    /// <summary>Emittiert den Overlay-Screen mit dem kleinen „!"-Button oben
-    /// rechts. Der Screen ist immer aktiv (via <c>config.overlay_screens</c>),
-    /// aber der Button ist nur sichtbar wenn ein Choice-Menu laueft UND wir
-    /// Impact-Daten fuer die aktuelle Menu-Location haben.</summary>
+    /// <summary>Emittiert den Overlay-Screen mit dem 3D-„!"-Icon oben rechts.
+    /// Der Screen ist immer aktiv (via <c>config.overlay_screens</c>), aber
+    /// der Button ist nur sichtbar wenn ein Choice-Menu laueft UND wir
+    /// Impact-Daten fuer die aktuelle Menu-Location haben. Das Icon selbst
+    /// (blauer bauchiger „!" mit eigenem Punkt) liegt als
+    /// <c>krostemod_hint.png</c> neben der <c>krostemod_info.rpy</c>.</summary>
     private static void WriteMenuHintScreen(StringBuilder sb)
     {
         sb.AppendLine("screen krostemod_menu_hint():");
         sb.AppendLine("    zorder 150");
         sb.AppendLine("    if krostemod_menu_hint_visible():");
-        sb.AppendLine("        button:");
+        sb.AppendLine("        imagebutton:");
         sb.AppendLine("            xalign 0.985");
         sb.AppendLine("            yalign 0.02");
-        sb.AppendLine("            xysize (44, 44)");
-        sb.AppendLine("            background \"#ffffff30\"");
-        sb.AppendLine("            hover_background \"#ffffffa0\"");
+        sb.AppendLine($"            idle Transform(\"{HintIconFileName}\", alpha=0.75)");
+        sb.AppendLine($"            hover Transform(\"{HintIconFileName}\", alpha=1.0, zoom=1.08)");
         sb.AppendLine("            action ToggleScreen(\"krostemod_context_info\")");
         sb.AppendLine("            tooltip \"KrosteMod: welche Story-Variablen setzen diese Choices?\"");
-        sb.AppendLine("            text \"!\" xalign 0.5 yalign 0.5 size 26 bold True color \"#000000\"");
         sb.AppendLine();
     }
 
