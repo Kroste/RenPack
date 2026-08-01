@@ -163,6 +163,13 @@
   <data name="Log_SizeFormat" xml:space="preserve"><value>Log size: {0}</value></data>
   <data name="Log_NotFoundFormat" xml:space="preserve"><value>Log file not found: {0}</value></data>
   <data name="Log_ReadFailedFormat" xml:space="preserve"><value>Could not read log: {0}</value></data>
+  <data name="Save_Compare" xml:space="preserve"><value>🔀 Compare…</value></data>
+  <data name="Save_Compare_Tip" xml:space="preserve"><value>Compare with another save file</value></data>
+  <data name="Diff_Title" xml:space="preserve"><value>Save comparison</value></data>
+  <data name="Diff_Subtitle" xml:space="preserve"><value>Compare two Ren'Py save files — added, removed, modified and unchanged variables side by side.</value></data>
+  <data name="Diff_Filter_Placeholder" xml:space="preserve"><value>🔍  Filter by name …</value></data>
+  <data name="Diff_OnlyDifferences" xml:space="preserve"><value>Only differences</value></data>
+  <data name="Diff_SummaryFormat" xml:space="preserve"><value>+ {0} added · − {1} removed · ≠ {2} modified · = {3} unchanged</value></data>
 
   <!-- ============ MessageBox ============ -->
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>

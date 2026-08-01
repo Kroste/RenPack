@@ -157,6 +157,13 @@
   <data name="Log_SizeFormat" xml:space="preserve"><value>Log-Größe: {0}</value></data>
   <data name="Log_NotFoundFormat" xml:space="preserve"><value>Log-Datei nicht gefunden: {0}</value></data>
   <data name="Log_ReadFailedFormat" xml:space="preserve"><value>Log konnte nicht gelesen werden: {0}</value></data>
+  <data name="Save_Compare" xml:space="preserve"><value>🔀 Vergleichen…</value></data>
+  <data name="Save_Compare_Tip" xml:space="preserve"><value>Mit einer anderen Save-Datei vergleichen</value></data>
+  <data name="Diff_Title" xml:space="preserve"><value>Save-Vergleich</value></data>
+  <data name="Diff_Subtitle" xml:space="preserve"><value>Zwei Ren'Py-Save-Dateien vergleichen — hinzugefügte, entfernte, geänderte und unveränderte Variablen nebeneinander.</value></data>
+  <data name="Diff_Filter_Placeholder" xml:space="preserve"><value>🔍  Nach Name filtern …</value></data>
+  <data name="Diff_OnlyDifferences" xml:space="preserve"><value>Nur Unterschiede</value></data>
+  <data name="Diff_SummaryFormat" xml:space="preserve"><value>+ {0} hinzugefügt · − {1} entfernt · ≠ {2} geändert · = {3} unverändert</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 

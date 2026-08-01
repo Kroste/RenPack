@@ -88,9 +88,14 @@
 
                     <StackPanel Grid.Column="4" Spacing="8">
                         <TextBlock Text="{loc:Tr Save_Section_Ai}" Classes="section-label" />
-                        <Button Content="{loc:Tr Save_Translate}"
-                                Command="{Binding TranslateCommand}"
-                                ToolTip.Tip="{loc:Tr Save_Translate_Tip}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="{loc:Tr Save_Translate}"
+                                    Command="{Binding TranslateCommand}"
+                                    ToolTip.Tip="{loc:Tr Save_Translate_Tip}" />
+                            <Button Content="{loc:Tr Save_Compare}"
+                                    Command="{Binding CompareCommand}"
+                                    ToolTip.Tip="{loc:Tr Save_Compare_Tip}" />
+                        </StackPanel>
                     </StackPanel>
 
                     <StackPanel Grid.Column="5" Orientation="Horizontal"

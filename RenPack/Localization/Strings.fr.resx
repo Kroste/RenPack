@@ -157,6 +157,13 @@
   <data name="Log_SizeFormat" xml:space="preserve"><value>Taille du journal : {0}</value></data>
   <data name="Log_NotFoundFormat" xml:space="preserve"><value>Fichier journal introuvable : {0}</value></data>
   <data name="Log_ReadFailedFormat" xml:space="preserve"><value>Impossible de lire le journal : {0}</value></data>
+  <data name="Save_Compare" xml:space="preserve"><value>🔀 Comparer…</value></data>
+  <data name="Save_Compare_Tip" xml:space="preserve"><value>Comparer avec un autre fichier de sauvegarde</value></data>
+  <data name="Diff_Title" xml:space="preserve"><value>Comparaison de sauvegardes</value></data>
+  <data name="Diff_Subtitle" xml:space="preserve"><value>Comparer deux fichiers de sauvegarde Ren'Py — variables ajoutées, supprimées, modifiées et inchangées côte à côte.</value></data>
+  <data name="Diff_Filter_Placeholder" xml:space="preserve"><value>🔍  Filtrer par nom …</value></data>
+  <data name="Diff_OnlyDifferences" xml:space="preserve"><value>Uniquement les différences</value></data>
+  <data name="Diff_SummaryFormat" xml:space="preserve"><value>+ {0} ajoutés · − {1} supprimés · ≠ {2} modifiés · = {3} inchangés</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 

@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using NLog;
+using RenPack.Services;
 using RenPack.ViewModels;
 
 namespace RenPack.Views;
@@ -77,4 +78,12 @@ public partial class SaveWindow : ChromeWindow, ISaveUi
 
     public Task<bool> ConfirmAsync(string title, string message) =>
         MessageBox.ShowAsync(this, title, message, showCancel: true);
+
+    public async Task ShowDiffAsync(SaveInfo left, SaveInfo right)
+    {
+        var vm = new SaveDiffViewModel();
+        vm.Load(left, right);
+        var win = new SaveDiffWindow { DataContext = vm };
+        await win.ShowDialog(this);
+    }
 }

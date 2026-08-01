@@ -79,6 +79,7 @@ public sealed partial class SaveWindowViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(OpenSaveCommand))]
     [NotifyCanExecuteChangedFor(nameof(UndoCommand))]
     [NotifyCanExecuteChangedFor(nameof(RedoCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CompareCommand))]
     private bool _isBusy;
 
     [ObservableProperty] private bool _showInternal;
@@ -380,6 +381,31 @@ public sealed partial class SaveWindowViewModel : ObservableObject
 
     private bool CanUndo() => !IsBusy && _undo.Count > 0;
     private bool CanRedo() => !IsBusy && _redo.Count > 0;
+
+    /// <summary>Vergleicht das aktuell geoeffnete Save mit einer zweiten
+    /// Datei. Oeffnet den FilePicker und danach das SaveDiffWindow.</summary>
+    [RelayCommand(CanExecute = nameof(CanCompare))]
+    private async Task CompareAsync()
+    {
+        if (Ui is null || Save is null) return;
+        string? otherPath = await Ui.PickOpenSaveAsync();
+        if (otherPath is null) return;
+
+        IsBusy = true;
+        try
+        {
+            var other = await Task.Run(() => _saveService.Read(otherPath));
+            await Ui.ShowDiffAsync(Save, other);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Save-Vergleich fehlgeschlagen: {path}", otherPath);
+            await Ui.ShowMessageAsync(L.T("Msg_SaveLoadFailed_Title"), ex.Message);
+        }
+        finally { IsBusy = false; }
+    }
+
+    private bool CanCompare() => !IsBusy && HasSave;
 
     private void ApplyFilter()
     {
