@@ -48,9 +48,16 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     private CultureInfo _current = CultureInfo.CurrentUICulture;
 
-    /// <summary>Aktuell aktive UI-Sprache. Bei Zuweisung feuert der
-    /// Service <see cref="PropertyChanged"/> für den Indexer, wodurch alle
-    /// aktiven <c>{loc:Tr}</c>-Bindings re-evaluiert werden.</summary>
+    /// <summary>Aktuell aktive UI-Sprache. Bei Zuweisung wird
+    /// <see cref="LocalizedString.NotifyAllChanged"/> aufgerufen — das
+    /// feuert auf jedem lebenden <see cref="LocalizedString"/>-Wrapper
+    /// ein regulaeres <c>PropertyChanged(nameof(Value))</c>, was von
+    /// Avalonias Binding-Engine zuverlaessig aufgeloest wird.
+    ///
+    /// <b>Wichtig:</b> nicht auf <c>PropertyChanged("Item[]")</c> setzen —
+    /// diese WPF-Indexer-Konvention wird von Avalonia 12 nur unzuverlaessig
+    /// gehandhabt (Bindings in nicht-fokussierten Fenstern bleiben stale
+    /// bis zum naechsten Fenster-Aufbau).</summary>
     public CultureInfo Current
     {
         get => _current;
@@ -59,7 +66,7 @@ public sealed class LocalizationService : INotifyPropertyChanged
             if (Equals(_current, value)) return;
             _current = value;
             CultureInfo.CurrentUICulture = value;
-            OnPropertyChanged("Item[]"); // WPF/Avalonia-Konvention für Indexer-Refresh
+            LocalizedString.NotifyAllChanged();
             OnPropertyChanged(nameof(Current));
             OnPropertyChanged(nameof(CurrentIso));
         }
