@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using LibVLCSharp.Shared;
 using NLog;
 
@@ -54,16 +55,22 @@ public sealed class MediaPlaybackService : IDisposable
         if (_initialized) return;
         _initialized = true;
 
-        // Erst der einfache Weg — Core.Initialize() ohne Pfad, sucht libvlc
-        // ueber dlopen (Linux/macOS) bzw. Windows-DLL-Search-Path.
+        // Linux/macOS: **Wichtig**: LibVLCSharp's [DllImport("libvlc")]
+        // sucht nur in .NET-Runtime-Pfaden (RID-native, App-Dir), NICHT
+        // im System-Pfad — auch wenn vlc installiert ist. Deshalb muessen
+        // wir libvlc.so.5 aus /usr/lib64 explicit via NativeLibrary.Load
+        // in den Prozessraum ziehen, BEVOR Core.Initialize() P/Invokes
+        // ausloest. Ist libvlc einmal geladen, findet der dynamische
+        // Linker die Symbole via GOT/PLT.
+        if (!OperatingSystem.IsWindows())
+        {
+            TryPreloadSystemLibVlc();
+        }
+
+        // Erst der einfache Weg — Core.Initialize() ohne Pfad.
         if (TryInit(pathHint: null)) return;
 
-        // Fallback: bekannte Linux-Pfade explizit durchprobieren. Auf Fedora/
-        // Bazzite ist libvlc.so unter /usr/lib64/, auf Debian/Ubuntu unter
-        // /usr/lib/x86_64-linux-gnu/, auf Distros mit /opt-Layout woanders.
-        // In Distrobox-Containern kann der Host-Pfad sichtbar sein wenn
-        // der Container /usr/lib bind-mountet — sonst hilft nur "vlc"
-        // im Container selbst installieren.
+        // Fallback: bekannte Linux-Pfade explizit durchprobieren.
         foreach (var candidate in CandidatePaths())
         {
             if (Directory.Exists(candidate) && TryInit(candidate)) return;
@@ -73,6 +80,62 @@ public sealed class MediaPlaybackService : IDisposable
         Log.Warn("LibVLC nicht auffindbar. Versucht: [{paths}]",
             string.Join(", ", CandidatePaths()));
         _initErrorMessage ??= "libvlc.so nicht gefunden — Suchpfade in logs/RenPack.log.";
+    }
+
+    /// <summary>Sucht libvlc.so.5 (und libvlccore.so.9) in bekannten
+    /// System-Pfaden und laedt sie via <see cref="NativeLibrary.Load(string)"/>
+    /// in den Prozess. Setzt zusaetzlich <c>VLC_PLUGIN_PATH</c>, damit
+    /// LibVLC seine Codec/Demux-Plugins findet — ohne die Plugins
+    /// initialisiert LibVLC zwar, spielt aber nichts ab.</summary>
+    private void TryPreloadSystemLibVlc()
+    {
+        // Reihenfolge: erst libvlccore (Abhaengigkeit), dann libvlc.
+        var soCandidates = new[]
+        {
+            // Fedora/RHEL/Bazzite
+            "/usr/lib64/libvlccore.so.9", "/usr/lib64/libvlc.so.5",
+            // Debian/Ubuntu
+            "/usr/lib/x86_64-linux-gnu/libvlccore.so.9",
+            "/usr/lib/x86_64-linux-gnu/libvlc.so.5",
+            // Arch, andere
+            "/usr/lib/libvlccore.so.9", "/usr/lib/libvlc.so.5",
+            // macOS Homebrew
+            "/opt/homebrew/lib/libvlccore.dylib",
+            "/opt/homebrew/lib/libvlc.dylib",
+        };
+        foreach (var so in soCandidates)
+        {
+            if (!File.Exists(so)) continue;
+            try
+            {
+                NativeLibrary.Load(so);
+                Log.Info("Preloaded {so}", so);
+            }
+            catch (Exception ex)
+            {
+                Log.Trace(ex, "NativeLibrary.Load fehlgeschlagen fuer {so}", so);
+            }
+        }
+
+        // Plugin-Pfad setzen (nur wenn nicht bereits explizit vom Nutzer).
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("VLC_PLUGIN_PATH")))
+        {
+            foreach (var pluginDir in new[]
+            {
+                "/usr/lib64/vlc/plugins",                    // Fedora/Bazzite
+                "/usr/lib/x86_64-linux-gnu/vlc/plugins",     // Debian/Ubuntu
+                "/usr/lib/vlc/plugins",                      // Arch, andere
+                "/opt/homebrew/lib/vlc/plugins",             // macOS Homebrew
+            })
+            {
+                if (Directory.Exists(pluginDir))
+                {
+                    Environment.SetEnvironmentVariable("VLC_PLUGIN_PATH", pluginDir);
+                    Log.Info("VLC_PLUGIN_PATH gesetzt: {dir}", pluginDir);
+                    break;
+                }
+            }
+        }
     }
 
     private bool TryInit(string? pathHint)
@@ -91,9 +154,6 @@ public sealed class MediaPlaybackService : IDisposable
         }
         catch (Exception ex)
         {
-            // Erste Fehlermeldung merken — spaetere Fallback-Fehler
-            // interessieren die UI nicht, aber die ursprueng-liche
-            // Exception ist die diagnostisch wichtige.
             _initErrorMessage ??= ex.Message;
             Log.Trace(ex, "LibVLC-Init fehlgeschlagen (Hint={hint})",
                 pathHint ?? "<default>");
@@ -101,18 +161,17 @@ public sealed class MediaPlaybackService : IDisposable
         }
     }
 
-    /// <summary>Kandidaten fuer libvlc.so-Verzeichnisse auf Linux/macOS
-    /// (Fedora/Bazzite, Debian/Ubuntu, Arch, macOS-Homebrew, NixOS).</summary>
+    /// <summary>Kandidaten fuer libvlc.so-Verzeichnisse auf Linux/macOS.</summary>
     private static IEnumerable<string> CandidatePaths()
     {
-        if (OperatingSystem.IsWindows()) yield break; // Windows: DLL-Search-Path
-        yield return "/usr/lib64";                       // Fedora/RHEL/Bazzite
-        yield return "/usr/lib/x86_64-linux-gnu";        // Debian/Ubuntu
-        yield return "/usr/lib";                          // Arch, andere
-        yield return "/usr/local/lib";                    // Manual installs
-        yield return "/app/lib";                          // Flatpak-Kontext
-        yield return "/opt/homebrew/lib";                 // macOS Apple Silicon
-        yield return "/usr/local/opt/vlc/lib";            // macOS Intel Homebrew
+        if (OperatingSystem.IsWindows()) yield break;
+        yield return "/usr/lib64";
+        yield return "/usr/lib/x86_64-linux-gnu";
+        yield return "/usr/lib";
+        yield return "/usr/local/lib";
+        yield return "/app/lib";
+        yield return "/opt/homebrew/lib";
+        yield return "/usr/local/opt/vlc/lib";
     }
 
     /// <summary>Startet die Wiedergabe einer Datei. Setzt eine bereits
