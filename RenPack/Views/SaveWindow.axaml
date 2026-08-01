@@ -134,10 +134,16 @@
                            FontSize="12" TextTrimming="CharacterEllipsis" />
             </Border>
 
-            <TextBox Grid.Row="3" Margin="0,0,0,12"
-                     PlaceholderText="{loc:Tr Save_Filter_Placeholder}"
-                     Text="{Binding FilterText}"
-                     IsVisible="{Binding HasSave}" />
+            <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,0,0,12"
+                  IsVisible="{Binding HasSave}">
+                <TextBox Grid.Column="0"
+                         PlaceholderText="{loc:Tr Save_Filter_Placeholder}"
+                         Text="{Binding FilterText}" />
+                <CheckBox Grid.Column="1" Content="{loc:Tr Save_SearchInValues}"
+                          IsChecked="{Binding SearchInValues}"
+                          VerticalAlignment="Center"
+                          Foreground="{DynamicResource KrosteSecondaryTextBrush}" />
+            </Grid>
 
             <Grid Grid.Row="4" ColumnDefinitions="Auto,*" ColumnSpacing="12">
                 <Border Grid.Column="0" Classes="card-flat" Width="280" MinHeight="180"

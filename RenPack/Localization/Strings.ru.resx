@@ -55,6 +55,7 @@
   <data name="Save_Translate" xml:space="preserve"><value>🌐 Перевести</value></data>
   <data name="Save_Translate_Tip" xml:space="preserve"><value>Перевести имена переменных через ИИ на целевой язык (проверьте настройки)</value></data>
   <data name="Save_ShowInternal" xml:space="preserve"><value>Показывать внутренние (_)</value></data>
+  <data name="Save_SearchInValues" xml:space="preserve"><value>Искать в значениях</value></data>
   <data name="Save_Filter_Placeholder" xml:space="preserve"><value>🔍  Фильтр переменных по имени …</value></data>
   <data name="Save_Column_Name" xml:space="preserve"><value>ИМЯ</value></data>
   <data name="Save_Column_Description" xml:space="preserve"><value>ОПИСАНИЕ</value></data>

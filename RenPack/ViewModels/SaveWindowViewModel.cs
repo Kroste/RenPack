@@ -120,6 +120,12 @@ public sealed partial class SaveWindowViewModel : ObservableObject
         set { if (SetProperty(ref _filterText, value)) ApplyFilter(); }
     }
 
+    /// <summary>Auch in Variablen-Werten (nicht nur Namen) suchen. Hilfreich
+    /// um z.B. "welche Variable steht auf 200?" schnell zu finden.
+    /// Persistiert nicht — pro Session-Zustand.</summary>
+    [ObservableProperty] private bool _searchInValues;
+    partial void OnSearchInValuesChanged(bool value) => ApplyFilter();
+
     partial void OnShowInternalChanged(bool value) => ApplyFilter();
 
     public bool HasSave => Save is not null;
@@ -450,7 +456,14 @@ public sealed partial class SaveWindowViewModel : ObservableObject
         IEnumerable<SaveVariableViewModel> src = _allVariables;
         if (!ShowInternal) src = src.Where(v => !v.IsInternal);
         if (!string.IsNullOrWhiteSpace(FilterText))
-            src = src.Where(v => v.Name.Contains(FilterText, StringComparison.OrdinalIgnoreCase));
+        {
+            var q = FilterText;
+            src = SearchInValues
+                ? src.Where(v =>
+                    v.Name.Contains(q, StringComparison.OrdinalIgnoreCase)
+                    || v.EditableValue.Contains(q, StringComparison.OrdinalIgnoreCase))
+                : src.Where(v => v.Name.Contains(q, StringComparison.OrdinalIgnoreCase));
+        }
         foreach (var v in src) Variables.Add(v);
     }
 

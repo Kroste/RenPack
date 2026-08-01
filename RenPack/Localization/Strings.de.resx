@@ -55,6 +55,7 @@
   <data name="Save_Translate" xml:space="preserve"><value>🌐 Übersetzen</value></data>
   <data name="Save_Translate_Tip" xml:space="preserve"><value>Variablennamen per KI in die Zielsprache übersetzen (Einstellungen prüfen)</value></data>
   <data name="Save_ShowInternal" xml:space="preserve"><value>Interne (_) anzeigen</value></data>
+  <data name="Save_SearchInValues" xml:space="preserve"><value>In Werten suchen</value></data>
   <data name="Save_Filter_Placeholder" xml:space="preserve"><value>🔍  Variablen filtern nach Name …</value></data>
   <data name="Save_Column_Name" xml:space="preserve"><value>NAME</value></data>
   <data name="Save_Column_Description" xml:space="preserve"><value>BESCHREIBUNG</value></data>
