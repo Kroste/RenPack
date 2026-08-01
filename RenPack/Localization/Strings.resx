@@ -145,6 +145,16 @@
   <data name="Pack_InvalidKey" xml:space="preserve"><value>Invalid hex value.</value></data>
   <data name="Save_Undo_Tip" xml:space="preserve"><value>Undo (Ctrl+Z)</value></data>
   <data name="Save_Redo_Tip" xml:space="preserve"><value>Redo (Ctrl+Y)</value></data>
+  <data name="Decompile_PickFolderTitle" xml:space="preserve"><value>Choose folder with .rpyc files (recursive)</value></data>
+  <data name="Decompile_SkipUpToDate_Title" xml:space="preserve"><value>Skip up-to-date files?</value></data>
+  <data name="Decompile_SkipUpToDate_Body" xml:space="preserve"><value>Skip .rpyc files whose .rpy neighbour is already up to date? (OK = skip / Cancel = redo everything)</value></data>
+  <data name="Decompile_Scanning" xml:space="preserve"><value>Scanning .rpyc files …</value></data>
+  <data name="Decompile_ProgressFormat" xml:space="preserve"><value>Decompiling {0}/{1}: {2}</value></data>
+  <data name="Decompile_DoneStatusFormat" xml:space="preserve"><value>Done: {0}/{1} decompiled, {2} errors, {3} skipped.</value></data>
+  <data name="Decompile_DoneMsgFormat" xml:space="preserve"><value>{0} of {1} file(s) decompiled ({2} skipped as up-to-date) — {3}</value></data>
+  <data name="Decompile_DoneWithErrorsFormat" xml:space="preserve"><value>{0} of {1} succeeded, {2} failed, {3} skipped:</value></data>
+  <data name="Decompile_DoneTitle" xml:space="preserve"><value>Folder decompilation done</value></data>
+  <data name="Decompile_FolderFailed" xml:space="preserve"><value>Folder decompilation failed.</value></data>
 
   <!-- ============ MessageBox ============ -->
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>

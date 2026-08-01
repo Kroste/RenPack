@@ -139,6 +139,16 @@
   <data name="Pack_InvalidKey" xml:space="preserve"><value>Ungültiger Hex-Wert.</value></data>
   <data name="Save_Undo_Tip" xml:space="preserve"><value>Rückgängig (Strg+Z)</value></data>
   <data name="Save_Redo_Tip" xml:space="preserve"><value>Wiederholen (Strg+Y)</value></data>
+  <data name="Decompile_PickFolderTitle" xml:space="preserve"><value>Ordner mit .rpyc-Dateien wählen (rekursiv)</value></data>
+  <data name="Decompile_SkipUpToDate_Title" xml:space="preserve"><value>Aktuelle Dateien überspringen?</value></data>
+  <data name="Decompile_SkipUpToDate_Body" xml:space="preserve"><value>.rpyc-Dateien überspringen, deren .rpy-Nachbardatei bereits aktuell ist? (OK = überspringen / Abbrechen = alles neu)</value></data>
+  <data name="Decompile_Scanning" xml:space="preserve"><value>Suche .rpyc-Dateien …</value></data>
+  <data name="Decompile_ProgressFormat" xml:space="preserve"><value>Dekompiliere {0}/{1}: {2}</value></data>
+  <data name="Decompile_DoneStatusFormat" xml:space="preserve"><value>Fertig: {0}/{1} dekompiliert, {2} Fehler, {3} übersprungen.</value></data>
+  <data name="Decompile_DoneMsgFormat" xml:space="preserve"><value>{0} von {1} Datei(en) dekompiliert ({2} übersprungen weil aktuell) — {3}</value></data>
+  <data name="Decompile_DoneWithErrorsFormat" xml:space="preserve"><value>{0} von {1} erfolgreich, {2} fehlgeschlagen, {3} übersprungen:</value></data>
+  <data name="Decompile_DoneTitle" xml:space="preserve"><value>Ordner-Dekompilierung fertig</value></data>
+  <data name="Decompile_FolderFailed" xml:space="preserve"><value>Fehler bei der Ordner-Dekompilierung.</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 

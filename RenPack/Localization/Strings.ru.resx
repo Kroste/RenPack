@@ -139,6 +139,16 @@
   <data name="Pack_InvalidKey" xml:space="preserve"><value>Неверное шестнадцатеричное значение.</value></data>
   <data name="Save_Undo_Tip" xml:space="preserve"><value>Отменить (Ctrl+Z)</value></data>
   <data name="Save_Redo_Tip" xml:space="preserve"><value>Повторить (Ctrl+Y)</value></data>
+  <data name="Decompile_PickFolderTitle" xml:space="preserve"><value>Выберите папку с .rpyc-файлами (рекурсивно)</value></data>
+  <data name="Decompile_SkipUpToDate_Title" xml:space="preserve"><value>Пропустить актуальные файлы?</value></data>
+  <data name="Decompile_SkipUpToDate_Body" xml:space="preserve"><value>Пропустить .rpyc-файлы, для которых .rpy-файл уже актуален? (OK = пропустить / Отмена = всё заново)</value></data>
+  <data name="Decompile_Scanning" xml:space="preserve"><value>Поиск .rpyc-файлов …</value></data>
+  <data name="Decompile_ProgressFormat" xml:space="preserve"><value>Декомпиляция {0}/{1}: {2}</value></data>
+  <data name="Decompile_DoneStatusFormat" xml:space="preserve"><value>Готово: {0}/{1} декомпилировано, {2} ошибок, {3} пропущено.</value></data>
+  <data name="Decompile_DoneMsgFormat" xml:space="preserve"><value>{0} из {1} файл(ов) декомпилировано ({2} пропущено как актуальные) — {3}</value></data>
+  <data name="Decompile_DoneWithErrorsFormat" xml:space="preserve"><value>{0} из {1} успешно, {2} с ошибкой, {3} пропущено:</value></data>
+  <data name="Decompile_DoneTitle" xml:space="preserve"><value>Декомпиляция папки завершена</value></data>
+  <data name="Decompile_FolderFailed" xml:space="preserve"><value>Ошибка декомпиляции папки.</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 

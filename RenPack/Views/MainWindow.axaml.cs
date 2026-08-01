@@ -167,29 +167,39 @@ public partial class MainWindow : ChromeWindow, IUiInteractions
         {
             var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
-                Title = "Ordner mit .rpyc-Dateien wählen (rekursiv)",
+                Title = L.T("Decompile_PickFolderTitle"),
                 AllowMultiple = false,
             });
             if (folders.Count == 0) return;
             var root = folders[0].TryGetLocalPath();
             if (root is null) return;
 
+            // Bestehende .rpy neben .rpyc? Dann "nur neuere"-Modus anbieten,
+            // das spart bei Re-Runs Minuten.
+            bool skipUpToDate = await MessageBox.ShowAsync(this,
+                L.T("Decompile_SkipUpToDate_Title"),
+                L.T("Decompile_SkipUpToDate_Body"),
+                showCancel: true);
+
             var batch = App.Services.GetRequiredService<RpycBatchService>();
-            SetBusy(true, "Suche .rpyc-Dateien …");
+            SetBusy(true, L.T("Decompile_Scanning"));
             var progress = new Progress<(int done, int total, string current)>(p =>
-                SetBusy(true, $"Dekompiliere {p.done}/{p.total}: {Path.GetFileName(p.current)}"));
-            var result = await Task.Run(() => batch.DecompileDirectory(root, progress));
-            SetBusy(false, $"Fertig: {result.Succeeded}/{result.Total} dekompiliert, {result.Failed} Fehler.");
+                SetBusy(true, L.F("Decompile_ProgressFormat", p.done, p.total, Path.GetFileName(p.current))));
+            var result = await Task.Run(() => batch.DecompileDirectory(root, progress, skipUpToDate));
+            SetBusy(false, L.F("Decompile_DoneStatusFormat",
+                result.Succeeded, result.Total, result.Failed, result.Skipped));
             var msg = result.Failed == 0
-                ? $"{result.Succeeded} von {result.Total} Datei(en) dekompiliert (rekursiv unter {root})."
-                : $"{result.Succeeded} von {result.Total} erfolgreich, {result.Failed} fehlgeschlagen:\n\n"
+                ? L.F("Decompile_DoneMsgFormat",
+                    result.Succeeded, result.Total, result.Skipped, root)
+                : L.F("Decompile_DoneWithErrorsFormat",
+                    result.Succeeded, result.Total, result.Failed, result.Skipped) + "\n\n"
                     + string.Join("\n", result.Errors.Take(10).Select(x => $"{Path.GetFileName(x.File)}: {x.Error}"));
-            await MessageBox.ShowAsync(this, "Ordner-Dekompilierung fertig", msg);
+            await MessageBox.ShowAsync(this, L.T("Decompile_DoneTitle"), msg);
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Ordner-Dekompilierung fehlgeschlagen");
-            SetBusy(false, "Fehler bei der Ordner-Dekompilierung.");
+            SetBusy(false, L.T("Decompile_FolderFailed"));
         }
     }
 
