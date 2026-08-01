@@ -435,8 +435,31 @@ public sealed class RenpyRpycDecompiler
     private void EmitLabel(StringBuilder sb, ClassDict node, int indent)
     {
         string name = AsString(node.GetValueOrDefault("name") ?? node.GetValueOrDefault("_name"));
-        AppendIndented(sb, indent, $"label {name}:");
+        string parameters = FormatParameterInfo(node.GetValueOrDefault("parameters"));
+        AppendIndented(sb, indent, $"label {name}{parameters}:");
         EmitBlockNonEmpty(sb, node.GetValueOrDefault("block") as IEnumerable ?? Array.Empty<object>(), indent + 1);
+    }
+
+    /// <summary>Formatiert ein <c>renpy.ast.ParameterInfo</c>-Node in seine
+    /// <c>(name, name2=default, …)</c>-Deklarationsform fuer <c>label</c>-
+    /// und <c>screen</c>-Definitionen. Struktur: <c>ParameterInfo.parameters
+    /// = [(name, default?), …]</c>. Positional-Args haben <c>default = None</c>.</summary>
+    private static string FormatParameterInfo(object? parameters)
+    {
+        if (parameters is not ClassDict cd) return "";
+        if (cd.GetValueOrDefault("parameters") is not IEnumerable list) return "";
+        var parts = new List<string>();
+        foreach (var p in list)
+        {
+            if (p is not object[] arr || arr.Length < 1) continue;
+            string pname = AsString(arr[0]);
+            if (string.IsNullOrEmpty(pname)) continue;
+            if (arr.Length >= 2 && arr[1] is not null)
+                parts.Add($"{pname}={AsString(arr[1])}");
+            else
+                parts.Add(pname);
+        }
+        return parts.Count > 0 ? "(" + string.Join(", ", parts) + ")" : "";
     }
 
     private static void EmitSay(StringBuilder sb, ClassDict node, int indent)
@@ -494,9 +517,36 @@ public sealed class RenpyRpycDecompiler
     {
         string target = AsString(node.GetValueOrDefault("label"));
         bool expr = node.GetValueOrDefault("expression") is bool b && b;
+        string args = FormatArgumentInfo(node.GetValueOrDefault("arguments"));
         string head = expr ? $"call expression {target}" : $"call {target}";
+        if (!string.IsNullOrEmpty(args)) head += " " + args;
         if (!string.IsNullOrEmpty(fromLabel)) head += $" from {fromLabel}";
         AppendIndented(sb, indent, head);
+    }
+
+    /// <summary>Formatiert ein <c>renpy.ast.ArgumentInfo</c>-Node in seine
+    /// <c>(arg1, kw=arg2, …)</c>-Textform. Wird von <see cref="EmitCall"/>
+    /// gebraucht: ohne die Args wuerde <c>call unlock("x") from _foo</c>
+    /// als <c>call unlock from _foo</c> emittiert, und der aufgerufene
+    /// <c>label unlock(label_name)</c>-Parameter bekommt keinen Wert →
+    /// <c>NameError: name 'label_name' is not defined</c> zur Laufzeit
+    /// (verifiziert an Sophia Parker 0.230, v0.8.4-Bug).
+    ///
+    /// Struktur: <c>ArgumentInfo.arguments = [(name?, PyExpr), …]</c> —
+    /// wenn <c>name</c> None ist, ist es positional; sonst Keyword-Arg.</summary>
+    private static string FormatArgumentInfo(object? arguments)
+    {
+        if (arguments is not ClassDict cd) return "";
+        if (cd.GetValueOrDefault("arguments") is not IEnumerable list) return "";
+        var parts = new List<string>();
+        foreach (var a in list)
+        {
+            if (a is not object[] arr || arr.Length < 2) continue;
+            string aname = arr[0] is null ? "" : AsString(arr[0]);
+            string aval = AsString(arr[1]);
+            parts.Add(string.IsNullOrEmpty(aname) ? aval : $"{aname}={aval}");
+        }
+        return parts.Count > 0 ? "(" + string.Join(", ", parts) + ")" : "";
     }
 
     private static void EmitReturn(StringBuilder sb, ClassDict node, int indent)

@@ -927,6 +927,64 @@ public sealed class RpycDecompilerTests
     }
 
     [Fact]
+    public void Call_with_positional_arguments_emits_arg_tuple()
+    {
+        // Regression-Test fuer v0.8.4-Bug (Sophia Parker 0.230):
+        // `call unlock("day20_...") from _call_unlock_55` wurde als
+        // `call unlock from _call_unlock_55` emittiert → NameError im Spiel,
+        // weil das `label unlock(label_name)` keinen Parameter bekam.
+        var argInfo = new ClassDict("renpy.ast", "ArgumentInfo");
+        argInfo["arguments"] = new object[]
+        {
+            new object[] { null!, "\"scene_a\"" }, // positional
+        };
+        var script = new object[]
+        {
+            Node("renpy.ast.Call", ("label", "unlock"), ("arguments", argInfo)),
+            Node("renpy.ast.Label", ("_name", "_call_unlock_1")),
+            Node("renpy.ast.Pass"),
+        };
+        var text = _dec.Decompile(script);
+        text.Should().Contain("call unlock (\"scene_a\") from _call_unlock_1");
+    }
+
+    [Fact]
+    public void Call_with_keyword_arguments_emits_kwargs()
+    {
+        var argInfo = new ClassDict("renpy.ast", "ArgumentInfo");
+        argInfo["arguments"] = new object[]
+        {
+            new object[] { "who", "\"Sophia\"" },
+            new object[] { "mood", "\"happy\"" },
+        };
+        var script = new object[]
+        {
+            Node("renpy.ast.Call", ("label", "greet"), ("arguments", argInfo)),
+        };
+        var text = _dec.Decompile(script);
+        text.Should().Contain("call greet (who=\"Sophia\", mood=\"happy\")");
+    }
+
+    [Fact]
+    public void Label_with_parameters_emits_parameter_list()
+    {
+        // `label unlock(label_name):` — sonst wuerde beim Aufruf mit
+        // Argument der Wert nicht gebunden werden (siehe Sophia Parker 0.230).
+        var paramInfo = new ClassDict("renpy.ast", "ParameterInfo");
+        paramInfo["parameters"] = new object[]
+        {
+            new object[] { "label_name", null! },
+            new object[] { "extra", "42" },
+        };
+        var script = new object[]
+        {
+            Node("renpy.ast.Label", ("_name", "unlock"), ("parameters", paramInfo)),
+        };
+        var text = _dec.Decompile(script);
+        text.Should().Contain("label unlock(label_name, extra=42):");
+    }
+
+    [Fact]
     public void Pyexpr_wrapper_is_unwrapped_to_source_string()
     {
         var expr = new ClassDict("renpy.astsupport", "PyExpr");
