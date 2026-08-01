@@ -226,6 +226,16 @@ Start the game — hints appear as [K love+3] etc. in the menu options.</value><
   <data name="Mod_UninstallDone_Title" xml:space="preserve"><value>Mod removed</value></data>
   <data name="Mod_UninstallDone_Body_Format" xml:space="preserve"><value>Deleted {0} mod file(s) and restored {1} original .rpyc backup(s). The game is back to its original state.</value></data>
   <data name="Mod_UninstallFailed_Title" xml:space="preserve"><value>Mod removal failed</value></data>
+  <data name="Rename_Title" xml:space="preserve"><value>KrosteMod — Character Rename</value></data>
+  <data name="Rename_Subtitle" xml:space="preserve"><value>Pick a new display name for any character. Leave a row empty to keep the original.</value></data>
+  <data name="Rename_Section_Characters" xml:space="preserve"><value>CHARACTERS DETECTED</value></data>
+  <data name="Rename_Instructions" xml:space="preserve"><value>Only the character's display name changes — the Python identifier and all say-statements keep working. Text mentions of the old name inside dialog bodies are NOT changed (would need AI-based rewriting; roadmap E4b).</value></data>
+  <data name="Rename_Col_Var" xml:space="preserve"><value>Variable</value></data>
+  <data name="Rename_Col_Original" xml:space="preserve"><value>Original name</value></data>
+  <data name="Rename_Col_NewName" xml:space="preserve"><value>New name</value></data>
+  <data name="Rename_Apply" xml:space="preserve"><value>Apply &amp; build mod</value></data>
+  <data name="Rename_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Rename_Footer_Hint" xml:space="preserve"><value>Cancel aborts the build. Apply generates krostemod_rename.rpy and installs it.</value></data>
   <data name="Main_RecentFolders_Tip" xml:space="preserve"><value>Recently decompiled folders</value></data>
   <data name="Save_Recent_Tip" xml:space="preserve"><value>Recently opened save files</value></data>
   <data name="Main_CompareArchive" xml:space="preserve"><value>🔀 Compare…</value></data>

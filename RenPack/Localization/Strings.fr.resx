@@ -220,6 +220,16 @@ Lance le jeu — les indices apparaissent comme [K love+3] etc. dans les options
   <data name="Mod_UninstallDone_Title" xml:space="preserve"><value>Mod supprimé</value></data>
   <data name="Mod_UninstallDone_Body_Format" xml:space="preserve"><value>{0} fichier(s) de mod supprimé(s) et {1} sauvegarde(s) .rpyc originale(s) restaurée(s). Le jeu est de retour à son état d'origine.</value></data>
   <data name="Mod_UninstallFailed_Title" xml:space="preserve"><value>Échec de la suppression du mod</value></data>
+  <data name="Rename_Title" xml:space="preserve"><value>KrosteMod — Renommage des personnages</value></data>
+  <data name="Rename_Subtitle" xml:space="preserve"><value>Choisis un nouveau nom d'affichage pour chaque personnage. Laisse vide pour garder l'original.</value></data>
+  <data name="Rename_Section_Characters" xml:space="preserve"><value>PERSONNAGES DÉTECTÉS</value></data>
+  <data name="Rename_Instructions" xml:space="preserve"><value>Seul le nom d'affichage change — l'identifiant Python et toutes les instructions say continuent de fonctionner. Les mentions de l'ancien nom dans les dialogues ne sont PAS modifiées (nécessiterait une réécriture par IA ; roadmap E4b).</value></data>
+  <data name="Rename_Col_Var" xml:space="preserve"><value>Variable</value></data>
+  <data name="Rename_Col_Original" xml:space="preserve"><value>Nom d'origine</value></data>
+  <data name="Rename_Col_NewName" xml:space="preserve"><value>Nouveau nom</value></data>
+  <data name="Rename_Apply" xml:space="preserve"><value>Appliquer &amp; créer le mod</value></data>
+  <data name="Rename_Cancel" xml:space="preserve"><value>Annuler</value></data>
+  <data name="Rename_Footer_Hint" xml:space="preserve"><value>Annuler arrête la création. Appliquer génère krostemod_rename.rpy et l'installe.</value></data>
   <data name="Main_RecentFolders_Tip" xml:space="preserve"><value>Dossiers récemment décompilés</value></data>
   <data name="Save_Recent_Tip" xml:space="preserve"><value>Sauvegardes récemment ouvertes</value></data>
   <data name="Main_CompareArchive" xml:space="preserve"><value>🔀 Comparer…</value></data>

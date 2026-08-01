@@ -33,30 +33,40 @@ public sealed class OneClickModBuilder
     private readonly KrosteWalkthroughGenerator _walkthrough;
     private readonly KrosteInfoScreenGenerator _infoScreen;
     private readonly KrosteCheatGenerator _cheat;
+    private readonly KrosteRenameGenerator _rename;
 
     public const string ManifestFileName = "KROSTEMOD_MANIFEST.json";
     public const string BackupSuffix = ".krostemod-bak";
 
     public OneClickModBuilder() : this(new RpycBatchService(), new RenpyModAnalyzer(),
-        new KrosteWalkthroughGenerator(), new KrosteInfoScreenGenerator(), new KrosteCheatGenerator()) { }
+        new KrosteWalkthroughGenerator(), new KrosteInfoScreenGenerator(),
+        new KrosteCheatGenerator(), new KrosteRenameGenerator()) { }
 
     public OneClickModBuilder(RpycBatchService batch, RenpyModAnalyzer analyzer,
         KrosteWalkthroughGenerator walkthrough, KrosteInfoScreenGenerator infoScreen,
-        KrosteCheatGenerator cheat)
+        KrosteCheatGenerator cheat, KrosteRenameGenerator rename)
     {
         _batch = batch;
         _analyzer = analyzer;
         _walkthrough = walkthrough;
         _infoScreen = infoScreen;
         _cheat = cheat;
+        _rename = rename;
     }
 
     /// <summary>Baut und deployt den Mod. <paramref name="userPickedFolder"/>
     /// darf sowohl der Spiel-Root sein als auch direkt der <c>game/</c>-Ordner
-    /// — wir finden das <c>game/</c> automatisch.</summary>
+    /// — wir finden das <c>game/</c> automatisch.
+    ///
+    /// <paramref name="renameConfigProvider"/> wird NUR beim Rename-Mod-
+    /// Typ aufgerufen, nach der Analyse (weil erst dann die Character-Liste
+    /// bekannt ist). Der Provider bekommt die Character-Liste und liefert
+    /// die Mappings zurueck. Gibt er <c>null</c> zurueck (User-Cancel),
+    /// wird der Build abgebrochen.</summary>
     public OneClickResult Build(string userPickedFolder, ModTypeId modType,
         IProgress<OneClickProgress>? progress = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        Func<IReadOnlyList<RpyCharacter>, RenameConfig?>? renameConfigProvider = null)
     {
         if (!Directory.Exists(userPickedFolder))
             throw new DirectoryNotFoundException($"Ordner nicht gefunden: {userPickedFolder}");
@@ -121,6 +131,21 @@ public sealed class OneClickModBuilder
                     // krostemod_cheat.rpy landet im modOut/.
                     Directory.CreateDirectory(modOut);
                     _cheat.Generate(modOut, analysis);
+                    break;
+                case ModTypeId.Rename:
+                    // Rename braucht User-Input NACH der Analyse (Character-
+                    // Liste muss erst da sein). Provider-Callback wird
+                    // synchronous aufgerufen — der Aufrufer ist verantwortlich
+                    // die Task-Ausfuehrung ggf. auf den UI-Thread zu
+                    // dispatchen und den Dialog zu zeigen.
+                    if (renameConfigProvider is null)
+                        throw new InvalidOperationException(
+                            "Rename-Mod-Typ erfordert einen renameConfigProvider.");
+                    var renameConfig = renameConfigProvider(analysis.Characters)
+                        ?? throw new OperationCanceledException(
+                            "Rename-Konfiguration vom User abgebrochen.");
+                    Directory.CreateDirectory(modOut);
+                    _rename.Generate(modOut, analysis, renameConfig);
                     break;
                 default:
                     throw new NotSupportedException($"Mod-Typ noch nicht implementiert: {modType}");

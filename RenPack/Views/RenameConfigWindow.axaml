@@ -1,0 +1,76 @@
+<views:ChromeWindow xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="using:RenPack.Views"
+        xmlns:controls="using:RenPack.Controls"
+        xmlns:vm="using:RenPack.ViewModels"
+        xmlns:loc="using:RenPack.Localization"
+        mc:Ignorable="d" d:DesignWidth="720" d:DesignHeight="580"
+        x:Class="RenPack.Views.RenameConfigWindow"
+        Width="720" Height="600" MinWidth="520" MinHeight="420"
+        WindowStartupLocation="CenterOwner"
+        Title="{loc:Tr Rename_Title}"
+        Background="{DynamicResource KrosteBackgroundBrush}">
+
+    <DockPanel>
+        <controls:TitleBar DockPanel.Dock="Top" Title="{loc:Tr Rename_Title}" />
+
+        <!-- Footer mit OK / Cancel -->
+        <Border DockPanel.Dock="Bottom" Padding="18,12"
+                BorderBrush="{DynamicResource KrosteBorderBrush}" BorderThickness="0,1,0,0"
+                Background="{DynamicResource KrosteTitleBarBrush}">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                <TextBlock Grid.Column="0" Text="{loc:Tr Rename_Footer_Hint}"
+                           Classes="muted" FontSize="11"
+                           VerticalAlignment="Center" TextWrapping="Wrap" />
+                <Button Grid.Column="1" x:Name="CancelButton"
+                        Content="{loc:Tr Rename_Cancel}" />
+                <Button Grid.Column="2" x:Name="OkButton" Classes="accent"
+                        Content="{loc:Tr Rename_Apply}" />
+            </Grid>
+        </Border>
+
+        <ScrollViewer>
+            <StackPanel Margin="24" Spacing="14">
+                <StackPanel>
+                    <TextBlock Text="{loc:Tr Rename_Title}" Classes="h1" />
+                    <TextBlock Text="{loc:Tr Rename_Subtitle}" Classes="muted" FontSize="12"
+                               Margin="0,2,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <Border Classes="card">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{loc:Tr Rename_Section_Characters}" Classes="section-label" />
+                        <TextBlock Text="{loc:Tr Rename_Instructions}" Classes="muted"
+                                   FontSize="11" TextWrapping="Wrap" />
+                        <DataGrid x:Name="MappingsGrid"
+                                  AutoGenerateColumns="False"
+                                  CanUserReorderColumns="False"
+                                  CanUserSortColumns="True"
+                                  HeadersVisibility="Column"
+                                  IsReadOnly="False"
+                                  MinHeight="300" MaxHeight="440"
+                                  GridLinesVisibility="Horizontal"
+                                  Margin="0,4,0,0">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn x:DataType="views:RenameRow"
+                                                    Header="{loc:Tr Rename_Col_Var}"
+                                                    Binding="{Binding VarName}"
+                                                    Width="180" IsReadOnly="True" />
+                                <DataGridTextColumn x:DataType="views:RenameRow"
+                                                    Header="{loc:Tr Rename_Col_Original}"
+                                                    Binding="{Binding OriginalName}"
+                                                    Width="180" IsReadOnly="True" />
+                                <DataGridTextColumn x:DataType="views:RenameRow"
+                                                    Header="{loc:Tr Rename_Col_NewName}"
+                                                    Binding="{Binding NewName, Mode=TwoWay}"
+                                                    Width="*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</views:ChromeWindow>

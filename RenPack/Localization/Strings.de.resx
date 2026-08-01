@@ -220,6 +220,16 @@ Spiel starten — Hinweise erscheinen als [K love+3] etc. in den Menu-Optionen.<
   <data name="Mod_UninstallDone_Title" xml:space="preserve"><value>Mod entfernt</value></data>
   <data name="Mod_UninstallDone_Body_Format" xml:space="preserve"><value>{0} Mod-Datei(en) gelöscht und {1} Original-.rpyc-Backup(s) wiederhergestellt. Das Spiel ist im Original-Zustand.</value></data>
   <data name="Mod_UninstallFailed_Title" xml:space="preserve"><value>Mod-Entfernen fehlgeschlagen</value></data>
+  <data name="Rename_Title" xml:space="preserve"><value>KrosteMod — Character-Rename</value></data>
+  <data name="Rename_Subtitle" xml:space="preserve"><value>Vergib fuer jeden Character einen neuen Anzeigenamen. Leer lassen = Original behalten.</value></data>
+  <data name="Rename_Section_Characters" xml:space="preserve"><value>ERKANNTE CHARACTER</value></data>
+  <data name="Rename_Instructions" xml:space="preserve"><value>Nur der Anzeigename aendert sich — der Python-Identifier und alle Say-Statements funktionieren weiter. Erwaehnungen des alten Namens in Dialog-Body-Text werden NICHT geaendert (braeuchte KI-Umschreibung; Roadmap E4b).</value></data>
+  <data name="Rename_Col_Var" xml:space="preserve"><value>Variable</value></data>
+  <data name="Rename_Col_Original" xml:space="preserve"><value>Originalname</value></data>
+  <data name="Rename_Col_NewName" xml:space="preserve"><value>Neuer Name</value></data>
+  <data name="Rename_Apply" xml:space="preserve"><value>Uebernehmen &amp; Mod bauen</value></data>
+  <data name="Rename_Cancel" xml:space="preserve"><value>Abbrechen</value></data>
+  <data name="Rename_Footer_Hint" xml:space="preserve"><value>Abbrechen stoppt den Build. Uebernehmen erzeugt krostemod_rename.rpy und installiert sie.</value></data>
   <data name="Main_RecentFolders_Tip" xml:space="preserve"><value>Zuletzt dekompilierte Ordner</value></data>
   <data name="Save_Recent_Tip" xml:space="preserve"><value>Zuletzt geöffnete Save-Dateien</value></data>
   <data name="Main_CompareArchive" xml:space="preserve"><value>🔀 Vergleichen…</value></data>

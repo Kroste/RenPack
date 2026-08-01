@@ -1,4 +1,5 @@
 using Avalonia.Platform.Storage;
+using RenPack.Services.Modding;
 using RenPack.ViewModels;
 
 namespace RenPack.Views;
@@ -31,4 +32,12 @@ public partial class ModGeneratorWindow : ChromeWindow, IModGeneratorUi
 
     public Task<bool> ConfirmAsync(string title, string message) =>
         MessageBox.ShowAsync(this, title, message, showCancel: true);
+
+    public async Task<RenameConfig?> PromptRenameMappingsAsync(IReadOnlyList<RpyCharacter> characters)
+    {
+        var dlg = new RenameConfigWindow();
+        dlg.Load(characters);
+        await dlg.ShowDialog(this);
+        return dlg.Result;
+    }
 }

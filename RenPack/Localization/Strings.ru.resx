@@ -220,6 +220,16 @@
   <data name="Mod_UninstallDone_Title" xml:space="preserve"><value>Мод удалён</value></data>
   <data name="Mod_UninstallDone_Body_Format" xml:space="preserve"><value>Удалено {0} файл(ов) мода и восстановлено {1} оригинальных .rpyc резервных копий. Игра возвращена в исходное состояние.</value></data>
   <data name="Mod_UninstallFailed_Title" xml:space="preserve"><value>Ошибка удаления мода</value></data>
+  <data name="Rename_Title" xml:space="preserve"><value>KrosteMod — Переименование персонажей</value></data>
+  <data name="Rename_Subtitle" xml:space="preserve"><value>Задай новое отображаемое имя для каждого персонажа. Оставь пустым, чтобы сохранить оригинал.</value></data>
+  <data name="Rename_Section_Characters" xml:space="preserve"><value>ОБНАРУЖЕННЫЕ ПЕРСОНАЖИ</value></data>
+  <data name="Rename_Instructions" xml:space="preserve"><value>Меняется только отображаемое имя — Python-идентификатор и все say-операторы продолжают работать. Упоминания старого имени в тексте диалогов НЕ меняются (потребовалась бы AI-правка; roadmap E4b).</value></data>
+  <data name="Rename_Col_Var" xml:space="preserve"><value>Переменная</value></data>
+  <data name="Rename_Col_Original" xml:space="preserve"><value>Оригинал</value></data>
+  <data name="Rename_Col_NewName" xml:space="preserve"><value>Новое имя</value></data>
+  <data name="Rename_Apply" xml:space="preserve"><value>Применить и создать мод</value></data>
+  <data name="Rename_Cancel" xml:space="preserve"><value>Отмена</value></data>
+  <data name="Rename_Footer_Hint" xml:space="preserve"><value>Отмена прерывает сборку. Применить создаёт krostemod_rename.rpy и устанавливает его.</value></data>
   <data name="Main_RecentFolders_Tip" xml:space="preserve"><value>Недавно декомпилированные папки</value></data>
   <data name="Save_Recent_Tip" xml:space="preserve"><value>Недавно открытые сохранения</value></data>
   <data name="Main_CompareArchive" xml:space="preserve"><value>🔀 Сравнить…</value></data>

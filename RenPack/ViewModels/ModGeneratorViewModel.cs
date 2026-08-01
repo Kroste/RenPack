@@ -54,7 +54,7 @@ public sealed partial class ModGeneratorViewModel : ObservableObject
     [
         new ModType(ModTypeId.Walkthrough, "Walkthrough"),
         new ModType(ModTypeId.Cheat, "Cheat menu (F11)"),
-        // spaeter: Rename …
+        new ModType(ModTypeId.Rename, "Character rename"),
     ];
 
     [ObservableProperty] private ModType _selectedModType;
@@ -137,10 +137,29 @@ public sealed partial class ModGeneratorViewModel : ObservableObject
             ProgressDetail = p.CurrentFile;
         });
 
+        // Rename-Provider: der Builder ruft das im Background-Thread mitten
+        // in der Pipeline auf. Wir dispatchen den Dialog synchron auf den
+        // UI-Thread und blocken den Worker bis der User geantwortet hat.
+        RenameConfig? RenamePrompt(IReadOnlyList<RpyCharacter> characters)
+        {
+            if (Ui is null) return null;
+            var tcs = new TaskCompletionSource<RenameConfig?>();
+            Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
+            {
+                try
+                {
+                    var cfg = await Ui.PromptRenameMappingsAsync(characters);
+                    tcs.TrySetResult(cfg);
+                }
+                catch (Exception ex) { tcs.TrySetException(ex); }
+            });
+            return tcs.Task.GetAwaiter().GetResult();
+        }
+
         try
         {
             var result = await Task.Run(() =>
-                _builder.Build(pickedFolder, pickedType, progress));
+                _builder.Build(pickedFolder, pickedType, progress, default, RenamePrompt));
             LastResult = result;
             StatusText = L.F("Mod_BuildDoneFormat", result.DeployedFileCount, result.GameDir);
             ProgressDetail = "";
@@ -214,6 +233,11 @@ public interface IModGeneratorUi
     Task<string?> PickFolderAsync(string title);
     Task ShowMessageAsync(string title, string message);
     Task<bool> ConfirmAsync(string title, string message);
+    /// <summary>Zeigt einen Dialog zum Eingeben der Rename-Mappings.
+    /// Der User sieht die vom Analyzer erkannten Character und kann pro
+    /// Character einen neuen Anzeigenamen eintragen. Leere Zeilen =
+    /// unveraendert. Rueckgabe <c>null</c> = Cancel → Build abbrechen.</summary>
+    Task<RenameConfig?> PromptRenameMappingsAsync(IReadOnlyList<RpyCharacter> characters);
 }
 
 public sealed record ModType(ModTypeId Id, string DisplayName)

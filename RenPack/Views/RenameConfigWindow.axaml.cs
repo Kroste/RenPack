@@ -1,0 +1,60 @@
+using System.Collections.ObjectModel;
+using RenPack.Services.Modding;
+
+namespace RenPack.Views;
+
+/// <summary>Modaler Dialog zum Konfigurieren der Character-Renames.
+/// Zeigt eine DataGrid mit einer Zeile pro erkanntem Character. Der User
+/// traegt in die „New Name"-Spalte den gewuenschten neuen Anzeigenamen
+/// ein — leer lassen = keine Aenderung.</summary>
+public partial class RenameConfigWindow : ChromeWindow
+{
+    private readonly ObservableCollection<RenameRow> _rows = new();
+
+    /// <summary>Wird gesetzt wenn User Apply klickt, bleibt <c>null</c> bei
+    /// Cancel/Close. Aufrufer prueft nach <see cref="ShowDialogAsync"/>.</summary>
+    public RenameConfig? Result { get; private set; }
+
+    public RenameConfigWindow()
+    {
+        InitializeComponent();
+        MappingsGrid.ItemsSource = _rows;
+        OkButton.Click += (_, _) => ApplyAndClose();
+        CancelButton.Click += (_, _) => { Result = null; Close(); };
+    }
+
+    /// <summary>Populate die DataGrid mit den erkannten Characters.</summary>
+    public void Load(IReadOnlyList<RpyCharacter> characters)
+    {
+        _rows.Clear();
+        foreach (var c in characters.OrderBy(c => c.VarName, StringComparer.Ordinal))
+        {
+            _rows.Add(new RenameRow
+            {
+                VarName = c.VarName,
+                OriginalName = c.DisplayName,
+                NewName = "",
+            });
+        }
+    }
+
+    private void ApplyAndClose()
+    {
+        // Nur Zeilen mit non-leerem NewName ins Result nehmen.
+        var dict = _rows
+            .Where(r => !string.IsNullOrWhiteSpace(r.NewName)
+                        && r.NewName.Trim() != r.OriginalName)
+            .ToDictionary(r => r.VarName, r => r.NewName.Trim(), StringComparer.Ordinal);
+        Result = new RenameConfig(dict);
+        Close();
+    }
+}
+
+/// <summary>DataGrid-Zeilen-Model. Public damit das XAML-Binding
+/// (<c>x:CompileBindings</c>) den Typ findet.</summary>
+public sealed class RenameRow
+{
+    public string VarName { get; set; } = "";
+    public string OriginalName { get; set; } = "";
+    public string NewName { get; set; } = "";
+}
