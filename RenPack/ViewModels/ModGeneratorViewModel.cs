@@ -53,7 +53,8 @@ public sealed partial class ModGeneratorViewModel : ObservableObject
     public ObservableCollection<ModType> AvailableModTypes { get; } =
     [
         new ModType(ModTypeId.Walkthrough, "Walkthrough"),
-        // spaeter: Cheat, Rename …
+        new ModType(ModTypeId.Cheat, "Cheat menu (F11)"),
+        // spaeter: Rename …
     ];
 
     [ObservableProperty] private ModType _selectedModType;

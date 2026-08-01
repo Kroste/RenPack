@@ -277,8 +277,10 @@ public static class CliRunner
                                              (file or folder; recursive for folders)
               renpack diff <a.save> <b.save>
               renpack diff <a.rpa>  <b.rpa>
-              renpack mod install <game-folder> [--type walkthrough]
+              renpack mod install <game-folder> [--type walkthrough|cheat]
                                              (one-shot: decompile + analyse + generate + install into game/)
+                                             (walkthrough = hint tags at every choice + F10 impact screen)
+                                             (cheat       = F11 cheat menu for numeric/bool story stats)
               renpack mod uninstall <game-folder>
                                              (restores originals via the .krostemod manifest)
               renpack mod analyze <source-dir>

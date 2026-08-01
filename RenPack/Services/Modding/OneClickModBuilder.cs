@@ -32,20 +32,23 @@ public sealed class OneClickModBuilder
     private readonly RenpyModAnalyzer _analyzer;
     private readonly KrosteWalkthroughGenerator _walkthrough;
     private readonly KrosteInfoScreenGenerator _infoScreen;
+    private readonly KrosteCheatGenerator _cheat;
 
     public const string ManifestFileName = "KROSTEMOD_MANIFEST.json";
     public const string BackupSuffix = ".krostemod-bak";
 
     public OneClickModBuilder() : this(new RpycBatchService(), new RenpyModAnalyzer(),
-        new KrosteWalkthroughGenerator(), new KrosteInfoScreenGenerator()) { }
+        new KrosteWalkthroughGenerator(), new KrosteInfoScreenGenerator(), new KrosteCheatGenerator()) { }
 
     public OneClickModBuilder(RpycBatchService batch, RenpyModAnalyzer analyzer,
-        KrosteWalkthroughGenerator walkthrough, KrosteInfoScreenGenerator infoScreen)
+        KrosteWalkthroughGenerator walkthrough, KrosteInfoScreenGenerator infoScreen,
+        KrosteCheatGenerator cheat)
     {
         _batch = batch;
         _analyzer = analyzer;
         _walkthrough = walkthrough;
         _infoScreen = infoScreen;
+        _cheat = cheat;
     }
 
     /// <summary>Baut und deployt den Mod. <paramref name="userPickedFolder"/>
@@ -108,15 +111,24 @@ public sealed class OneClickModBuilder
             ct.ThrowIfCancellationRequested();
             progress?.Report(new OneClickProgress(OneClickPhase.Generating, 0, 0, ""));
             var modOut = Path.Combine(tempRoot, "mod");
-            int _ = modType switch
+            switch (modType)
             {
-                ModTypeId.Walkthrough => _walkthrough.Generate(tempRoot, modOut, analysis),
-                _ => throw new NotSupportedException($"Mod-Typ noch nicht implementiert: {modType}"),
-            };
+                case ModTypeId.Walkthrough:
+                    _walkthrough.Generate(tempRoot, modOut, analysis);
+                    break;
+                case ModTypeId.Cheat:
+                    // Cheat-Mod hat kein .rpy-Patching noetig, nur die
+                    // krostemod_cheat.rpy landet im modOut/.
+                    Directory.CreateDirectory(modOut);
+                    _cheat.Generate(modOut, analysis);
+                    break;
+                default:
+                    throw new NotSupportedException($"Mod-Typ noch nicht implementiert: {modType}");
+            }
 
             // 3b. F10-Info-Screen daneben legen — bringt Live-Variable-Werte
-            // + Consumer-Liste ingame. Ergaenzt den Walkthrough um „warum-
-            // Kontext" fuer den Spieler.
+            // + Consumer-Liste ingame. Ergaenzt den Walkthrough/Cheat um
+            // „warum-Kontext" fuer den Spieler.
             _infoScreen.Generate(modOut, analysis);
 
             // 4. Deploy: modifizierte .rpy nach gameDir, .rpyc backuppen.
