@@ -36,9 +36,29 @@ public sealed class KrosteWalkthroughGeneratorTests : IDisposable
         var hint = KrosteWalkthroughGenerator.FormatHint(choice);
         hint.Should().StartWith("{color=#e0b14c}");
         hint.Should().EndWith("{/color}");
-        hint.Should().Contain("[K love+3]");
-        hint.Should().Contain("[K respect-1]");
-        hint.Should().Contain("[K day0s2_compliment set]");
+        // WICHTIG: [[ ist die Ren'Py-Escape-Sequenz fuer ein literales [.
+        // Ohne den doppelten Bracket wuerde Ren'Py "K love+3" als
+        // Python-Expression zu evaluieren versuchen → SyntaxError.
+        hint.Should().Contain("[[K love+3]");
+        hint.Should().Contain("[[K respect-1]");
+        hint.Should().Contain("[[K day0s2_compliment set]");
+    }
+
+    [Fact]
+    public void Every_hint_bracket_is_doubled_for_renpy_escape()
+    {
+        // Regression-Test fuer v0.8.2-Bug: Ren'Py interpretiert einzelne [
+        // als Python-Interpolation. Wir brauchen fuer JEDES Delta ein [[.
+        var choice = new RpyChoice("f.rpy", 1, "l", 0, 0, "t", null,
+            new[]
+            {
+                new VarDelta("a", "+=", "1"),
+                new VarDelta("b", "-=", "2"),
+                new VarDelta("c", "=", "True"),
+            });
+        var hint = KrosteWalkthroughGenerator.FormatHint(choice);
+        int doubleBrackets = System.Text.RegularExpressions.Regex.Matches(hint, @"\[\[").Count;
+        doubleBrackets.Should().Be(3, "jeder Delta-Tag muss mit [[ escaped werden");
     }
 
     [Fact]
@@ -67,8 +87,9 @@ public sealed class KrosteWalkthroughGeneratorTests : IDisposable
         var patched = File.ReadAllText(Path.Combine(dst, "script.rpy"));
 
         // Beide Choices haben jetzt Hint-Suffix VOR dem schliessenden ".
-        patched.Should().Contain("\"Be nice {color=#e0b14c}[K love+3]{/color}\":");
-        patched.Should().Contain("\"Be rude {color=#e0b14c}[K love-2]{/color}\":");
+        // [[ ist Ren'Py-Escape fuer literales [ (sonst SyntaxError zur Laufzeit).
+        patched.Should().Contain("\"Be nice {color=#e0b14c}[[K love+3]{/color}\":");
+        patched.Should().Contain("\"Be rude {color=#e0b14c}[[K love-2]{/color}\":");
 
         // Restliche Struktur bleibt erhalten (Label, $-Statements).
         patched.Should().Contain("label start:");
@@ -135,6 +156,6 @@ public sealed class KrosteWalkthroughGeneratorTests : IDisposable
         var choiceLine = patched.Single(l => l.Contains("Rich choice"));
         choiceLine.Should().StartWith("        \""); // Original-Einrueckung
         choiceLine.Should().Contain("if money > 100:");
-        choiceLine.Should().Contain("[K love+5]");
+        choiceLine.Should().Contain("[[K love+5]");
     }
 }

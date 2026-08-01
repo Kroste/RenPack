@@ -121,9 +121,17 @@ public sealed class KrosteWalkthroughGenerator
     }
 
     /// <summary>Erzeugt den Hint-String aus den Deltas eines Choices.
-    /// Format: <c>{color=#e0b14c}[K var+N] [K other-M] [K flag_set]{/color}</c>.
+    /// Format: <c>{color=#e0b14c}[[K var+N] [[K other-M] [[K flag_set]{/color}</c>.
     /// Leerer String, wenn keine erkennbaren Deltas existieren (dann
-    /// bleibt der Original-Choice-Text unveraendert).</summary>
+    /// bleibt der Original-Choice-Text unveraendert).
+    ///
+    /// **Warum <c>[[</c> statt <c>[</c>?** Ren'Py-Text-Strings interpretieren
+    /// <c>[…]</c> als **Python-Interpolation** (siehe Ren'Py-Docs, Text-Tags).
+    /// Ein rohes <c>[K love+3]</c> im Choice-Text laesst Ren'Py versuchen
+    /// <c>K love+3</c> als Python-Expression zu evaluieren → <c>SyntaxError</c>
+    /// zur Laufzeit (verifiziert an Sophia Parker 0.230, v0.8.2 Bug).
+    /// <c>[[</c> ist die Ren'Py-native Escape-Sequenz fuer ein literales
+    /// <c>[</c> — genau was wir wollen.</summary>
     public static string FormatHint(RpyChoice choice)
     {
         if (choice.Deltas.Count == 0) return "";
@@ -131,7 +139,7 @@ public sealed class KrosteWalkthroughGenerator
         foreach (var d in choice.Deltas)
         {
             var tag = FormatDelta(d);
-            if (tag is not null) parts.Add($"[K {tag}]");
+            if (tag is not null) parts.Add($"[[K {tag}]");
         }
         if (parts.Count == 0) return "";
         return "{color=" + HintColor + "}" + string.Join(' ', parts) + "{/color}";
