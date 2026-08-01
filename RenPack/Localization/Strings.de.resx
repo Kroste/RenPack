@@ -127,6 +127,9 @@
   <data name="Preview_UnsupportedFormat" xml:space="preserve"><value>Keine Vorschau für {0}-Dateien.</value></data>
   <data name="Preview_TooLargeFormat" xml:space="preserve"><value>Datei ist {0} — zu groß für Vorschau (Limit: {1}).</value></data>
   <data name="Preview_LoadFailed" xml:space="preserve"><value>Vorschau konnte nicht geladen werden.</value></data>
+  <data name="Ctx_Extract" xml:space="preserve"><value>Diese Datei entpacken…</value></data>
+  <data name="Ctx_CopyPath" xml:space="preserve"><value>Pfad kopieren</value></data>
+  <data name="Status_PathCopiedFormat" xml:space="preserve"><value>Pfad kopiert: {0}</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 

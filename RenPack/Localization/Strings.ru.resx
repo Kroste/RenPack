@@ -127,6 +127,9 @@
   <data name="Preview_UnsupportedFormat" xml:space="preserve"><value>Нет предпросмотра для файлов {0}.</value></data>
   <data name="Preview_TooLargeFormat" xml:space="preserve"><value>Файл {0} — слишком большой для предпросмотра (лимит: {1}).</value></data>
   <data name="Preview_LoadFailed" xml:space="preserve"><value>Не удалось загрузить предпросмотр.</value></data>
+  <data name="Ctx_Extract" xml:space="preserve"><value>Распаковать этот файл…</value></data>
+  <data name="Ctx_CopyPath" xml:space="preserve"><value>Скопировать путь</value></data>
+  <data name="Status_PathCopiedFormat" xml:space="preserve"><value>Путь скопирован: {0}</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 

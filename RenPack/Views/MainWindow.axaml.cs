@@ -1,9 +1,11 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using NLog;
+using RenPack.Localization;
 using RenPack.Services;
 using RenPack.ViewModels;
 
@@ -24,6 +26,29 @@ public partial class MainWindow : ChromeWindow, IUiInteractions
 
         AddHandler(DragDrop.DropEvent, OnDrop);
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
+
+        // Ctrl+F fokussiert die Filter-TextBox. KeyBinding im XAML geht
+        // hier nicht sauber, weil wir das Ziel (FilterBox) referenzieren
+        // muessen — deshalb im Code-behind ueber Preview-Tunneling.
+        AddHandler(KeyDownEvent, OnGlobalKeyDown, RoutingStrategies.Tunnel);
+    }
+
+    private void OnGlobalKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.F)
+        {
+            FilterBox.Focus();
+            FilterBox.SelectAll();
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>Doppelklick auf einen Datei-Eintrag → einzelne Datei
+    /// extrahieren.</summary>
+    private void OnEntryDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm && vm.ExtractHighlightedCommand.CanExecute(null))
+            vm.ExtractHighlightedCommand.Execute(null);
     }
 
     protected override void OnDataContextChanged(EventArgs e)
@@ -237,8 +262,26 @@ public partial class MainWindow : ChromeWindow, IUiInteractions
         return file?.TryGetLocalPath();
     }
 
+    /// <summary>Save-Dialog fuer eine einzelne Datei aus dem Archiv
+    /// (behaelt die Original-Extension bei, kein Format-Filter).</summary>
+    public async Task<string?> PickSaveArchiveOrFileAsync(string suggestedName)
+    {
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Datei speichern unter",
+            SuggestedFileName = suggestedName,
+        });
+        return file?.TryGetLocalPath();
+    }
+
     public Task ShowMessageAsync(string title, string message) => MessageBox.ShowAsync(this, title, message);
 
     public Task<bool> ConfirmAsync(string title, string message) =>
         MessageBox.ShowAsync(this, title, message, showCancel: true);
+
+    public async Task CopyToClipboardAsync(string text)
+    {
+        var cb = Clipboard;
+        if (cb is not null) await cb.SetTextAsync(text);
+    }
 }

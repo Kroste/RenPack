@@ -10,6 +10,8 @@ public interface IUiInteractions
     Task<string?> PickOpenArchiveAsync();
     Task<string?> PickFolderAsync(string title);
     Task<string?> PickSaveArchiveAsync(string suggestedName);
+    Task<string?> PickSaveArchiveOrFileAsync(string suggestedName);
     Task ShowMessageAsync(string title, string message);
     Task<bool> ConfirmAsync(string title, string message);
+    Task CopyToClipboardAsync(string text);
 }

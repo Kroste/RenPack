@@ -19,6 +19,20 @@
         <vm:MainWindowViewModel />
     </Design.DataContext>
 
+    <!-- Tastenkuerzel — Kroste-Standard: Ctrl+O/P Archiv-Aktionen,
+         Ctrl+F Filter, F5 Reload, Esc Filter leeren.
+         SelectAll/DeselectAll bewusst mit Ctrl+Shift+A/D, damit
+         Ctrl+A in Textfeldern (Filter) weiter Text-Selektion macht. -->
+    <views:ChromeWindow.KeyBindings>
+        <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenArchiveCommand}" />
+        <KeyBinding Gesture="Ctrl+P" Command="{Binding CreateArchiveCommand}" />
+        <KeyBinding Gesture="F5" Command="{Binding ReloadCommand}" />
+        <KeyBinding Gesture="Ctrl+Shift+A" Command="{Binding SelectAllCommand}" />
+        <KeyBinding Gesture="Ctrl+Shift+D" Command="{Binding DeselectAllCommand}" />
+        <KeyBinding Gesture="Ctrl+E" Command="{Binding ExtractSelectedCommand}" />
+        <KeyBinding Gesture="Escape" Command="{Binding ClearFilterCommand}" />
+    </views:ChromeWindow.KeyBindings>
+
     <DockPanel>
         <controls:TitleBar DockPanel.Dock="Top" Title="{loc:Tr App_Title}">
             <controls:TitleBar.RightContent>
@@ -118,9 +132,10 @@
                 </Grid>
             </Border>
 
-            <!-- Filter-Zeile -->
+            <!-- Filter-Zeile — x:Name fuer Ctrl+F-Fokus im Code-behind. -->
             <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
-                <TextBox Grid.Column="0" PlaceholderText="{loc:Tr Main_Filter_Placeholder}"
+                <TextBox Grid.Column="0" x:Name="FilterBox"
+                         PlaceholderText="{loc:Tr Main_Filter_Placeholder}"
                          Text="{Binding FilterText}" />
             </Grid>
 
@@ -133,7 +148,16 @@
                               CanUserReorderColumns="True"
                               CanUserSortColumns="True"
                               GridLinesVisibility="Horizontal"
-                              Background="Transparent">
+                              Background="Transparent"
+                              DoubleTapped="OnEntryDoubleTapped">
+                        <DataGrid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="{loc:Tr Ctx_Extract}"
+                                          Command="{Binding ExtractHighlightedCommand}" />
+                                <MenuItem Header="{loc:Tr Ctx_CopyPath}"
+                                          Command="{Binding CopyHighlightedPathCommand}" />
+                            </ContextMenu>
+                        </DataGrid.ContextMenu>
                         <DataGrid.Columns>
                             <DataGridCheckBoxColumn Header="✓" Width="42"
                                 Binding="{Binding IsSelected}" />

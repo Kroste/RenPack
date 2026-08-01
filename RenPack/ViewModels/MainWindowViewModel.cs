@@ -222,6 +222,53 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void DeselectAll() { foreach (var e in _allEntries) e.IsSelected = false; }
 
+    /// <summary>F5 / Reload: aktuelles Archiv frisch vom Datentraeger einlesen
+    /// (falls jemand aussen etwas veraendert hat). No-op wenn nichts offen.</summary>
+    [RelayCommand]
+    private Task ReloadAsync() => Archive is null ? Task.CompletedTask : LoadArchiveAsync(Archive.ArchivePath);
+
+    /// <summary>Filter leeren (Esc-Hotkey).</summary>
+    [RelayCommand]
+    private void ClearFilter() => FilterText = "";
+
+    /// <summary>Doppelklick / Kontextmenue: nur die aktuell hervorgehobene
+    /// Datei entpacken (mit Datei-Picker fuer den Zielpfad).</summary>
+    [RelayCommand]
+    private async Task ExtractHighlightedAsync()
+    {
+        if (Ui is null || Archive is null || HighlightedEntry is null) return;
+        string? target = await Ui.PickSaveArchiveOrFileAsync(
+            System.IO.Path.GetFileName(HighlightedEntry.Path));
+        if (target is null) return;
+
+        var archive = Archive;
+        var entry = HighlightedEntry.Entry;
+        IsBusy = true;
+        try
+        {
+            await Task.Run(() => _archiveService.ExtractEntry(archive.ArchivePath, entry, target));
+            StatusText = L.F("Status_ExtractDoneFormat", 1, target);
+            Log.Info("Einzelne Datei extrahiert: {path} → {target}", entry.Path, target);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Einzel-Extraktion fehlgeschlagen");
+            StatusText = L.T("Status_ExtractFailed");
+            await Ui.ShowMessageAsync(L.T("Msg_ExtractFailed_Title"), ex.Message);
+        }
+        finally { IsBusy = false; }
+    }
+
+    /// <summary>Kontextmenue: Pfad des hervorgehobenen Eintrags in die
+    /// System-Zwischenablage kopieren.</summary>
+    [RelayCommand]
+    private async Task CopyHighlightedPathAsync()
+    {
+        if (Ui is null || HighlightedEntry is null) return;
+        await Ui.CopyToClipboardAsync(HighlightedEntry.Path);
+        StatusText = L.F("Status_PathCopiedFormat", HighlightedEntry.Path);
+    }
+
     private void OnEntryChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ArchiveEntryViewModel.IsSelected))

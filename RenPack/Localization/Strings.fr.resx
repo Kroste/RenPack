@@ -127,6 +127,9 @@
   <data name="Preview_UnsupportedFormat" xml:space="preserve"><value>Aucun aperçu pour les fichiers {0}.</value></data>
   <data name="Preview_TooLargeFormat" xml:space="preserve"><value>Fichier {0} — trop grand pour l'aperçu (limite : {1}).</value></data>
   <data name="Preview_LoadFailed" xml:space="preserve"><value>Impossible de charger l'aperçu.</value></data>
+  <data name="Ctx_Extract" xml:space="preserve"><value>Extraire ce fichier…</value></data>
+  <data name="Ctx_CopyPath" xml:space="preserve"><value>Copier le chemin</value></data>
+  <data name="Status_PathCopiedFormat" xml:space="preserve"><value>Chemin copié : {0}</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 
