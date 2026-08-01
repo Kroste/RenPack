@@ -733,7 +733,7 @@ public sealed class RpycDecompilerTests
         // wir nur "_arg0=None" emittieren, referenziert der ATL-Body noch
         // immer "delay" → NameError: name 'delay' is not defined.
         // Fix: freie Identifier aus PyExpr-Bodys ausschlachten und als
-        // echte Parameternamen ausgeben.
+        // Parameter-Namen ausgeben — wenn ein Aufrufer Argumente übergibt.
         var delayExpr = new ClassDict("renpy.astsupport", "PyExpr");
         delayExpr["__args__"] = new object[] { "delay" };
         var pauseStmt = new ClassDict("renpy.atl", "RawMultipurpose");
@@ -743,31 +743,60 @@ public sealed class RpycDecompilerTests
         block["statements"] = new ArrayList { pauseStmt };
         var tr = Node("renpy.ast.Transform", ("varname", "delayed_blink"), ("atl", block));
 
-        var text = _dec.Decompile(new object[] { tr });
+        // Aufrufer mit 1 Argument — braucht Parameter.
+        var addNode = new ClassDict("renpy.sl2.slast", "SLDisplayable");
+        addNode["name"] = "add"; addNode["positional"] = new ArrayList { "Text(\"x\")" };
+        addNode["keyword"] = new ArrayList { new object[] { "at", "delayed_blink(3)" } };
+        addNode["children"] = new ArrayList();
+        var slBlock = new ClassDict("renpy.sl2.slast", "SLBlock");
+        slBlock["keyword"] = new ArrayList(); slBlock["children"] = new ArrayList { addNode };
+        var slScreen = new ClassDict("renpy.sl2.slast", "SLScreen");
+        slScreen["name"] = "s"; slScreen["keyword"] = new ArrayList();
+        slScreen["children"] = new ArrayList { slBlock };
+        var astScreen = Node("renpy.ast.Screen", ("screen", slScreen));
+
+        var text = _dec.Decompile(new object[] { tr, astScreen });
         text.Should().Contain("transform delayed_blink(delay=None):");
         text.Should().Contain("    pause delay");
         text.Should().NotContain("_arg0");
     }
 
     [Fact]
-    public void Transform_filters_python_and_renpy_globals_from_extracted_params()
+    public void Transform_without_call_args_stays_parameterless_even_with_body_refs()
     {
-        // In der PyExpr "int(config.rollback_length + margin)" ist "margin"
-        // der einzige echte Parameter — "int" und "config" sind Globals.
-        var expr = new ClassDict("renpy.astsupport", "PyExpr");
-        expr["__args__"] = new object[] { "int(config.rollback_length + margin)" };
+        // Regression: credits_scroll_transform aus Boundaries of Morality
+        // hatte im Original KEINEN Parameter — "scroll_duration" im Body war
+        // eine Store-Variable ($ scroll_duration = 200). Wenn wir fälschlich
+        // einen Parameter "scroll_duration=None" hinzufügen, wird die
+        // Store-Var geshadowed und Ren'Py wirft
+        // TypeError: '>=' not supported between 'float' and 'NoneType'
+        // beim ATL-Rendering.
+        var sdExpr = new ClassDict("renpy.astsupport", "PyExpr");
+        sdExpr["__args__"] = new object[] { "scroll_duration" };
         var stmt = new ClassDict("renpy.atl", "RawMultipurpose");
-        stmt["warper"] = "linear"; stmt["duration"] = expr;
+        stmt["warper"] = "linear"; stmt["duration"] = sdExpr;
         stmt["expressions"] = new ArrayList();
-        stmt["properties"] = new ArrayList { new object[] { "alpha", "1.0" } };
+        stmt["properties"] = new ArrayList { new object[] { "yoffset", "-12000" } };
         var block = new ClassDict("renpy.atl", "RawBlock");
         block["statements"] = new ArrayList { stmt };
-        var tr = Node("renpy.ast.Transform", ("varname", "fade_in"), ("atl", block));
+        var tr = Node("renpy.ast.Transform",
+            ("varname", "credits_scroll_transform"), ("atl", block));
 
-        var text = _dec.Decompile(new object[] { tr });
-        text.Should().Contain("transform fade_in(margin=None):");
-        text.Should().NotContain("int=");
-        text.Should().NotContain("config=");
+        // Aufrufer ruft OHNE Argumente ("at credits_scroll_transform").
+        var addNode = new ClassDict("renpy.sl2.slast", "SLDisplayable");
+        addNode["name"] = "frame"; addNode["positional"] = new ArrayList();
+        addNode["keyword"] = new ArrayList { new object[] { "at", "credits_scroll_transform" } };
+        addNode["children"] = new ArrayList();
+        var slBlock = new ClassDict("renpy.sl2.slast", "SLBlock");
+        slBlock["keyword"] = new ArrayList(); slBlock["children"] = new ArrayList { addNode };
+        var slScreen = new ClassDict("renpy.sl2.slast", "SLScreen");
+        slScreen["name"] = "credits"; slScreen["keyword"] = new ArrayList();
+        slScreen["children"] = new ArrayList { slBlock };
+        var astScreen = Node("renpy.ast.Screen", ("screen", slScreen));
+
+        var text = _dec.Decompile(new object[] { tr, astScreen });
+        text.Should().Contain("transform credits_scroll_transform:");
+        text.Should().NotContain("scroll_duration=None");
     }
 
     [Fact]

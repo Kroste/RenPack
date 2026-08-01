@@ -747,19 +747,19 @@ public sealed class RenpyRpycDecompiler
     /// wiederverwendbar per <c>at NAME</c> auf beliebigen Displayables.
     ///
     /// Sonderfall: Ren'Py speichert die Transform-Parameter nicht in der
-    /// .rpyc. Wir rekonstruieren zwei Dinge:
-    /// <list type="number">
-    ///   <item>Wie <b>viele</b> Parameter — aus dem Maximum der Argument-
-    ///     Anzahl aller Aufrufer (<c>at NAME(a, b, c)</c>).</item>
-    ///   <item>Wie sie <b>heißen</b> — aus den freien Identifiern im ATL-
-    ///     Body (<c>pause delay</c> → Parameter <c>delay</c>).</item>
-    /// </list>
-    /// Sonst würde ein Zahl-Argument als Child-Displayable interpretiert
-    /// ("Not a displayable: 0") oder ein Body-Reference auf einen fehlenden
-    /// Parameter als <c>NameError</c> knallen. Ren'Py verbietet
-    /// <c>*args</c>/<c>**kwargs</c> auf <c>transform</c>-Statements explizit
-    /// ("the transform statement does not take *args"), also nur benannte
-    /// Parameter mit Default <c>None</c>.</summary>
+    /// .rpyc. Wir rekonstruieren aus den Aufrufern die Anzahl und aus dem
+    /// ATL-Body die Namen. Aber Achtung: <b>keinen Parameter emittieren,
+    /// wenn kein Aufrufer Argumente übergibt</b> — freie Identifier im Body
+    /// (z. B. <c>linear scroll_duration yoffset -12000</c>) sind sonst
+    /// Store-Variablen und würden durch einen fälschlich hinzugefügten
+    /// Parameter geshadowed werden (Default <c>None</c> → TypeError beim
+    /// Rendern). Nur wenn ein Aufruf tatsächlich Argumente übergibt (dann
+    /// braucht Ren'Py eine Signatur, sonst Child-Displayable-Bug), rekon-
+    /// struieren wir <c>callArgCount</c> Parameter — benannt mit den
+    /// extrahierten Namen wo verfügbar, sonst <c>_argN</c> als Fallback.
+    /// Ren'Py verbietet <c>*args</c>/<c>**kwargs</c> auf <c>transform</c>-
+    /// Statements explizit, also nur benannte Parameter mit Default
+    /// <c>None</c>.</summary>
     private void EmitTransform(StringBuilder sb, ClassDict node, int indent)
     {
         string name = AsString(node.GetValueOrDefault("varname") ?? node.GetValueOrDefault("name"));
@@ -768,12 +768,11 @@ public sealed class RenpyRpycDecompiler
         _transformParamNames.TryGetValue(name, out var extractedNames);
         extractedNames ??= new List<string>();
 
-        int totalArgs = Math.Max(callArgCount, extractedNames.Count);
         string paramSuffix = "";
-        if (totalArgs > 0)
+        if (callArgCount > 0)
         {
-            var parts = new List<string>(totalArgs);
-            for (int i = 0; i < totalArgs; i++)
+            var parts = new List<string>(callArgCount);
+            for (int i = 0; i < callArgCount; i++)
             {
                 string paramName = i < extractedNames.Count ? extractedNames[i] : $"_arg{i}";
                 parts.Add($"{paramName}=None");
