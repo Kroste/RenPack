@@ -122,6 +122,11 @@
   <data name="Status_Done" xml:space="preserve"><value>Готово.</value></data>
   <data name="Tray_Show" xml:space="preserve"><value>Показать</value></data>
   <data name="Tray_Quit" xml:space="preserve"><value>Выход</value></data>
+  <data name="Preview_Title" xml:space="preserve"><value>ПРЕДПРОСМОТР</value></data>
+  <data name="Preview_None" xml:space="preserve"><value>Выберите файл для предпросмотра.</value></data>
+  <data name="Preview_UnsupportedFormat" xml:space="preserve"><value>Нет предпросмотра для файлов {0}.</value></data>
+  <data name="Preview_TooLargeFormat" xml:space="preserve"><value>Файл {0} — слишком большой для предпросмотра (лимит: {1}).</value></data>
+  <data name="Preview_LoadFailed" xml:space="preserve"><value>Не удалось загрузить предпросмотр.</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 

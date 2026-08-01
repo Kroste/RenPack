@@ -124,32 +124,87 @@
                          Text="{Binding FilterText}" />
             </Grid>
 
-            <!-- Dateiliste als Card -->
-            <Border Grid.Row="4" Classes="card-flat" ClipToBounds="True">
-                <DataGrid ItemsSource="{Binding Entries}"
-                          IsReadOnly="False"
-                          CanUserReorderColumns="True"
-                          CanUserSortColumns="True"
-                          GridLinesVisibility="Horizontal"
-                          Background="Transparent">
-                    <DataGrid.Columns>
-                        <DataGridCheckBoxColumn Header="✓" Width="42"
-                            Binding="{Binding IsSelected}" />
-                        <DataGridTextColumn Width="*" IsReadOnly="True"
-                            Binding="{Binding Path}">
-                            <DataGridTextColumn.Header>
-                                <TextBlock Text="{loc:Tr Main_Column_File}" />
-                            </DataGridTextColumn.Header>
-                        </DataGridTextColumn>
-                        <DataGridTextColumn Width="120" IsReadOnly="True"
-                            Binding="{Binding SizeDisplay}">
-                            <DataGridTextColumn.Header>
-                                <TextBlock Text="{loc:Tr Main_Column_Size}" />
-                            </DataGridTextColumn.Header>
-                        </DataGridTextColumn>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </Border>
+            <!-- Dateiliste + Preview-Pane, mit GridSplitter zwischen beiden. -->
+            <Grid Grid.Row="4" ColumnDefinitions="*,Auto,2*">
+                <Border Grid.Column="0" Classes="card-flat" ClipToBounds="True">
+                    <DataGrid ItemsSource="{Binding Entries}"
+                              SelectedItem="{Binding HighlightedEntry, Mode=TwoWay}"
+                              IsReadOnly="False"
+                              CanUserReorderColumns="True"
+                              CanUserSortColumns="True"
+                              GridLinesVisibility="Horizontal"
+                              Background="Transparent">
+                        <DataGrid.Columns>
+                            <DataGridCheckBoxColumn Header="✓" Width="42"
+                                Binding="{Binding IsSelected}" />
+                            <DataGridTextColumn Width="*" IsReadOnly="True"
+                                Binding="{Binding Path}">
+                                <DataGridTextColumn.Header>
+                                    <TextBlock Text="{loc:Tr Main_Column_File}" />
+                                </DataGridTextColumn.Header>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Width="120" IsReadOnly="True"
+                                Binding="{Binding SizeDisplay}">
+                                <DataGridTextColumn.Header>
+                                    <TextBlock Text="{loc:Tr Main_Column_Size}" />
+                                </DataGridTextColumn.Header>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+
+                <GridSplitter Grid.Column="1" Width="6" Background="Transparent"
+                              ResizeDirection="Columns" HorizontalAlignment="Center" />
+
+                <!-- Preview-Panel -->
+                <Border Grid.Column="2" Classes="card-flat" ClipToBounds="True">
+                    <DockPanel>
+                        <Border DockPanel.Dock="Top" Padding="12,10"
+                                BorderBrush="{DynamicResource KrosteBorderBrush}"
+                                BorderThickness="0,0,0,1">
+                            <StackPanel>
+                                <TextBlock Text="{loc:Tr Preview_Title}" Classes="section-label" />
+                                <TextBlock Text="{Binding Preview.Headline}" Classes="secondary"
+                                           FontSize="12" TextTrimming="CharacterEllipsis"
+                                           IsVisible="{Binding Preview.HasContent}" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Kein Eintrag ausgewaehlt -->
+                        <TextBlock Text="{loc:Tr Preview_None}" Classes="muted"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   IsVisible="{Binding !Preview.HasContent}" />
+
+                        <!-- Placeholder (unbekanntes Format / zu gross / Fehler) -->
+                        <TextBlock Text="{Binding Preview.Placeholder}" Classes="secondary"
+                                   Padding="16" TextWrapping="Wrap"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   IsVisible="{Binding Preview.IsPlaceholder}" />
+
+                        <!-- Bild-Preview -->
+                        <ScrollViewer IsVisible="{Binding Preview.IsImage}"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Auto">
+                            <Image Source="{Binding Preview.ImageContent}" Stretch="None"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </ScrollViewer>
+
+                        <!-- Text-Preview: monospaced, scrollbar. -->
+                        <ScrollViewer IsVisible="{Binding Preview.IsText}"
+                                      HorizontalScrollBarVisibility="Auto">
+                            <TextBox Text="{Binding Preview.TextContent, Mode=OneWay}"
+                                     IsReadOnly="True"
+                                     FontFamily="Cascadia Mono,Consolas,Menlo,DejaVu Sans Mono,monospace"
+                                     FontSize="12"
+                                     BorderThickness="0"
+                                     Background="Transparent"
+                                     Padding="12"
+                                     TextWrapping="NoWrap"
+                                     AcceptsReturn="True" />
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+            </Grid>
         </Grid>
     </DockPanel>
 </views:ChromeWindow>

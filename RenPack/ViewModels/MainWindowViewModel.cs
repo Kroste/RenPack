@@ -21,6 +21,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public MainWindowViewModel(IRenpyArchiveService archiveService)
     {
         _archiveService = archiveService;
+        Preview = new PreviewViewModel(archiveService);
     }
 
     // Designer-Konstruktor
@@ -28,6 +29,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     /// <summary>Die aktuell gefilterte, angezeigte Dateiliste.</summary>
     public ObservableCollection<ArchiveEntryViewModel> Entries { get; } = [];
+
+    /// <summary>Preview-Panel neben der Dateiliste. Wird bei
+    /// <see cref="HighlightedEntry"/>-Wechsel neu geladen.</summary>
+    public PreviewViewModel Preview { get; }
+
+    [ObservableProperty] private ArchiveEntryViewModel? _highlightedEntry;
+
+    partial void OnHighlightedEntryChanged(ArchiveEntryViewModel? value)
+    {
+        if (value is null || Archive is null) { Preview.Clear(); return; }
+        _ = Preview.LoadAsync(Archive.ArchivePath, value.Entry);
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasArchive))]

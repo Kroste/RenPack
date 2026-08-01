@@ -18,6 +18,11 @@ public interface IRenpyArchiveService
     /// <summary>Entpackt eine einzelne Datei aus dem Archiv nach <paramref name="destinationFile"/>.</summary>
     void ExtractEntry(string archivePath, RpaEntry entry, string destinationFile);
 
+    /// <summary>Liest den vollstaendigen Inhalt eines Eintrags in Memory.
+    /// Bricht ab, wenn <paramref name="maxBytes"/> ueberschritten wird
+    /// (Rueckgabe <c>null</c>) — schuetzt vor 1-GB-PNG-Preview-Katastrophen.</summary>
+    byte[]? ReadEntryBytes(string archivePath, RpaEntry entry, long maxBytes);
+
     /// <summary>
     /// Entpackt ausgewählte Einträge in ein Zielverzeichnis (Ordnerstruktur bleibt erhalten).
     /// Gibt die Anzahl entpackter Dateien zurück.

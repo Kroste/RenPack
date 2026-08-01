@@ -115,6 +115,33 @@ public sealed class RenpyArchiveService : IRenpyArchiveService
         ExtractEntryCore(archive, entry, destinationFile);
     }
 
+    public byte[]? ReadEntryBytes(string archivePath, RpaEntry entry, long maxBytes)
+    {
+        if (entry.Size > maxBytes) return null;
+        using var archive = File.OpenRead(archivePath);
+        using var output = new MemoryStream(capacity: (int)Math.Min(entry.Size, int.MaxValue));
+        var buffer = new byte[81920];
+        foreach (var seg in entry.Segments)
+        {
+            if (seg.Prefix.Length > 0)
+                output.Write(seg.Prefix, 0, seg.Prefix.Length);
+
+            archive.Seek(seg.Offset, SeekOrigin.Begin);
+            long remaining = seg.BytesFromArchive;
+            while (remaining > 0)
+            {
+                int want = (int)Math.Min(remaining, buffer.Length);
+                int read = archive.Read(buffer, 0, want);
+                if (read <= 0)
+                    throw new EndOfStreamException(
+                        $"Archiv unerwartet zu Ende beim Lesen von '{entry.Path}'.");
+                output.Write(buffer, 0, read);
+                remaining -= read;
+            }
+        }
+        return output.ToArray();
+    }
+
     public int Extract(RpaArchiveInfo archive, IEnumerable<RpaEntry> entries, string destinationDirectory,
         IProgress<RpaProgress>? progress = null, CancellationToken cancellationToken = default)
     {

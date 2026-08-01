@@ -128,6 +128,11 @@
   <data name="Status_Done" xml:space="preserve"><value>Done.</value></data>
   <data name="Tray_Show" xml:space="preserve"><value>Show</value></data>
   <data name="Tray_Quit" xml:space="preserve"><value>Quit</value></data>
+  <data name="Preview_Title" xml:space="preserve"><value>PREVIEW</value></data>
+  <data name="Preview_None" xml:space="preserve"><value>Select a file to preview it here.</value></data>
+  <data name="Preview_UnsupportedFormat" xml:space="preserve"><value>No preview available for {0} files.</value></data>
+  <data name="Preview_TooLargeFormat" xml:space="preserve"><value>File is {0} — too large for preview (limit: {1}).</value></data>
+  <data name="Preview_LoadFailed" xml:space="preserve"><value>Preview could not be loaded.</value></data>
 
   <!-- ============ MessageBox ============ -->
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
