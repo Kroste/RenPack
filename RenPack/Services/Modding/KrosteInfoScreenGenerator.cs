@@ -130,14 +130,23 @@ public sealed class KrosteInfoScreenGenerator
         sb.AppendLine("    }");
         sb.AppendLine();
 
-        // Zusaetzliche Helper-Function fuer den Screen: aktuellen Wert einer
-        // Store-Var lesen und lesbar formatieren (unset → '?').
+        // Zusaetzliche Helper: aktuellen Wert lesen + Ren'Py-Text-Escape.
+        // Warum Escape? repr(leeres_dict) == '{}' — und '{}' ist fuer
+        // Ren'Py's Text-Tokenizer ein leeres Tag → "Empty text tag"-
+        // Exception. Ren'Py-native Escape: '{' → '{{', '[' → '[['.
+        // Betrifft auch Snippets (Conditions koennen list/dict-Literale
+        // enthalten).
+        sb.AppendLine("    def krostemod_escape(s):");
+        sb.AppendLine("        if s is None: return ''");
+        sb.AppendLine("        return s.replace('{', '{{').replace('[', '[[')");
+        sb.AppendLine();
         sb.AppendLine("    def krostemod_get_value(name):");
         sb.AppendLine("        try:");
         sb.AppendLine("            v = getattr(store, name)");
-        sb.AppendLine("            return repr(v) if v is not None else 'None'");
+        sb.AppendLine("            s = repr(v) if v is not None else 'None'");
         sb.AppendLine("        except Exception:");
         sb.AppendLine("            return '<unset>'");
+        sb.AppendLine("        return krostemod_escape(s)");
         sb.AppendLine();
     }
 
@@ -197,7 +206,7 @@ public sealed class KrosteInfoScreenGenerator
         sb.AppendLine("                                    text \"[krostemod_get_value(var_name)]\" size 14 color \"#8fcfff\"");
         sb.AppendLine("                                if krostemod_impact[var_name]:");
         sb.AppendLine("                                    for entry in krostemod_impact[var_name]:");
-        sb.AppendLine("                                        text \"    -> [entry[3]] in [entry[2] or entry[0]] ([entry[0]]:[entry[1]]) : [entry[4]]\" size 11 color \"#999999\"");
+        sb.AppendLine("                                        text \"    -> [entry[3]] in [entry[2] or entry[0]] ([entry[0]]:[entry[1]]) : [krostemod_escape(entry[4])]\" size 11 color \"#999999\"");
         sb.AppendLine("                                else:");
         sb.AppendLine("                                    text \"    (no consumers detected)\" size 11 color \"#666666\" italic True");
         sb.AppendLine("                                null height 3");

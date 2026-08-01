@@ -117,4 +117,22 @@ public sealed class KrosteInfoScreenGeneratorTests : IDisposable
         var content = File.ReadAllText(path);
         content.Should().Contain("\"unused_var\"");
     }
+
+    [Fact]
+    public void Emits_renpy_text_escape_helper_for_dict_and_list_values()
+    {
+        // Regression-Test fuer v0.9.0-Bug (Sophia Parker):
+        // repr({}) == '{}' — Ren'Py's Text-Tokenizer wirft "Empty text tag"
+        // wenn '{}' rendered wird. Escape muss vor der Anzeige greifen.
+        var path = _gen.Generate(_tmp, MakeAnalysis());
+        var content = File.ReadAllText(path);
+        // Escape-Helper muss im Init-Python-Block sein
+        content.Should().Contain("def krostemod_escape");
+        content.Should().Contain("'{{'");
+        content.Should().Contain("'[['");
+        // krostemod_get_value muss den Escape anwenden
+        content.Should().Contain("return krostemod_escape(s)");
+        // Snippet-Rendering muss auch escapen (entry[4])
+        content.Should().Contain("krostemod_escape(entry[4])");
+    }
 }
