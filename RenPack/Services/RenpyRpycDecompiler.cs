@@ -35,31 +35,44 @@ public sealed class RenpyRpycDecompiler
         // "at flying_transform(msg[…])" ruft und der Transform bei uns ohne
         // Parameter emittiert wird, interpretiert Ren'Py das Argument als
         // Child-Displayable → "Not a displayable: 0". Wir merken uns die
-        // Namen und ergänzen bei der Transform-Deklaration einen
-        // (*args, **kwargs)-Fallback-Parameter, damit der Aufruf durchgeht.
-        _transformsWithArgCall = CollectTransformsCalledWithArgs(statements);
+        // Namen inklusive Argument-Anzahl und ergänzen bei der Transform-
+        // Deklaration passend viele Fallback-Parameter (_arg0=None, …).
+        _transformCallArgCount = CollectTransformCallArgCounts(statements);
 
         EmitBlock(sb, statements, indent: 0);
         return sb.ToString();
     }
 
-    private HashSet<string> _transformsWithArgCall = new(StringComparer.Ordinal);
+    private Dictionary<string, int> _transformCallArgCount = new(StringComparer.Ordinal);
 
-    private static HashSet<string> CollectTransformsCalledWithArgs(IEnumerable statements)
+    private static Dictionary<string, int> CollectTransformCallArgCounts(IEnumerable statements)
     {
-        var result = new HashSet<string>(StringComparer.Ordinal);
+        var result = new Dictionary<string, int>(StringComparer.Ordinal);
         var seen = new HashSet<object>(ReferenceEqualityComparer.Instance);
+        // Fängt `NAME(...)` — mit Klammern-Balancierung, damit
+        // `flying_transform(msg["slot_index"])` als 1-arg zählt, nicht als
+        // Text.
         var callPattern = new System.Text.RegularExpressions.Regex(
-            @"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\(",
+            @"([A-Za-z_][A-Za-z0-9_]*)\s*\(",
             System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        void Record(string call)
+        {
+            foreach (System.Text.RegularExpressions.Match m in callPattern.Matches(call))
+            {
+                string name = m.Groups[1].Value;
+                int openPos = m.Index + m.Length - 1; // Position der '('
+                int argCount = CountArgs(call, openPos);
+                if (!result.TryGetValue(name, out var prev) || prev < argCount)
+                    result[name] = argCount;
+            }
+        }
 
         void Walk(object? o)
         {
             if (o is null || (o.GetType().IsClass && !seen.Add(o))) return;
             if (o is ClassDict cd)
             {
-                // "at"-Keyword in SLDisplayable: der Wert ist ein PyExpr wie
-                // "flying_transform(msg['slot_index'])" oder "[t1(x), t2]".
                 if (cd.ClassName == "renpy.sl2.slast.SLDisplayable"
                     && cd.TryGetValue("keyword", out var kws) && kws is IEnumerable kwEnum)
                 {
@@ -68,17 +81,10 @@ public sealed class RenpyRpycDecompiler
                         if (kv is object[] arr && arr.Length >= 2
                             && AsString(arr[0]) == "at")
                         {
-                            var expr = ExtractPyExprString(arr[1]);
-                            foreach (var m in callPattern.Matches(expr).Cast<System.Text.RegularExpressions.Match>())
-                                result.Add(m.Groups[1].Value);
-                            // Auch Muster wie "[a(x), b(y)]" — grep über die Klammern.
-                            foreach (System.Text.RegularExpressions.Match m in
-                                System.Text.RegularExpressions.Regex.Matches(expr, @"([A-Za-z_][A-Za-z0-9_]*)\s*\("))
-                                result.Add(m.Groups[1].Value);
+                            Record(ExtractPyExprString(arr[1]));
                         }
                     }
                 }
-
                 foreach (var v in cd.Values) Walk(v);
             }
             else if (o is IEnumerable en && o is not string)
@@ -86,6 +92,42 @@ public sealed class RenpyRpycDecompiler
         }
         Walk(statements);
         return result;
+    }
+
+    /// <summary>Zählt die Top-Level-Komma-getrennten Argumente in einem
+    /// Python-Call ab der Position der öffnenden Klammer. Respektiert
+    /// verschachtelte Klammern und Strings, sodass
+    /// <c>foo(a, [b, c], d)</c> als 3 Argumente gezählt wird, nicht 4.</summary>
+    private static int CountArgs(string text, int openParenPos)
+    {
+        if (openParenPos >= text.Length || text[openParenPos] != '(') return 0;
+        int i = openParenPos + 1;
+        // Leere Klammern: ()
+        while (i < text.Length && char.IsWhiteSpace(text[i])) i++;
+        if (i < text.Length && text[i] == ')') return 0;
+
+        int depth = 0;      // Klammern-Tiefe (relative zu openParenPos)
+        int args = 1;
+        char strChar = '\0';
+        for (; i < text.Length; i++)
+        {
+            char c = text[i];
+            if (strChar != '\0')
+            {
+                if (c == '\\' && i + 1 < text.Length) { i++; continue; }
+                if (c == strChar) strChar = '\0';
+                continue;
+            }
+            if (c == '"' || c == '\'') { strChar = c; continue; }
+            if (c is '(' or '[' or '{') depth++;
+            else if (c is ')' or ']' or '}')
+            {
+                if (depth == 0) return args;
+                depth--;
+            }
+            else if (c == ',' && depth == 0) args++;
+        }
+        return args;
     }
 
     private static string ExtractPyExprString(object? v)
@@ -602,14 +644,21 @@ public sealed class RenpyRpycDecompiler
     /// .rpyc. Wenn ein Aufrufer <c>at NAME(arg)</c> nutzt und wir keinen
     /// Parameter emittieren, wraps Ren'Py das Argument als Child-
     /// Displayable — bei Zahl-Werten kracht das mit "Not a displayable: 0".
-    /// Falls beim Pre-Pass ein solcher Aufruf gefunden wurde, ergänzen wir
-    /// einen <c>(*args, **kwargs)</c>-Fallback-Parameter, der Ren'Py's
-    /// Aufruf-Semantik zufriedenstellt (das eigentliche Binding an einen
-    /// benannten Parameter ist nicht rekonstruierbar).</summary>
+    ///
+    /// Fallback bei gefundenem Aufruf: benannte Parameter mit Defaults
+    /// emittieren, so viele wie die Aufrufe brauchen. Ren'Py verbietet
+    /// <c>*args</c>/<c>**kwargs</c> in <c>transform</c>-Statements
+    /// explizit ("the transform statement does not take *args"), also
+    /// gehen nur reguläre Named-Parameter.</summary>
     private void EmitTransform(StringBuilder sb, ClassDict node, int indent)
     {
         string name = AsString(node.GetValueOrDefault("varname") ?? node.GetValueOrDefault("name"));
-        string paramSuffix = _transformsWithArgCall.Contains(name) ? "(*args, **kwargs)" : "";
+        string paramSuffix = "";
+        if (_transformCallArgCount.TryGetValue(name, out int argCount) && argCount > 0)
+        {
+            var parts = Enumerable.Range(0, argCount).Select(i => $"_arg{i}=None");
+            paramSuffix = "(" + string.Join(", ", parts) + ")";
+        }
         AppendIndented(sb, indent, $"transform {name}{paramSuffix}:");
         RenpyAtlWriter.EmitBlockBody(sb, node.GetValueOrDefault("atl"), indent + 1);
     }

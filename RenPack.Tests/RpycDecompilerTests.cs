@@ -679,7 +679,38 @@ public sealed class RpycDecompilerTests
         var astScreen = Node("renpy.ast.Screen", ("screen", slScreen));
 
         var text = _dec.Decompile(new object[] { transform, astScreen });
-        text.Should().Contain("transform myTransform(*args, **kwargs):");
+        // Ren'Py verbietet *args/**kwargs in transform-Statements
+        // ("the transform statement does not take *args"). Also nur benannte
+        // Parameter mit Defaults — genau so viele wie der Aufruf braucht.
+        text.Should().Contain("transform myTransform(_arg0=None):");
+        text.Should().NotContain("*args");
+    }
+
+    [Fact]
+    public void Transform_gets_multiple_arg_fallbacks_when_call_has_multiple_args()
+    {
+        // Aufruf mit 2 Argumenten inkl. verschachteltem Ausdruck (der die
+        // Argument-Zählung nicht durcheinanderbringen darf).
+        var atlBlock = new ClassDict("renpy.atl", "RawBlock");
+        atlBlock["statements"] = new ArrayList();
+        var transform = Node("renpy.ast.Transform", ("varname", "twoArg"), ("atl", atlBlock));
+
+        var addNode = new ClassDict("renpy.sl2.slast", "SLDisplayable");
+        addNode["name"] = "add"; addNode["positional"] = new ArrayList { "Text(\"x\")" };
+        addNode["keyword"] = new ArrayList
+        {
+            new object[] { "at", "twoArg(msg[\"a\"], [1, 2, 3])" }, // 2 args: dict-access + list
+        };
+        addNode["children"] = new ArrayList();
+        var block = new ClassDict("renpy.sl2.slast", "SLBlock");
+        block["keyword"] = new ArrayList(); block["children"] = new ArrayList { addNode };
+        var slScreen = new ClassDict("renpy.sl2.slast", "SLScreen");
+        slScreen["name"] = "s"; slScreen["keyword"] = new ArrayList();
+        slScreen["children"] = new ArrayList { block };
+        var astScreen = Node("renpy.ast.Screen", ("screen", slScreen));
+
+        var text = _dec.Decompile(new object[] { transform, astScreen });
+        text.Should().Contain("transform twoArg(_arg0=None, _arg1=None):");
     }
 
     [Fact]
