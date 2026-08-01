@@ -183,6 +183,46 @@
 {1}</value></data>
   <data name="Msg_BatchExtractDoneWithErrors_Body_Format" xml:space="preserve"><value>{0} of {1} archives succeeded, {2} failed:</value></data>
   <data name="Main_Recent_Tip" xml:space="preserve"><value>Recently opened archives</value></data>
+  <data name="Main_ModGenerator" xml:space="preserve"><value>🛠 Mod-Generator</value></data>
+  <data name="Main_ModGenerator_Tip" xml:space="preserve"><value>Generate KrosteMod files from a decompiled Ren'Py game</value></data>
+  <data name="Window_ModGenerator" xml:space="preserve"><value>RenPack — Mod Generator</value></data>
+  <data name="Mod_Subtitle" xml:space="preserve"><value>Analyse a decompiled Ren'Py game and generate KrosteMod files (walkthrough, more mod types coming).</value></data>
+  <data name="Mod_Section_Source" xml:space="preserve"><value>SOURCE</value></data>
+  <data name="Mod_Source_Description" xml:space="preserve"><value>Folder with the decompiled .rpy files — typically the game/ directory after 'extract' + 'decompile'.</value></data>
+  <data name="Mod_Source_Placeholder" xml:space="preserve"><value>/path/to/decompiled/game</value></data>
+  <data name="Mod_Pick" xml:space="preserve"><value>📁 Browse…</value></data>
+  <data name="Mod_Analyze" xml:space="preserve"><value>🔍 Analyze</value></data>
+  <data name="Mod_Analyzing" xml:space="preserve"><value>Analysing …</value></data>
+  <data name="Mod_AnalyzeDoneFormat" xml:space="preserve"><value>Analysed {0} .rpy file(s), {1} choices.</value></data>
+  <data name="Mod_AnalyzeFailedFormat" xml:space="preserve"><value>Analysis failed: {0}</value></data>
+  <data name="Mod_SourceNotFound" xml:space="preserve"><value>Source folder does not exist.</value></data>
+  <data name="Mod_Section_Analysis" xml:space="preserve"><value>ANALYSIS</value></data>
+  <data name="Mod_Stat_Files" xml:space="preserve"><value>files</value></data>
+  <data name="Mod_Stat_Choices" xml:space="preserve"><value>choices</value></data>
+  <data name="Mod_Stat_StoreVars" xml:space="preserve"><value>store vars</value></data>
+  <data name="Mod_Stat_Characters" xml:space="preserve"><value>characters</value></data>
+  <data name="Mod_TopStats_Title" xml:space="preserve"><value>Top stat variables (by change count):</value></data>
+  <data name="Mod_Section_Generate" xml:space="preserve"><value>GENERATE</value></data>
+  <data name="Mod_Type" xml:space="preserve"><value>Mod type</value></data>
+  <data name="Mod_Destination" xml:space="preserve"><value>Destination folder</value></data>
+  <data name="Mod_Destination_Placeholder" xml:space="preserve"><value>/path/to/mod/output</value></data>
+  <data name="Mod_Generate" xml:space="preserve"><value>🛠 Generate mod</value></data>
+  <data name="Mod_Generating" xml:space="preserve"><value>Generating …</value></data>
+  <data name="Mod_GenerateDoneFormat" xml:space="preserve"><value>Wrote {0} file(s) to {1}</value></data>
+  <data name="Mod_GenerateFailedFormat" xml:space="preserve"><value>Generation failed: {0}</value></data>
+  <data name="Mod_GenerateDone_Title" xml:space="preserve"><value>Mod generated</value></data>
+  <data name="Mod_GenerateDone_Body_Format" xml:space="preserve"><value>{0} .rpy file(s) written to:
+{1}
+
+Copy them into the game's game/ folder (backup first) and start Ren'Py.</value></data>
+  <data name="Mod_GenerateFailed_Title" xml:space="preserve"><value>Mod generation failed</value></data>
+  <data name="Mod_DestRequired" xml:space="preserve"><value>Please choose a destination folder.</value></data>
+  <data name="Mod_DestExists_Title" xml:space="preserve"><value>Destination not empty</value></data>
+  <data name="Mod_DestExists_Body_Format" xml:space="preserve"><value>{0}
+
+The destination already contains files. Overwrite?</value></data>
+  <data name="Mod_PickSource_Title" xml:space="preserve"><value>Choose decompiled game folder</value></data>
+  <data name="Mod_PickDest_Title" xml:space="preserve"><value>Choose mod output folder</value></data>
   <data name="Main_RecentFolders_Tip" xml:space="preserve"><value>Recently decompiled folders</value></data>
   <data name="Save_Recent_Tip" xml:space="preserve"><value>Recently opened save files</value></data>
   <data name="Main_CompareArchive" xml:space="preserve"><value>🔀 Compare…</value></data>

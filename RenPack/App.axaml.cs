@@ -97,6 +97,7 @@ public partial class App : Application
         services.AddTransient<MainWindowViewModel>();
         services.AddTransient<SaveWindowViewModel>();
         services.AddTransient<SettingsWindowViewModel>();
+        services.AddTransient<ModGeneratorViewModel>();
         // OllamaPullViewModel wird ad-hoc mit Modellnamen erzeugt, kein DI-Eintrag.
 
         return services.BuildServiceProvider();

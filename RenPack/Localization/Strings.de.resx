@@ -177,6 +177,46 @@
 {1}</value></data>
   <data name="Msg_BatchExtractDoneWithErrors_Body_Format" xml:space="preserve"><value>{0} von {1} Archiven erfolgreich, {2} fehlgeschlagen:</value></data>
   <data name="Main_Recent_Tip" xml:space="preserve"><value>Zuletzt geöffnete Archive</value></data>
+  <data name="Main_ModGenerator" xml:space="preserve"><value>🛠 Mod-Generator</value></data>
+  <data name="Main_ModGenerator_Tip" xml:space="preserve"><value>KrosteMod-Dateien aus einem dekompilierten Ren'Py-Spiel erzeugen</value></data>
+  <data name="Window_ModGenerator" xml:space="preserve"><value>RenPack — Mod-Generator</value></data>
+  <data name="Mod_Subtitle" xml:space="preserve"><value>Dekompiliertes Ren'Py-Spiel analysieren und KrosteMod-Dateien erzeugen (Walkthrough, weitere Mod-Typen folgen).</value></data>
+  <data name="Mod_Section_Source" xml:space="preserve"><value>QUELLE</value></data>
+  <data name="Mod_Source_Description" xml:space="preserve"><value>Ordner mit dekompilierten .rpy-Dateien — typischerweise das game/-Verzeichnis nach 'extract' + 'decompile'.</value></data>
+  <data name="Mod_Source_Placeholder" xml:space="preserve"><value>/pfad/zum/dekompilierten/spiel</value></data>
+  <data name="Mod_Pick" xml:space="preserve"><value>📁 Wählen…</value></data>
+  <data name="Mod_Analyze" xml:space="preserve"><value>🔍 Analysieren</value></data>
+  <data name="Mod_Analyzing" xml:space="preserve"><value>Analysiere …</value></data>
+  <data name="Mod_AnalyzeDoneFormat" xml:space="preserve"><value>Analysiert: {0} .rpy-Datei(en), {1} Choices.</value></data>
+  <data name="Mod_AnalyzeFailedFormat" xml:space="preserve"><value>Analyse fehlgeschlagen: {0}</value></data>
+  <data name="Mod_SourceNotFound" xml:space="preserve"><value>Quell-Ordner existiert nicht.</value></data>
+  <data name="Mod_Section_Analysis" xml:space="preserve"><value>ANALYSE</value></data>
+  <data name="Mod_Stat_Files" xml:space="preserve"><value>Dateien</value></data>
+  <data name="Mod_Stat_Choices" xml:space="preserve"><value>Choices</value></data>
+  <data name="Mod_Stat_StoreVars" xml:space="preserve"><value>Store-Vars</value></data>
+  <data name="Mod_Stat_Characters" xml:space="preserve"><value>Charaktere</value></data>
+  <data name="Mod_TopStats_Title" xml:space="preserve"><value>Top-Stat-Variablen (nach Änderungshäufigkeit):</value></data>
+  <data name="Mod_Section_Generate" xml:space="preserve"><value>GENERIEREN</value></data>
+  <data name="Mod_Type" xml:space="preserve"><value>Mod-Typ</value></data>
+  <data name="Mod_Destination" xml:space="preserve"><value>Ziel-Ordner</value></data>
+  <data name="Mod_Destination_Placeholder" xml:space="preserve"><value>/pfad/zum/mod-ausgabe</value></data>
+  <data name="Mod_Generate" xml:space="preserve"><value>🛠 Mod erzeugen</value></data>
+  <data name="Mod_Generating" xml:space="preserve"><value>Generiere …</value></data>
+  <data name="Mod_GenerateDoneFormat" xml:space="preserve"><value>{0} Datei(en) geschrieben nach {1}</value></data>
+  <data name="Mod_GenerateFailedFormat" xml:space="preserve"><value>Generierung fehlgeschlagen: {0}</value></data>
+  <data name="Mod_GenerateDone_Title" xml:space="preserve"><value>Mod erzeugt</value></data>
+  <data name="Mod_GenerateDone_Body_Format" xml:space="preserve"><value>{0} .rpy-Datei(en) geschrieben nach:
+{1}
+
+Kopiere sie in den game/-Ordner des Spiels (Backup vorher) und starte Ren'Py.</value></data>
+  <data name="Mod_GenerateFailed_Title" xml:space="preserve"><value>Mod-Generierung fehlgeschlagen</value></data>
+  <data name="Mod_DestRequired" xml:space="preserve"><value>Bitte einen Ziel-Ordner wählen.</value></data>
+  <data name="Mod_DestExists_Title" xml:space="preserve"><value>Ziel-Ordner nicht leer</value></data>
+  <data name="Mod_DestExists_Body_Format" xml:space="preserve"><value>{0}
+
+Der Ziel-Ordner enthält bereits Dateien. Überschreiben?</value></data>
+  <data name="Mod_PickSource_Title" xml:space="preserve"><value>Dekompilierten Spiel-Ordner wählen</value></data>
+  <data name="Mod_PickDest_Title" xml:space="preserve"><value>Mod-Ausgabe-Ordner wählen</value></data>
   <data name="Main_RecentFolders_Tip" xml:space="preserve"><value>Zuletzt dekompilierte Ordner</value></data>
   <data name="Save_Recent_Tip" xml:space="preserve"><value>Zuletzt geöffnete Save-Dateien</value></data>
   <data name="Main_CompareArchive" xml:space="preserve"><value>🔀 Vergleichen…</value></data>

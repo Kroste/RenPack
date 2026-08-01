@@ -24,6 +24,7 @@ public partial class MainWindow : ChromeWindow, IUiInteractions
         SettingsButton.Click += OnSettings;
         DecompileFileButton.Click += OnDecompileFiles;
         DecompileFolderButton.Click += OnDecompileFolder;
+        ModGeneratorButton.Click += OnModGenerator;
 
         AddHandler(DragDrop.DropEvent, OnDrop);
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
@@ -103,6 +104,20 @@ public partial class MainWindow : ChromeWindow, IUiInteractions
         catch (Exception ex)
         {
             Log.Error(ex, "Save-Fenster konnte nicht geöffnet werden");
+        }
+    }
+
+    private async void OnModGenerator(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var vm = App.Services.GetRequiredService<ModGeneratorViewModel>();
+            var win = new ModGeneratorWindow { DataContext = vm };
+            await win.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Mod-Generator-Fenster konnte nicht geöffnet werden");
         }
     }
 

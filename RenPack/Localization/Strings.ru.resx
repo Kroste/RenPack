@@ -177,6 +177,46 @@
 {1}</value></data>
   <data name="Msg_BatchExtractDoneWithErrors_Body_Format" xml:space="preserve"><value>{0} из {1} архивов успешно, {2} с ошибкой:</value></data>
   <data name="Main_Recent_Tip" xml:space="preserve"><value>Недавно открытые архивы</value></data>
+  <data name="Main_ModGenerator" xml:space="preserve"><value>🛠 Генератор модов</value></data>
+  <data name="Main_ModGenerator_Tip" xml:space="preserve"><value>Создание файлов KrosteMod из декомпилированной игры Ren'Py</value></data>
+  <data name="Window_ModGenerator" xml:space="preserve"><value>RenPack — Генератор модов</value></data>
+  <data name="Mod_Subtitle" xml:space="preserve"><value>Анализ декомпилированной игры Ren'Py и создание файлов KrosteMod (walkthrough, другие типы модов позже).</value></data>
+  <data name="Mod_Section_Source" xml:space="preserve"><value>ИСТОЧНИК</value></data>
+  <data name="Mod_Source_Description" xml:space="preserve"><value>Папка с декомпилированными файлами .rpy — обычно каталог game/ после 'extract' + 'decompile'.</value></data>
+  <data name="Mod_Source_Placeholder" xml:space="preserve"><value>/путь/к/декомпилированной/игре</value></data>
+  <data name="Mod_Pick" xml:space="preserve"><value>📁 Обзор…</value></data>
+  <data name="Mod_Analyze" xml:space="preserve"><value>🔍 Анализировать</value></data>
+  <data name="Mod_Analyzing" xml:space="preserve"><value>Анализ …</value></data>
+  <data name="Mod_AnalyzeDoneFormat" xml:space="preserve"><value>Проанализировано: {0} файл(ов) .rpy, {1} выборов.</value></data>
+  <data name="Mod_AnalyzeFailedFormat" xml:space="preserve"><value>Ошибка анализа: {0}</value></data>
+  <data name="Mod_SourceNotFound" xml:space="preserve"><value>Исходная папка не существует.</value></data>
+  <data name="Mod_Section_Analysis" xml:space="preserve"><value>АНАЛИЗ</value></data>
+  <data name="Mod_Stat_Files" xml:space="preserve"><value>файлов</value></data>
+  <data name="Mod_Stat_Choices" xml:space="preserve"><value>выборов</value></data>
+  <data name="Mod_Stat_StoreVars" xml:space="preserve"><value>переменных</value></data>
+  <data name="Mod_Stat_Characters" xml:space="preserve"><value>персонажей</value></data>
+  <data name="Mod_TopStats_Title" xml:space="preserve"><value>Топ стат-переменных (по числу изменений):</value></data>
+  <data name="Mod_Section_Generate" xml:space="preserve"><value>СОЗДАТЬ</value></data>
+  <data name="Mod_Type" xml:space="preserve"><value>Тип мода</value></data>
+  <data name="Mod_Destination" xml:space="preserve"><value>Целевая папка</value></data>
+  <data name="Mod_Destination_Placeholder" xml:space="preserve"><value>/путь/к/выводу/мода</value></data>
+  <data name="Mod_Generate" xml:space="preserve"><value>🛠 Создать мод</value></data>
+  <data name="Mod_Generating" xml:space="preserve"><value>Создание …</value></data>
+  <data name="Mod_GenerateDoneFormat" xml:space="preserve"><value>Записано {0} файл(ов) в {1}</value></data>
+  <data name="Mod_GenerateFailedFormat" xml:space="preserve"><value>Ошибка создания: {0}</value></data>
+  <data name="Mod_GenerateDone_Title" xml:space="preserve"><value>Мод создан</value></data>
+  <data name="Mod_GenerateDone_Body_Format" xml:space="preserve"><value>{0} файл(ов) .rpy записано в:
+{1}
+
+Скопируйте их в папку game/ игры (сначала резервная копия) и запустите Ren'Py.</value></data>
+  <data name="Mod_GenerateFailed_Title" xml:space="preserve"><value>Ошибка создания мода</value></data>
+  <data name="Mod_DestRequired" xml:space="preserve"><value>Пожалуйста, выберите целевую папку.</value></data>
+  <data name="Mod_DestExists_Title" xml:space="preserve"><value>Папка не пуста</value></data>
+  <data name="Mod_DestExists_Body_Format" xml:space="preserve"><value>{0}
+
+Целевая папка уже содержит файлы. Перезаписать?</value></data>
+  <data name="Mod_PickSource_Title" xml:space="preserve"><value>Выберите папку декомпилированной игры</value></data>
+  <data name="Mod_PickDest_Title" xml:space="preserve"><value>Выберите папку вывода мода</value></data>
   <data name="Main_RecentFolders_Tip" xml:space="preserve"><value>Недавно декомпилированные папки</value></data>
   <data name="Save_Recent_Tip" xml:space="preserve"><value>Недавно открытые сохранения</value></data>
   <data name="Main_CompareArchive" xml:space="preserve"><value>🔀 Сравнить…</value></data>

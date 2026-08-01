@@ -177,6 +177,46 @@
 {1}</value></data>
   <data name="Msg_BatchExtractDoneWithErrors_Body_Format" xml:space="preserve"><value>{0} archives sur {1} réussies, {2} échouées :</value></data>
   <data name="Main_Recent_Tip" xml:space="preserve"><value>Archives récemment ouvertes</value></data>
+  <data name="Main_ModGenerator" xml:space="preserve"><value>🛠 Générateur de mods</value></data>
+  <data name="Main_ModGenerator_Tip" xml:space="preserve"><value>Génère des fichiers KrosteMod à partir d'un jeu Ren'Py décompilé</value></data>
+  <data name="Window_ModGenerator" xml:space="preserve"><value>RenPack — Générateur de mods</value></data>
+  <data name="Mod_Subtitle" xml:space="preserve"><value>Analyser un jeu Ren'Py décompilé et générer des fichiers KrosteMod (walkthrough, autres types de mods à venir).</value></data>
+  <data name="Mod_Section_Source" xml:space="preserve"><value>SOURCE</value></data>
+  <data name="Mod_Source_Description" xml:space="preserve"><value>Dossier avec les fichiers .rpy décompilés — typiquement le dossier game/ après 'extract' + 'decompile'.</value></data>
+  <data name="Mod_Source_Placeholder" xml:space="preserve"><value>/chemin/vers/jeu/decompile</value></data>
+  <data name="Mod_Pick" xml:space="preserve"><value>📁 Parcourir…</value></data>
+  <data name="Mod_Analyze" xml:space="preserve"><value>🔍 Analyser</value></data>
+  <data name="Mod_Analyzing" xml:space="preserve"><value>Analyse en cours …</value></data>
+  <data name="Mod_AnalyzeDoneFormat" xml:space="preserve"><value>Analysé : {0} fichier(s) .rpy, {1} choix.</value></data>
+  <data name="Mod_AnalyzeFailedFormat" xml:space="preserve"><value>Échec de l'analyse : {0}</value></data>
+  <data name="Mod_SourceNotFound" xml:space="preserve"><value>Le dossier source n'existe pas.</value></data>
+  <data name="Mod_Section_Analysis" xml:space="preserve"><value>ANALYSE</value></data>
+  <data name="Mod_Stat_Files" xml:space="preserve"><value>fichiers</value></data>
+  <data name="Mod_Stat_Choices" xml:space="preserve"><value>choix</value></data>
+  <data name="Mod_Stat_StoreVars" xml:space="preserve"><value>vars store</value></data>
+  <data name="Mod_Stat_Characters" xml:space="preserve"><value>personnages</value></data>
+  <data name="Mod_TopStats_Title" xml:space="preserve"><value>Variables stat principales (par nombre de changements) :</value></data>
+  <data name="Mod_Section_Generate" xml:space="preserve"><value>GÉNÉRER</value></data>
+  <data name="Mod_Type" xml:space="preserve"><value>Type de mod</value></data>
+  <data name="Mod_Destination" xml:space="preserve"><value>Dossier de destination</value></data>
+  <data name="Mod_Destination_Placeholder" xml:space="preserve"><value>/chemin/vers/sortie/mod</value></data>
+  <data name="Mod_Generate" xml:space="preserve"><value>🛠 Générer le mod</value></data>
+  <data name="Mod_Generating" xml:space="preserve"><value>Génération en cours …</value></data>
+  <data name="Mod_GenerateDoneFormat" xml:space="preserve"><value>{0} fichier(s) écrit(s) vers {1}</value></data>
+  <data name="Mod_GenerateFailedFormat" xml:space="preserve"><value>Échec de la génération : {0}</value></data>
+  <data name="Mod_GenerateDone_Title" xml:space="preserve"><value>Mod généré</value></data>
+  <data name="Mod_GenerateDone_Body_Format" xml:space="preserve"><value>{0} fichier(s) .rpy écrit(s) vers :
+{1}
+
+Copiez-les dans le dossier game/ du jeu (sauvegarde d'abord) et démarrez Ren'Py.</value></data>
+  <data name="Mod_GenerateFailed_Title" xml:space="preserve"><value>Échec de la génération du mod</value></data>
+  <data name="Mod_DestRequired" xml:space="preserve"><value>Veuillez choisir un dossier de destination.</value></data>
+  <data name="Mod_DestExists_Title" xml:space="preserve"><value>Destination non vide</value></data>
+  <data name="Mod_DestExists_Body_Format" xml:space="preserve"><value>{0}
+
+Le dossier de destination contient déjà des fichiers. Écraser ?</value></data>
+  <data name="Mod_PickSource_Title" xml:space="preserve"><value>Choisir le dossier du jeu décompilé</value></data>
+  <data name="Mod_PickDest_Title" xml:space="preserve"><value>Choisir le dossier de sortie du mod</value></data>
   <data name="Main_RecentFolders_Tip" xml:space="preserve"><value>Dossiers récemment décompilés</value></data>
   <data name="Save_Recent_Tip" xml:space="preserve"><value>Sauvegardes récemment ouvertes</value></data>
   <data name="Main_CompareArchive" xml:space="preserve"><value>🔀 Comparer…</value></data>

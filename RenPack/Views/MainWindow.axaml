@@ -119,6 +119,8 @@
                                     ToolTip.Tip="{loc:Tr Main_OpenSave_Tip}" />
                             <Button x:Name="DecompileFileButton" Content="{loc:Tr Main_DecompileFile}"
                                     ToolTip.Tip="{loc:Tr Main_DecompileFile_Tip}" />
+                            <Button x:Name="ModGeneratorButton" Content="{loc:Tr Main_ModGenerator}"
+                                    ToolTip.Tip="{loc:Tr Main_ModGenerator_Tip}" />
                             <StackPanel Orientation="Horizontal" Spacing="0">
                                 <Button x:Name="DecompileFolderButton" Content="{loc:Tr Main_DecompileFolder}"
                                         CornerRadius="6,0,0,6"
