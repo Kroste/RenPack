@@ -284,4 +284,12 @@ public partial class MainWindow : ChromeWindow, IUiInteractions
         var cb = Clipboard;
         if (cb is not null) await cb.SetTextAsync(text);
     }
+
+    public async Task<PackOptionsViewModel?> AskPackOptionsAsync()
+    {
+        var vm = new PackOptionsViewModel();
+        var dlg = new PackOptionsWindow { DataContext = vm };
+        await dlg.ShowDialog(this);
+        return dlg.Confirmed ? vm : null;
+    }
 }

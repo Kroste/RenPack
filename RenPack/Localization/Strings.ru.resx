@@ -130,6 +130,13 @@
   <data name="Ctx_Extract" xml:space="preserve"><value>Распаковать этот файл…</value></data>
   <data name="Ctx_CopyPath" xml:space="preserve"><value>Скопировать путь</value></data>
   <data name="Status_PathCopiedFormat" xml:space="preserve"><value>Путь скопирован: {0}</value></data>
+  <data name="Pack_Title" xml:space="preserve"><value>Параметры упаковки</value></data>
+  <data name="Pack_Subtitle" xml:space="preserve"><value>Выберите формат архива и ключ шифрования.</value></data>
+  <data name="Pack_Format" xml:space="preserve"><value>Формат</value></data>
+  <data name="Pack_Key" xml:space="preserve"><value>Ключ шифрования (hex)</value></data>
+  <data name="Pack_KeyReset" xml:space="preserve"><value>↺ Сброс</value></data>
+  <data name="Pack_KeyHint" xml:space="preserve"><value>Ren'Py по умолчанию использует 0xDEADBEEF. Меняйте только осознанно.</value></data>
+  <data name="Pack_InvalidKey" xml:space="preserve"><value>Неверное шестнадцатеричное значение.</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 

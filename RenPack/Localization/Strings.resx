@@ -136,6 +136,13 @@
   <data name="Ctx_Extract" xml:space="preserve"><value>Extract this file…</value></data>
   <data name="Ctx_CopyPath" xml:space="preserve"><value>Copy path</value></data>
   <data name="Status_PathCopiedFormat" xml:space="preserve"><value>Path copied: {0}</value></data>
+  <data name="Pack_Title" xml:space="preserve"><value>Pack options</value></data>
+  <data name="Pack_Subtitle" xml:space="preserve"><value>Choose the archive format and encryption key.</value></data>
+  <data name="Pack_Format" xml:space="preserve"><value>Format</value></data>
+  <data name="Pack_Key" xml:space="preserve"><value>Encryption key (hex)</value></data>
+  <data name="Pack_KeyReset" xml:space="preserve"><value>↺ Reset</value></data>
+  <data name="Pack_KeyHint" xml:space="preserve"><value>Ren'Py uses 0xDEADBEEF by default. Only change this if you know why.</value></data>
+  <data name="Pack_InvalidKey" xml:space="preserve"><value>Invalid hex value.</value></data>
 
   <!-- ============ MessageBox ============ -->
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>

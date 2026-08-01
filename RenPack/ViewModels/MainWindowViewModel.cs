@@ -184,6 +184,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
         string? target = await Ui.PickSaveArchiveAsync("archive.rpa");
         if (target is null) return;
 
+        // Neues Optionen-Dialog: Format + Key waehlen. Cancel bricht den
+        // gesamten Pack-Vorgang ab (der Nutzer hat sich's anders ueberlegt).
+        var options = await Ui.AskPackOptionsAsync();
+        if (options is null) return;
+
         IsBusy = true;
         Progress = 0;
         var progress = new Progress<RpaProgress>(p =>
@@ -194,9 +199,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         try
         {
             int count = await Task.Run(() =>
-                _archiveService.Create(target, sourceDir, RpaVersion.V3_0, RenpyArchiveService.DefaultKey, progress));
+                _archiveService.Create(target, sourceDir, options.ResultFormat, options.ResultKey, progress));
             StatusText = L.F("Status_PackDoneFormat", count, System.IO.Path.GetFileName(target));
-            Log.Info("{count} Datei(en) gepackt: {target}", count, target);
+            Log.Info("{count} Datei(en) als {fmt} gepackt: {target}", count, options.ResultFormat, target);
             bool open = await Ui.ConfirmAsync(L.T("Msg_ArchiveCreated_Title"),
                 L.F("Msg_ArchiveCreated_Body_Format", count, target));
             if (open) await LoadArchiveAsync(target);

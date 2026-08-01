@@ -130,6 +130,13 @@
   <data name="Ctx_Extract" xml:space="preserve"><value>Diese Datei entpacken…</value></data>
   <data name="Ctx_CopyPath" xml:space="preserve"><value>Pfad kopieren</value></data>
   <data name="Status_PathCopiedFormat" xml:space="preserve"><value>Pfad kopiert: {0}</value></data>
+  <data name="Pack_Title" xml:space="preserve"><value>Pack-Optionen</value></data>
+  <data name="Pack_Subtitle" xml:space="preserve"><value>Wähle das Archivformat und den Verschlüsselungs-Key.</value></data>
+  <data name="Pack_Format" xml:space="preserve"><value>Format</value></data>
+  <data name="Pack_Key" xml:space="preserve"><value>Verschlüsselungs-Key (hex)</value></data>
+  <data name="Pack_KeyReset" xml:space="preserve"><value>↺ Zurücksetzen</value></data>
+  <data name="Pack_KeyHint" xml:space="preserve"><value>Ren'Py nutzt standardmäßig 0xDEADBEEF. Nur ändern, wenn du weißt warum.</value></data>
+  <data name="Pack_InvalidKey" xml:space="preserve"><value>Ungültiger Hex-Wert.</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 

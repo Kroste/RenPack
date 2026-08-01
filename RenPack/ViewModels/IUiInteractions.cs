@@ -11,6 +11,7 @@ public interface IUiInteractions
     Task<string?> PickFolderAsync(string title);
     Task<string?> PickSaveArchiveAsync(string suggestedName);
     Task<string?> PickSaveArchiveOrFileAsync(string suggestedName);
+    Task<PackOptionsViewModel?> AskPackOptionsAsync();
     Task ShowMessageAsync(string title, string message);
     Task<bool> ConfirmAsync(string title, string message);
     Task CopyToClipboardAsync(string text);
