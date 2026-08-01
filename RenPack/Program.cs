@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Media;
 using NLog;
+using RenPack.Cli;
 using RenPack.Logging;
 using RenPack.Services;
 
@@ -17,6 +18,15 @@ internal static class Program
     {
         MaskingLayoutRenderer.Register();
         Log.Info("RenPack startet (args: {args})", string.Join(' ', args));
+
+        // CLI-Mode: wenn das erste Argument ein Sub-Command ist, laeuft
+        // RenPack als Konsolen-Tool statt als GUI. Kein Single-Instance-
+        // Guard, keine Avalonia-Init — nur den Command ausfuehren und raus.
+        if (CliRunner.IsCliInvocation(args))
+        {
+            Environment.Exit(CliRunner.Run(args));
+            return;
+        }
 
         // Single-Instance-Guard vor Avalonia — Zweitstart benachrichtigt
         // die laufende Instanz und beendet sich selbst.
