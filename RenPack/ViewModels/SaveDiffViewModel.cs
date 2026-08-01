@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using RenPack.Services;
 
 namespace RenPack.ViewModels;
@@ -83,6 +84,31 @@ public sealed partial class SaveDiffViewModel : ObservableObject
             src = src.Where(r => r.Name.Contains(FilterText, StringComparison.OrdinalIgnoreCase));
         foreach (var r in src) Rows.Add(r);
     }
+
+    /// <summary>Vom SaveWindowViewModel gesetzt, wenn das Diff-Fenster
+    /// aus einer geladenen Save-Session geoeffnet wurde. Der Callback
+    /// bekommt die ausgewaehlte Zeile und uebernimmt den Wert aus B
+    /// in die aktive Session — dort greifen Dirty/Undo/Save normal.
+    /// Ohne Callback (z.B. Diff aus dem Nichts) ist der Menu-Punkt
+    /// deaktiviert.</summary>
+    public Action<SaveDiffRow>? OnMigrateFromRight { get; set; }
+
+    [ObservableProperty] private SaveDiffRow? _selectedRow;
+
+    [RelayCommand(CanExecute = nameof(CanMigrateFromRight))]
+    private void MigrateFromRight()
+    {
+        if (SelectedRow is null) return;
+        OnMigrateFromRight?.Invoke(SelectedRow);
+    }
+
+    private bool CanMigrateFromRight() =>
+        OnMigrateFromRight is not null
+        && SelectedRow is not null
+        && SelectedRow.Change is DiffChange.Modified or DiffChange.Added;
+
+    partial void OnSelectedRowChanged(SaveDiffRow? value)
+        => MigrateFromRightCommand.NotifyCanExecuteChanged();
 }
 
 public enum DiffChange { Unchanged, Added, Removed, Modified }

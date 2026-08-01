@@ -83,6 +83,11 @@ public partial class SaveWindow : ChromeWindow, ISaveUi
     {
         var vm = new SaveDiffViewModel();
         vm.Load(left, right);
+        // Migration-Callback: der User klickt im Diff-Fenster
+        // "Wert aus B uebernehmen" — wir schreiben den EditableValue
+        // in die aktive Save-Session. Dirty/Undo/Save greift dann normal.
+        if (DataContext is SaveWindowViewModel svm)
+            vm.OnMigrateFromRight = row => svm.MigrateFromDiff(row);
         var win = new SaveDiffWindow { DataContext = vm };
         await win.ShowDialog(this);
     }

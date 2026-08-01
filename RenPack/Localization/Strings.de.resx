@@ -166,6 +166,8 @@
   <data name="Diff_Filter_Placeholder" xml:space="preserve"><value>🔍  Nach Name filtern …</value></data>
   <data name="Diff_OnlyDifferences" xml:space="preserve"><value>Nur Unterschiede</value></data>
   <data name="Diff_SummaryFormat" xml:space="preserve"><value>+ {0} hinzugefügt · − {1} entfernt · ≠ {2} geändert · = {3} unverändert</value></data>
+  <data name="Diff_MigrateFromRight" xml:space="preserve"><value>← Wert aus B übernehmen</value></data>
+  <data name="Save_MigrateOneFormat" xml:space="preserve"><value>Übernommen: {0}</value></data>
   <data name="Main_BatchExtract" xml:space="preserve"><value>📤 Batch-Extract…</value></data>
   <data name="Main_BatchExtract_Tip" xml:space="preserve"><value>Mehrere .rpa-Archive auswählen und jedes in einen eigenen Unterordner entpacken</value></data>
   <data name="Status_BatchExtractProgressFormat" xml:space="preserve"><value>Entpacke Archiv {0}/{1}: {2}</value></data>

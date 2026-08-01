@@ -166,6 +166,8 @@
   <data name="Diff_Filter_Placeholder" xml:space="preserve"><value>🔍  Фильтр по имени …</value></data>
   <data name="Diff_OnlyDifferences" xml:space="preserve"><value>Только различия</value></data>
   <data name="Diff_SummaryFormat" xml:space="preserve"><value>+ {0} добавлено · − {1} удалено · ≠ {2} изменено · = {3} без изменений</value></data>
+  <data name="Diff_MigrateFromRight" xml:space="preserve"><value>← Взять значение из B</value></data>
+  <data name="Save_MigrateOneFormat" xml:space="preserve"><value>Перенесено: {0}</value></data>
   <data name="Main_BatchExtract" xml:space="preserve"><value>📤 Пакетная распаковка…</value></data>
   <data name="Main_BatchExtract_Tip" xml:space="preserve"><value>Выберите несколько архивов .rpa и распакуйте каждый в свою подпапку</value></data>
   <data name="Status_BatchExtractProgressFormat" xml:space="preserve"><value>Распаковка архива {0}/{1}: {2}</value></data>

@@ -47,9 +47,16 @@
 
             <Border Grid.Row="3" Classes="card-flat" ClipToBounds="True">
                 <DataGrid ItemsSource="{Binding Rows}"
+                          SelectedItem="{Binding SelectedRow, Mode=TwoWay}"
                           CanUserSortColumns="True"
                           GridLinesVisibility="Horizontal"
                           Background="Transparent">
+                    <DataGrid.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="{loc:Tr Diff_MigrateFromRight}"
+                                      Command="{Binding MigrateFromRightCommand}" />
+                        </ContextMenu>
+                    </DataGrid.ContextMenu>
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Δ" Width="40" IsReadOnly="True"
                             Binding="{Binding Marker}" />

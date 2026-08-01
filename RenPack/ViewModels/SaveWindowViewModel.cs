@@ -431,6 +431,19 @@ public sealed partial class SaveWindowViewModel : ObservableObject
 
     private bool CanCompare() => !IsBusy && HasSave;
 
+    /// <summary>Vom SaveDiffWindow aufgerufen: uebernimmt den Wert aus
+    /// dem Vergleich-Save (rechts, "B") in die aktive Session. Nutzt
+    /// den normalen EditableValue-Setter — Dirty-Marker, Undo-Stack,
+    /// Save/Revert greifen automatisch.</summary>
+    public void MigrateFromDiff(SaveDiffRow row)
+    {
+        var target = _allVariables.FirstOrDefault(v =>
+            string.Equals(v.Name, row.Name, StringComparison.Ordinal));
+        if (target is null || !target.IsEditable) return;
+        target.EditableValue = row.RightValue;
+        StatusText = L.F("Save_MigrateOneFormat", row.Name);
+    }
+
     private void ApplyFilter()
     {
         Variables.Clear();

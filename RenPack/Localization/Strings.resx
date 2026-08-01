@@ -172,6 +172,8 @@
   <data name="Diff_Filter_Placeholder" xml:space="preserve"><value>🔍  Filter by name …</value></data>
   <data name="Diff_OnlyDifferences" xml:space="preserve"><value>Only differences</value></data>
   <data name="Diff_SummaryFormat" xml:space="preserve"><value>+ {0} added · − {1} removed · ≠ {2} modified · = {3} unchanged</value></data>
+  <data name="Diff_MigrateFromRight" xml:space="preserve"><value>← Take value from B</value></data>
+  <data name="Save_MigrateOneFormat" xml:space="preserve"><value>Migrated: {0}</value></data>
   <data name="Main_BatchExtract" xml:space="preserve"><value>📤 Batch-Extract…</value></data>
   <data name="Main_BatchExtract_Tip" xml:space="preserve"><value>Pick multiple .rpa archives and extract each into its own subfolder</value></data>
   <data name="Status_BatchExtractProgressFormat" xml:space="preserve"><value>Extracting archive {0}/{1}: {2}</value></data>
