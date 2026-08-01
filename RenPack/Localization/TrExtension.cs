@@ -21,9 +21,14 @@ public sealed class TrExtension : MarkupExtension
 
     public override object ProvideValue(IServiceProvider serviceProvider)
     {
+        // Wrapper aus dem statischen Cache — nicht pro Binding neu
+        // erzeugen! Avalonia haelt Binding.Source nicht dauerhaft
+        // stark; ein frisch erzeugter Wrapper wuerde nach dem ersten
+        // Rendering GC'd, und die Sprachwechsel-Notification liefe ins
+        // Leere. Der Cache haelt jeden Wrapper fuer die App-Lebensdauer.
         return new Binding(nameof(LocalizedString.Value))
         {
-            Source = new LocalizedString(Key),
+            Source = LocalizedString.Get(Key),
             Mode = BindingMode.OneWay,
         };
     }

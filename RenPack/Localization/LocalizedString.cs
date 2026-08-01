@@ -5,59 +5,66 @@ namespace RenPack.Localization;
 
 /// <summary>
 /// Bindbarer Wrapper um einen einzelnen Localization-Key. Wird von
-/// <see cref="TrExtension"/> erzeugt und im XAML per Binding an
-/// <see cref="Value"/> konsumiert.
+/// <see cref="TrExtension"/> ueber <see cref="Get"/> beschafft (nicht
+/// pro Binding neu erzeugt!) und im XAML per Binding an <see cref="Value"/>
+/// konsumiert.
 ///
 /// **Warum dieser Umweg?** Ein direktes Binding gegen den Indexer
 /// <c>LocalizationService.Instance[Key]</c> braucht eine
-/// <c>PropertyChanged("Item[]")</c>-Notification (WPF-Konvention) —
-/// und die wird von Avalonia 12 nur unzuverlaessig verarbeitet:
-/// Bindings in Fenstern, die gerade nicht den Fokus haben, bleiben
-/// stale, bis das Fenster neu geladen wird. Das MainWindow uebernahm
-/// die Sprachwahl aus dem SettingsWindow deshalb erst nach Neustart.
+/// <c>PropertyChanged("Item[]")</c>-Notification (WPF-Konvention) — die
+/// wird von Avalonia 12 nur unzuverlaessig verarbeitet: Bindings in
+/// Fenstern ohne Fokus bleiben stale. Der Wrapper umgeht das mit einer
+/// regulaeren <see cref="Value"/>-Property.
 ///
-/// Der Wrapper hat eine ganz normale Property <see cref="Value"/> mit
-/// regulaerem <c>PropertyChanged</c>-Notify — das versteht Avalonia
-/// zuverlaessig. Beim Culture-Wechsel wird zentral
-/// <see cref="NotifyAllChanged"/> aufgerufen; alle noch lebenden
-/// Wrapper melden ihren <see cref="Value"/> als geaendert und alle
-/// aktiven Bindings refreshen sofort in allen Fenstern.
+/// **Warum statisch gecacht (nicht pro Binding)?** In der ersten
+/// RenPack-v0.5.1-Version wurde pro Binding ein neuer Wrapper erzeugt
+/// und in einer <c>WeakReference</c>-Registry gehalten. Symptom: der
+/// Live-Wechsel funktionierte weiterhin nur im Fenster, das den Wechsel
+/// getriggert hat — die anderen Fenster blieben stale. Ursache:
+/// Avalonias <c>Binding.Source</c> haelt die Referenz nicht dauerhaft
+/// stark; kurz nach dem ersten Rendering wurden die Wrapper vom GC
+/// eingesammelt, und die Notification lief ins Leere.
 ///
-/// **GC-Sicherheit:** die Registry haelt nur <see cref="WeakReference"/>s
-/// auf die Wrapper — solange ein Fenster mit einem <c>{loc:Tr Key}</c>-
-/// Binding existiert, haelt das Binding die Referenz stark. Sobald das
-/// Fenster geschlossen wird, kann der Wrapper GC'd werden; beim naechsten
-/// <see cref="NotifyAllChanged"/> raeumt die Registry tote Eintraege
-/// automatisch auf.
+/// Der statische Cache haelt fuer jeden Key genau einen Wrapper stark
+/// fuer die App-Lebensdauer (typischerweise ~150 Instanzen, wenige KB
+/// insgesamt). Damit ist garantiert, dass <see cref="NotifyAllChanged"/>
+/// jeden aktiven Wrapper erreicht.
 /// </summary>
 public sealed class LocalizedString : INotifyPropertyChanged
 {
     public string Key { get; }
     public string Value => LocalizationService.Instance[Key];
 
-    private static readonly List<WeakReference<LocalizedString>> _all = new();
+    private static readonly Dictionary<string, LocalizedString> _cache = new(StringComparer.Ordinal);
     private static readonly object _lock = new();
 
-    public LocalizedString(string key)
-    {
-        Key = key;
-        lock (_lock) _all.Add(new WeakReference<LocalizedString>(this));
-    }
+    private LocalizedString(string key) => Key = key;
 
-    /// <summary>Feuert <c>PropertyChanged(nameof(Value))</c> auf jedem
-    /// lebenden Wrapper und entsorgt tote WeakReferences.</summary>
-    internal static void NotifyAllChanged()
+    /// <summary>Liefert den (gecachten) Wrapper fuer einen Key. Erzeugt
+    /// beim ersten Zugriff, wiederverwendet danach — damit alle Bindings
+    /// gegen denselben Key dieselbe Source teilen und garantiert am
+    /// Leben bleiben.</summary>
+    public static LocalizedString Get(string key)
     {
         lock (_lock)
         {
-            for (int i = _all.Count - 1; i >= 0; i--)
+            if (!_cache.TryGetValue(key, out var s))
             {
-                if (_all[i].TryGetTarget(out var s))
-                    s.OnPropertyChanged(nameof(Value));
-                else
-                    _all.RemoveAt(i);
+                s = new LocalizedString(key);
+                _cache[key] = s;
             }
+            return s;
         }
+    }
+
+    /// <summary>Feuert <c>PropertyChanged(nameof(Value))</c> auf jedem
+    /// gecachten Wrapper. Wird vom <see cref="LocalizationService"/> beim
+    /// Sprachwechsel aufgerufen.</summary>
+    internal static void NotifyAllChanged()
+    {
+        LocalizedString[] snapshot;
+        lock (_lock) snapshot = _cache.Values.ToArray();
+        foreach (var s in snapshot) s.OnPropertyChanged(nameof(Value));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
