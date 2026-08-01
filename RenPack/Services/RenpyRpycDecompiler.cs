@@ -26,9 +26,12 @@ public sealed class RenpyRpycDecompiler
     public string Decompile(IReadOnlyList<object?> statements)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("# Decompiled by RenPack — Basic-Decompiler ohne vollständige Ren'Py-Sprachdeckung.");
-        sb.AppendLine("# Für Screens, ATL und komplexe Init-Blöcke bitte weiterhin unrpyc verwenden.");
-        sb.AppendLine();
+        // Immer LF, nie CRLF — Ren'Py-Quelldateien sind LF-normalisiert und
+        // Tests vergleichen gegen "\n". sb.AppendLine() wuerde auf Windows
+        // "\r\n" produzieren und den Windows-CI-Build brechen.
+        sb.Append("# Decompiled by RenPack — Basic-Decompiler ohne vollständige Ren'Py-Sprachdeckung.\n");
+        sb.Append("# Für Screens, ATL und komplexe Init-Blöcke bitte weiterhin unrpyc verwenden.\n");
+        sb.Append('\n');
 
         // Vor dem Emit: Transform-Aufrufe mit Argumenten sammeln. Ren'Py
         // speichert die Transform-Parameter nicht im rpyc — wenn ein Screen
@@ -860,7 +863,7 @@ public sealed class RenpyRpycDecompiler
     private static void AppendIndented(StringBuilder sb, int indent, string content)
     {
         for (int i = 0; i < indent; i++) sb.Append(Indent);
-        sb.AppendLine(content);
+        sb.Append(content).Append('\n');
     }
 
     /// <summary>Wandelt einen AST-Wert in seine Textrepräsentation. Für die

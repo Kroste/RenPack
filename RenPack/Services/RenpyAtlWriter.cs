@@ -243,6 +243,7 @@ internal static class RenpyAtlWriter
     private static void AppendIndented(StringBuilder sb, int indent, string content)
     {
         for (int i = 0; i < indent; i++) sb.Append("    ");
-        sb.AppendLine(content);
+        // Immer LF, nie CRLF — Konsistenz mit RenpyRpycDecompiler.
+        sb.Append(content).Append('\n');
     }
 }
