@@ -63,13 +63,13 @@
 
 ## Roadmap
 
-- **Decompiler v0.5:** Coverage für Screens, ATL, Transform, Style-Definitions — die typischen UI-`.rpyc`. Für den Story-Text reicht v0.4c bereits.
+- **App-Icon im Ren'Py-Vibe** — aktuell haben wir das geometrische Kroste-Gold-Paket aus v0.7.0. User will was charakterhaftes im Stil des Ren'Py-Eileen-Icons (Chibi/Anime, kleine Figur mit Python-Referenz). PIL kriegt sowas nicht sauber hin → extern generieren (Midjourney/DALL-E/SDXL), 512×512 transparent als `Assets/RenPack.png` einlegen, dann `scripts/build_icon.py` so anpassen dass es die manuelle Basis akzeptiert und daraus die Multi-Res-ICO baut.
+- **KrosteMod E3 — Cheat-Mod-Generator** — analog Walkthrough, aber generiert ein Cheat-Menu (Screen `krostemod_cheat`) mit Slidern/Buttons für alle Top-Stat-Variablen. Der Analyzer sammelt schon Delta-Häufigkeiten (Top-Stats), fehlt nur der Generator + Screen-Template.
+- **KrosteMod E4 — KI-basierter Rename-Patch** — Character-Namen umbenennen via `AiProviderFactory` (Kontext-Prompt: „ersetze Namen X durch Y konsistent in allen Dialogen"). Braucht Character-List (schon vorhanden) + Provider-Call + Patch-Writer für Say-Statements.
+- **Decompiler v0.5:** Coverage für Screens, ATL, Transform, Style-Definitions — die typischen UI-`.rpyc`. Für Story-Text reicht v0.8.6 bereits (Sophia Parker läuft sauber durch).
 - **Save-Editor v0.5:** Neue Store-Variablen anlegen (nicht nur bestehende ändern), Typ-Wechsel (int → str), Listen/Dict-Editing. Braucht echten Pickle-Roundtrip mit Custom-Picklers für die Opaque-Klassen — deutlich riskanter als Value-Splice.
-- Kontextmenü in der Dateiliste (einzelne Datei per Rechtsklick extrahieren/Vorschau).
-- Vorschau für Text-/Bilddateien direkt im Fenster.
-- Beim Packen wählbares Format/Key in einem kleinen Dialog (aktuell fix RPA-3.0 + Standard-Key).
-- Headless-UI-Smoke-Test (Avalonia.Headless) — beim ersten Versuch verklemmt; braucht `[AvaloniaTestApplication]`-Setup, später sauber nachziehen.
-- App-Icon durch ein richtiges Design ersetzen (aktuell schlichtes Platzhalter-Icon in `Assets/RenPack.png`/`.ico`).
+- **Media-Preview inline** (v0.6.3-Trade-off): aktuell öffnet der Video-Preview den System-Default-Player. Für echtes Inline-Playback zwei Wege: (a) libvlc + Plugins IM AppImage bundlen (Deployment-Aufwand hoch), (b) eigener Video-Widget via ffmpeg-Frame-Stream in Bitmap-Reihe.
+- **Headless-UI-Smoke-Test** (Avalonia.Headless) — beim ersten Versuch verklemmt; braucht `[AvaloniaTestApplication]`-Setup, später sauber nachziehen.
 
 ## Referenz
 
