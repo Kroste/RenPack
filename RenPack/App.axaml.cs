@@ -29,6 +29,14 @@ public partial class App : Application
         var settings = Services.GetRequiredService<AiSettingsService>().Current;
         LocalizationService.Instance.SetCulture(settings.UiCulture);
 
+        // Der Sprachwechsel triggert die {loc:Tr}-Bindings, aber die
+        // SupportedUiCultures-Liste im SettingsWindow wird nur einmal
+        // beim ViewModel-Aufbau erzeugt (also mit den nativen Namen der
+        // Bereitstellungs-Kultur). Nichts weiter zu tun — der native
+        // Name jeder Sprache aendert sich ohnehin nicht, egal welche
+        // UI-Sprache aktiv ist (English bleibt "English", Русский
+        // bleibt "Русский").
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             GlobalExceptionHandler.Attach(desktop);

@@ -70,12 +70,12 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
 
     /// <summary>UI-Sprachen (Anzeige-Reihenfolge = wie in
     /// <see cref="LocalizationService.SupportedCultures"/>).
-    /// Element-Typ ist der Tupel <c>(Iso, Display)</c>, damit die ComboBox
-    /// den nativen Sprachnamen zeigt (English, Deutsch, Français, Русский)
-    /// unabhaengig von der aktuell aktiven UI-Sprache.</summary>
+    /// <see cref="UiCultureOption.Display"/> enthaelt Flagge + nativen
+    /// Sprachnamen (z.B. "🇬🇧 English"), damit die ComboBox unabhaengig
+    /// von der aktuell aktiven UI-Sprache alle Optionen lesbar zeigt.</summary>
     public IReadOnlyList<UiCultureOption> SupportedUiCultures { get; } =
         LocalizationService.SupportedCultures
-            .Select(c => new UiCultureOption(c.Iso, c.Display))
+            .Select(c => new UiCultureOption(c.Iso, $"{c.Flag}  {c.Display}"))
             .ToList();
 
     /// <summary>Aktuell in der ComboBox ausgewaehlte UI-Sprache. Setter

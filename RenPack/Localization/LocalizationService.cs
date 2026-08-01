@@ -31,13 +31,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
     /// <summary>Vom App-Nutzer konfigurierbare Sprachen. Der ISO-Code passt
     /// zur <c>Strings.{iso}.resx</c>-Dateinamenskonvention. Neutral (=
     /// Fallback) ist Englisch — die englische <c>Strings.resx</c> liegt
-    /// ohne Sprach-Suffix.</summary>
-    public static IReadOnlyList<(string Iso, string Display)> SupportedCultures { get; } = new[]
+    /// ohne Sprach-Suffix. <c>Flag</c> ist das Emoji-Fahnen-Piktogramm
+    /// (Regional Indicator Symbols) für den Selektor. Englisch bekommt
+    /// die UK-Flagge (🇬🇧) als international neutrales Symbol.</summary>
+    public static IReadOnlyList<(string Iso, string Display, string Flag)> SupportedCultures { get; } = new[]
     {
-        ("en", "English"),
-        ("de", "Deutsch"),
-        ("fr", "Français"),
-        ("ru", "Русский"),
+        ("en", "English", "🇬🇧"),
+        ("de", "Deutsch", "🇩🇪"),
+        ("fr", "Français", "🇫🇷"),
+        ("ru", "Русский", "🇷🇺"),
     };
 
     private readonly ResourceManager _rm = new(
