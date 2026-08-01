@@ -27,6 +27,10 @@ Open, pack and unpack Ren'Py archives (`.rpa`) — cross-platform desktop app fo
 - **Batch extract** (v0.6): pick multiple `.rpa` archives, each goes into its own subfolder.
 - **In-app log viewer** (v0.6): inspect `logs/RenPack.log` right from the About window (filter, refresh, open folder).
 - **System tray + single-instance guard** (v0.6): minimising drops the window into the tray, closing quits properly; a second launch raises the running instance.
+- **Archive diff** (v0.7): compare two `.rpa` archives — added, removed, modified files side by side (great for analysing game updates).
+- **Save-to-save migration** (v0.7): in the save diff view, right-click a row to copy the value from save B into the current session.
+- **Content filter when packing** (v0.7): `.DS_Store`, `Thumbs.db`, `__pycache__`, `.git*` are skipped automatically when building an archive from a folder.
+- **CLI** (v0.7): `renpack extract archive.rpa`, `renpack decompile <path>`, `renpack diff <a> <b>` for scripting and CI. Run `renpack --help` for details.
 - **Self-update** (v0.6): the About dialog can download and install a new release with one click (Windows ZIP, Linux AppImage or tar.gz) and restart the app automatically. No silent install — you always confirm.
 - **Update check:** queries GitHub Releases (proxy-aware) and offers a hint when a new version is available.
 
