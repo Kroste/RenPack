@@ -16,4 +16,5 @@ public interface IUiInteractions
     Task ShowMessageAsync(string title, string message);
     Task<bool> ConfirmAsync(string title, string message);
     Task CopyToClipboardAsync(string text);
+    Task ShowArchiveDiffAsync(RenPack.Services.RpaArchiveInfo left, RenPack.Services.RpaArchiveInfo right);
 }

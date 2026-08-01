@@ -103,6 +103,10 @@
                                     Command="{Binding BatchExtractCommand}"
                                     ToolTip.Tip="{loc:Tr Main_BatchExtract_Tip}"
                                     Margin="8,0,0,0" />
+                            <Button Content="{loc:Tr Main_CompareArchive}"
+                                    Command="{Binding CompareArchiveCommand}"
+                                    ToolTip.Tip="{loc:Tr Main_CompareArchive_Tip}"
+                                    Margin="8,0,0,0" />
                         </StackPanel>
                     </StackPanel>
 

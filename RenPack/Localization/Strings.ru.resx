@@ -176,6 +176,10 @@
   <data name="Main_Recent_Tip" xml:space="preserve"><value>Недавно открытые архивы</value></data>
   <data name="Main_RecentFolders_Tip" xml:space="preserve"><value>Недавно декомпилированные папки</value></data>
   <data name="Save_Recent_Tip" xml:space="preserve"><value>Недавно открытые сохранения</value></data>
+  <data name="Main_CompareArchive" xml:space="preserve"><value>🔀 Сравнить…</value></data>
+  <data name="Main_CompareArchive_Tip" xml:space="preserve"><value>Сравнить текущий архив с другим</value></data>
+  <data name="ArchiveDiff_Title" xml:space="preserve"><value>Сравнение архивов</value></data>
+  <data name="ArchiveDiff_Subtitle" xml:space="preserve"><value>Сравнение двух Ren'Py-архивов — добавленные, удалённые, изменённые и неизменные файлы рядом.</value></data>
   <data name="About_InstallUpdate" xml:space="preserve"><value>⬇ Установить обновление</value></data>
   <data name="Update_Checking" xml:space="preserve"><value>Проверка …</value></data>
   <data name="Update_AvailableFormat" xml:space="preserve"><value>Доступна версия {0}!</value></data>

@@ -100,6 +100,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(ExtractAllCommand))]
     [NotifyCanExecuteChangedFor(nameof(ExtractSelectedCommand))]
     [NotifyCanExecuteChangedFor(nameof(CreateArchiveCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CompareArchiveCommand))]
     private bool _isBusy;
 
     [ObservableProperty] private string _statusText = L.T("Status_ArchiveEmpty");
@@ -321,6 +322,31 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         finally { IsBusy = false; }
     }
+
+    /// <summary>Vergleicht das aktuell geoeffnete Archiv mit einem zweiten
+    /// per FilePicker. Oeffnet danach das ArchiveDiffWindow.</summary>
+    [RelayCommand(CanExecute = nameof(CanCompareArchive))]
+    private async Task CompareArchiveAsync()
+    {
+        if (Ui is null || Archive is null) return;
+        string? otherPath = await Ui.PickOpenArchiveAsync();
+        if (otherPath is null) return;
+
+        IsBusy = true;
+        try
+        {
+            var other = await Task.Run(() => _archiveService.ReadIndex(otherPath));
+            await Ui.ShowArchiveDiffAsync(Archive, other);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Archiv-Vergleich fehlgeschlagen: {path}", otherPath);
+            await Ui.ShowMessageAsync(L.T("Msg_ArchiveLoadFailed_Title"), ex.Message);
+        }
+        finally { IsBusy = false; }
+    }
+
+    private bool CanCompareArchive() => !IsBusy && HasArchive;
 
     /// <summary>Batch-Extract: mehrere Archive gleichzeitig in einen
     /// Zielordner entpacken. Pro Archiv wird ein Unterordner unter dem

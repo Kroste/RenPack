@@ -385,4 +385,11 @@ public partial class MainWindow : ChromeWindow, IUiInteractions
         await dlg.ShowDialog(this);
         return dlg.Confirmed ? vm : null;
     }
+
+    public async Task ShowArchiveDiffAsync(RpaArchiveInfo left, RpaArchiveInfo right)
+    {
+        var vm = new ArchiveDiffViewModel();
+        vm.Load(left, right);
+        await new ArchiveDiffWindow { DataContext = vm }.ShowDialog(this);
+    }
 }

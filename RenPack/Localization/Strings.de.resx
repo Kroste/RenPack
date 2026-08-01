@@ -176,6 +176,10 @@
   <data name="Main_Recent_Tip" xml:space="preserve"><value>Zuletzt geöffnete Archive</value></data>
   <data name="Main_RecentFolders_Tip" xml:space="preserve"><value>Zuletzt dekompilierte Ordner</value></data>
   <data name="Save_Recent_Tip" xml:space="preserve"><value>Zuletzt geöffnete Save-Dateien</value></data>
+  <data name="Main_CompareArchive" xml:space="preserve"><value>🔀 Vergleichen…</value></data>
+  <data name="Main_CompareArchive_Tip" xml:space="preserve"><value>Aktuelles Archiv mit einem anderen vergleichen</value></data>
+  <data name="ArchiveDiff_Title" xml:space="preserve"><value>Archiv-Vergleich</value></data>
+  <data name="ArchiveDiff_Subtitle" xml:space="preserve"><value>Zwei Ren'Py-Archive vergleichen — hinzugefügte, entfernte, geänderte und unveränderte Dateien nebeneinander.</value></data>
   <data name="About_InstallUpdate" xml:space="preserve"><value>⬇ Update installieren</value></data>
   <data name="Update_Checking" xml:space="preserve"><value>Prüfe …</value></data>
   <data name="Update_AvailableFormat" xml:space="preserve"><value>Version {0} verfügbar!</value></data>
