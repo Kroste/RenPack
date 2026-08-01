@@ -20,6 +20,14 @@ Open, pack and unpack Ren'Py archives (`.rpa`) — cross-platform desktop app fo
 - **Localization:** the UI ships in **English (default), German, French and Russian**. Switch languages live under *Settings → Application language* — no restart needed.
 - **Modern card-based UI:** dark theme with gold highlights, sectioned toolbars, live-focus rings, subtle row hovers. Every window inherits the same style library.
 - **Progress & logs:** progress bar while extracting/packing, comprehensive log with automatic masking of passwords/tokens.
+- **Preview pane** (v0.6): text and image files (`.rpy`, `.py`, `.json`, `.png`, `.jpg`, …) are shown live next to the file list — no need to extract first.
+- **Recent files, hotkeys, context menu, double-click** (v0.6): Ctrl+O/P/E/F, F5, Esc, Ctrl+Shift+A/D. Recent-archives dropdown next to *Open*. Right-click a file for *Extract single* / *Copy path*. Double-click extracts a single file.
+- **Undo/Redo in the save editor** (v0.6): Ctrl+Z / Ctrl+Y roll individual value edits back and forth without discarding everything.
+- **Save diff** (v0.6): compare two save files side by side — added, removed, modified variables with filters.
+- **Batch extract** (v0.6): pick multiple `.rpa` archives, each goes into its own subfolder.
+- **In-app log viewer** (v0.6): inspect `logs/RenPack.log` right from the About window (filter, refresh, open folder).
+- **System tray + single-instance guard** (v0.6): minimising drops the window into the tray, closing quits properly; a second launch raises the running instance.
+- **Self-update** (v0.6): the About dialog can download and install a new release with one click (Windows ZIP, Linux AppImage or tar.gz) and restart the app automatically. No silent install — you always confirm.
 - **Update check:** queries GitHub Releases (proxy-aware) and offers a hint when a new version is available.
 
 ## Installation
