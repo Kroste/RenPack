@@ -31,17 +31,21 @@ public sealed class OneClickModBuilder
     private readonly RpycBatchService _batch;
     private readonly RenpyModAnalyzer _analyzer;
     private readonly KrosteWalkthroughGenerator _walkthrough;
+    private readonly KrosteInfoScreenGenerator _infoScreen;
 
     public const string ManifestFileName = "KROSTEMOD_MANIFEST.json";
     public const string BackupSuffix = ".krostemod-bak";
 
-    public OneClickModBuilder() : this(new RpycBatchService(), new RenpyModAnalyzer(), new KrosteWalkthroughGenerator()) { }
+    public OneClickModBuilder() : this(new RpycBatchService(), new RenpyModAnalyzer(),
+        new KrosteWalkthroughGenerator(), new KrosteInfoScreenGenerator()) { }
 
-    public OneClickModBuilder(RpycBatchService batch, RenpyModAnalyzer analyzer, KrosteWalkthroughGenerator walkthrough)
+    public OneClickModBuilder(RpycBatchService batch, RenpyModAnalyzer analyzer,
+        KrosteWalkthroughGenerator walkthrough, KrosteInfoScreenGenerator infoScreen)
     {
         _batch = batch;
         _analyzer = analyzer;
         _walkthrough = walkthrough;
+        _infoScreen = infoScreen;
     }
 
     /// <summary>Baut und deployt den Mod. <paramref name="userPickedFolder"/>
@@ -109,6 +113,11 @@ public sealed class OneClickModBuilder
                 ModTypeId.Walkthrough => _walkthrough.Generate(tempRoot, modOut, analysis),
                 _ => throw new NotSupportedException($"Mod-Typ noch nicht implementiert: {modType}"),
             };
+
+            // 3b. F10-Info-Screen daneben legen — bringt Live-Variable-Werte
+            // + Consumer-Liste ingame. Ergaenzt den Walkthrough um „warum-
+            // Kontext" fuer den Spieler.
+            _infoScreen.Generate(modOut, analysis);
 
             // 4. Deploy: modifizierte .rpy nach gameDir, .rpyc backuppen.
             ct.ThrowIfCancellationRequested();

@@ -6,12 +6,38 @@ namespace RenPack.Services.Modding;
 public enum ModTypeId { Walkthrough, Cheat, Rename }
 
 /// <summary>Ergebnis einer <see cref="RenpyModAnalyzer.Analyze(string)"/>-
-/// Auswertung eines dekompilierten Ren'Py-Spiels.</summary>
+/// Auswertung eines dekompilierten Ren'Py-Spiels.
+///
+/// <see cref="VariableConsumers"/> mappt jeden Variablennamen auf die Liste
+/// aller Stellen, wo die Variable geLESEN wird (in <c>if</c>/<c>elif</c>-
+/// Conditions, Menu-Choice-Conditions). Fuer den KrosteMod-Info-Screen
+/// (v0.9.0) wichtig — dem Spieler zeigen wo eine gerade veraenderte Variable
+/// spaeter Konsequenzen hat.</summary>
 public sealed record ModAnalysis(
     IReadOnlyList<RpyChoice> Choices,
     IReadOnlyList<RpyStoreVariable> StoreVariables,
     IReadOnlyList<RpyCharacter> Characters,
-    IReadOnlyList<string> AnalyzedFiles);
+    IReadOnlyList<string> AnalyzedFiles,
+    IReadOnlyDictionary<string, IReadOnlyList<VarConsumer>> VariableConsumers);
+
+/// <summary>Eine Stelle im Skript, an der eine Variable GELESEN wird.
+/// Beispiel: <c>if love >= 5:</c> in <c>day22.rpy</c> Zeile 234, im Label
+/// <c>day22_confession</c>. <see cref="Kind"/> unterscheidet die Kontexte
+/// fuer die Anzeige („checked in condition" vs „menu gated").</summary>
+public sealed record VarConsumer(
+    string SourceFile,
+    int SourceLine,
+    string Label,
+    VarConsumerKind Kind,
+    string Snippet);
+
+public enum VarConsumerKind
+{
+    /// <summary><c>if var == …</c> / <c>elif</c> / <c>while</c>.</summary>
+    Condition,
+    /// <summary>Choice-Condition: <c>"text" if var:</c>.</summary>
+    MenuChoiceGate,
+}
 
 /// <summary>Ein Choice innerhalb eines <c>menu:</c>-Blocks. Die
 /// <see cref="Text"/>-Property enthaelt den Choice-Text ohne umschlie-

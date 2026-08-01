@@ -66,6 +66,28 @@ public sealed class RenpyModAnalyzer
         @"^\s*define\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*Character\s*\(\s*""((?:[^""\\]|\\.)*)""(?:\s*,\s*color\s*=\s*""(#?[0-9A-Fa-f]{3,8})"")?",
         RegexOptions.Compiled);
 
+    /// <summary>Condition-Header: <c>if X:</c>, <c>elif Y:</c>, <c>while Z:</c>.
+    /// Wir extrahieren nur den Ausdruck, den Rest interpretiert der Konsument.</summary>
+    private static readonly Regex ConditionPattern = new(
+        @"^\s*(?:if|elif|while)\s+(.+?)\s*:\s*$",
+        RegexOptions.Compiled);
+
+    /// <summary>Python-Identifier — fuer die Extraktion von Variablennamen aus
+    /// Condition-Ausdruecken. Ren'Py-Store-Vars sind i.d.R. snake_case.</summary>
+    private static readonly Regex IdentifierPattern = new(
+        @"\b([a-zA-Z_][a-zA-Z_0-9]*)\b",
+        RegexOptions.Compiled);
+
+    /// <summary>Python-Keywords + haeufige Builtins/Ren'Py-Funcs, die wir aus
+    /// Consumer-Kandidaten ausfiltern (kein Store-Var, sondern Sprach-Element).</summary>
+    private static readonly HashSet<string> NonVariableTokens = new(StringComparer.Ordinal)
+    {
+        "and", "or", "not", "in", "is", "if", "else", "elif", "True", "False", "None",
+        "len", "int", "str", "float", "bool", "list", "dict", "set", "tuple",
+        "range", "print", "type", "isinstance", "abs", "min", "max", "sum",
+        "renpy", "config", "persistent", "store",
+    };
+
     /// <summary>Analysiert alle <c>.rpy</c>-Dateien unter <paramref name="rootDir"/>
     /// rekursiv. Auto-Sync- und Compiler-generierte Files (Endung <c>.rpymc</c>,
     /// Startpraefix <c>_</c>, oder Verzeichnisse <c>tl/</c> für Translations)
@@ -79,6 +101,7 @@ public sealed class RenpyModAnalyzer
         var vars = new List<RpyStoreVariable>();
         var chars = new List<RpyCharacter>();
         var files = new List<string>();
+        var consumers = new Dictionary<string, List<VarConsumer>>(StringComparer.Ordinal);
 
         var root = Path.GetFullPath(rootDir);
         foreach (var file in Directory.EnumerateFiles(root, "*.rpy", SearchOption.AllDirectories)
@@ -90,17 +113,61 @@ public sealed class RenpyModAnalyzer
             if (rel.Split('/').Any(s => s.Equals("tl", StringComparison.OrdinalIgnoreCase)))
                 continue;
             files.Add(rel);
-            AnalyzeFile(file, rel, choices, vars, chars);
+            AnalyzeFile(file, rel, choices, vars, chars, consumers);
         }
 
+        // Nachtraeglich: Choice-Conditions als MenuChoiceGate-Consumer erfassen.
+        // Machen wir hier statt in AnalyzeFile, weil wir dort die volle
+        // Choice-Liste erst nach dem File-Lauf haben.
+        foreach (var ch in choices)
+        {
+            if (string.IsNullOrWhiteSpace(ch.Condition)) continue;
+            foreach (var v in ExtractIdentifiers(ch.Condition!))
+                AddConsumer(consumers, v, new VarConsumer(
+                    ch.SourceFile, ch.SourceLine, ch.Label,
+                    VarConsumerKind.MenuChoiceGate, ch.Condition!));
+        }
+
+        // Frozen dictionary: pro Variable Consumers sortiert nach Datei/Zeile.
+        var frozen = consumers.ToDictionary(
+            kv => kv.Key,
+            kv => (IReadOnlyList<VarConsumer>)kv.Value
+                .OrderBy(c => c.SourceFile, StringComparer.Ordinal)
+                .ThenBy(c => c.SourceLine)
+                .ToList());
+
         Log.Info("Mod-Analyse: {files} .rpy-Dateien, {choices} Choices, "
-            + "{vars} Store-Variablen, {chars} Characters",
-            files.Count, choices.Count, vars.Count, chars.Count);
-        return new ModAnalysis(choices, vars, chars, files);
+            + "{vars} Store-Variablen, {chars} Characters, {consumers} Variables mit Consumers",
+            files.Count, choices.Count, vars.Count, chars.Count, frozen.Count);
+        return new ModAnalysis(choices, vars, chars, files, frozen);
+    }
+
+    private static void AddConsumer(Dictionary<string, List<VarConsumer>> dict,
+        string varName, VarConsumer c)
+    {
+        if (!dict.TryGetValue(varName, out var list))
+            dict[varName] = list = new List<VarConsumer>();
+        list.Add(c);
+    }
+
+    /// <summary>Extrahiert Python-Identifier aus einem Ausdruck. Filtert
+    /// Keywords/Builtins raus. Achtung: fangt auch False Positives (lokale
+    /// Vars, Methoden-Namen); fuer den Info-Screen ist die Ober-Auswahl
+    /// akzeptabel.</summary>
+    private static IEnumerable<string> ExtractIdentifiers(string expr)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (Match m in IdentifierPattern.Matches(expr))
+        {
+            var name = m.Groups[1].Value;
+            if (NonVariableTokens.Contains(name)) continue;
+            if (seen.Add(name)) yield return name;
+        }
     }
 
     private static void AnalyzeFile(string absPath, string relPath,
-        List<RpyChoice> choices, List<RpyStoreVariable> vars, List<RpyCharacter> chars)
+        List<RpyChoice> choices, List<RpyStoreVariable> vars, List<RpyCharacter> chars,
+        Dictionary<string, List<VarConsumer>> consumers)
     {
         var lines = File.ReadAllLines(absPath);
         string currentLabel = "";
@@ -205,6 +272,19 @@ public sealed class RenpyModAnalyzer
                     VarName: mChar.Groups[1].Value,
                     DisplayName: UnescapeRenpyString(mChar.Groups[2].Value),
                     Color: mChar.Groups[3].Success ? mChar.Groups[3].Value : null));
+            }
+
+            // if / elif / while — Variable-Consumer erfassen. Choice-
+            // Conditions ("text" if X:) laufen im Nachtrag ueber die
+            // choices-Liste — hier nur die Standalone-Conditions.
+            var mCond = ConditionPattern.Match(line);
+            if (mCond.Success)
+            {
+                string expr = mCond.Groups[1].Value.Trim();
+                foreach (var v in ExtractIdentifiers(expr))
+                    AddConsumer(consumers, v, new VarConsumer(
+                        relPath, i + 1, currentLabel,
+                        VarConsumerKind.Condition, expr));
             }
         }
     }

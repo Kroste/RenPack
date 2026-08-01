@@ -194,4 +194,58 @@ public sealed class RenpyModAnalyzerTests : IDisposable
         result.Choices[0].Condition.Should().Be("money > 100");
         result.Choices[1].Condition.Should().BeNull();
     }
+
+    // ---- v0.9.0: Variable-Consumer-Erfassung ------------------------------
+
+    [Fact]
+    public void Collects_if_condition_as_variable_consumer()
+    {
+        Write("story.rpy", """
+            label after_choice:
+                if love >= 5:
+                    "She smiles."
+                elif love >= 2:
+                    "She looks neutral."
+                else:
+                    "She frowns."
+            """);
+        var result = _analyzer.Analyze(_tmp);
+        result.VariableConsumers.Should().ContainKey("love");
+        var loveUsers = result.VariableConsumers["love"];
+        loveUsers.Should().HaveCount(2, "if love + elif love — else zaehlt nicht");
+        loveUsers.Should().OnlyContain(c => c.Kind == VarConsumerKind.Condition);
+        loveUsers.Should().OnlyContain(c => c.Label == "after_choice");
+    }
+
+    [Fact]
+    public void Collects_choice_condition_as_menu_gate_consumer()
+    {
+        Write("story.rpy", """
+            label start:
+                menu:
+                    "Rich choice" if money > 100:
+                        $ pass
+                    "Normal choice":
+                        $ pass
+            """);
+        var result = _analyzer.Analyze(_tmp);
+        result.VariableConsumers.Should().ContainKey("money");
+        result.VariableConsumers["money"].Should()
+            .ContainSingle(c => c.Kind == VarConsumerKind.MenuChoiceGate);
+    }
+
+    [Fact]
+    public void Filters_python_keywords_and_builtins_from_consumers()
+    {
+        Write("story.rpy", """
+            label x:
+                if love and not respect:
+                    pass
+            """);
+        var result = _analyzer.Analyze(_tmp);
+        result.VariableConsumers.Should().ContainKey("love");
+        result.VariableConsumers.Should().ContainKey("respect");
+        result.VariableConsumers.Should().NotContainKey("and");
+        result.VariableConsumers.Should().NotContainKey("not");
+    }
 }
