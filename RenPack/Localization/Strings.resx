@@ -133,6 +133,9 @@
   <data name="Preview_UnsupportedFormat" xml:space="preserve"><value>No preview available for {0} files.</value></data>
   <data name="Preview_TooLargeFormat" xml:space="preserve"><value>File is {0} — too large for preview (limit: {1}).</value></data>
   <data name="Preview_LoadFailed" xml:space="preserve"><value>Preview could not be loaded.</value></data>
+  <data name="Preview_MediaUnavailable" xml:space="preserve"><value>Media playback unavailable. Install VLC (or libvlc) to enable in-app video/audio preview.</value></data>
+  <data name="Preview_Media_TogglePlay" xml:space="preserve"><value>Play / Pause</value></data>
+  <data name="Preview_Media_Stop" xml:space="preserve"><value>Stop</value></data>
   <data name="Ctx_Extract" xml:space="preserve"><value>Extract this file…</value></data>
   <data name="Ctx_CopyPath" xml:space="preserve"><value>Copy path</value></data>
   <data name="Status_PathCopiedFormat" xml:space="preserve"><value>Path copied: {0}</value></data>

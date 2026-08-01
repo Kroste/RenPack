@@ -19,17 +19,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
     /// <summary>Von der View gesetzt (Datei-/Ordnerdialoge, Meldungen).</summary>
     public IUiInteractions? Ui { get; set; }
 
-    public MainWindowViewModel(IRenpyArchiveService archiveService, RecentFilesService recent)
+    public MainWindowViewModel(IRenpyArchiveService archiveService, RecentFilesService recent,
+        MediaPlaybackService media)
     {
         _archiveService = archiveService;
         _recent = recent;
-        Preview = new PreviewViewModel(archiveService);
+        Preview = new PreviewViewModel(archiveService, media);
         RecentArchives = new(_recent.Archives);
         _recent.Changed += (_, _) => RefreshRecent();
     }
 
     // Designer-Konstruktor
-    public MainWindowViewModel() : this(new RenpyArchiveService(), new RecentFilesService()) { }
+    public MainWindowViewModel() : this(new RenpyArchiveService(), new RecentFilesService(), new MediaPlaybackService()) { }
 
     /// <summary>MRU-Liste der zuletzt geoeffneten Archive — im Dropdown
     /// neben dem "Oeffnen"-Button gebunden.</summary>

@@ -7,6 +7,7 @@
         xmlns:chrome="using:Avalonia.Controls.Chrome"
         xmlns:vm="using:RenPack.ViewModels"
         xmlns:loc="using:RenPack.Localization"
+        xmlns:vlc="using:LibVLCSharp.Avalonia"
         mc:Ignorable="d" d:DesignWidth="960" d:DesignHeight="660"
         x:Class="RenPack.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
@@ -227,13 +228,44 @@
                                    HorizontalAlignment="Center" VerticalAlignment="Center"
                                    IsVisible="{Binding Preview.IsPlaceholder}" />
 
-                        <!-- Bild-Preview -->
-                        <ScrollViewer IsVisible="{Binding Preview.IsImage}"
-                                      HorizontalScrollBarVisibility="Auto"
-                                      VerticalScrollBarVisibility="Auto">
-                            <Image Source="{Binding Preview.ImageContent}" Stretch="None"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </ScrollViewer>
+                        <!-- Bild-Preview: kleine Bilder Originalgroesse zentriert,
+                             grosse Bilder proportional in den Pane einpassen
+                             (Uniform + DownOnly). Ohne ScrollViewer — dank
+                             DownOnly gibt's nie Overflow. -->
+                        <Image IsVisible="{Binding Preview.IsImage}"
+                               Source="{Binding Preview.ImageContent}"
+                               Stretch="Uniform" StretchDirection="DownOnly"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Margin="12" />
+
+                        <!-- Video/Audio-Preview: LibVLC-basiert, laeuft direkt
+                             beim Auswaehlen los. VideoView bekommt die
+                             MediaPlayer-Instanz aus dem PreviewViewModel;
+                             bei Audio bleibt der VideoView schwarz — daher
+                             oben ein grosses Note-Symbol als visueller Hint. -->
+                        <Grid IsVisible="{Binding Preview.IsMedia}" RowDefinitions="*,Auto">
+                            <Grid Grid.Row="0">
+                                <Border Background="Black"
+                                        IsVisible="{Binding Preview.IsVideoActive}">
+                                    <vlc:VideoView MediaPlayer="{Binding Preview.MediaPlayer}" />
+                                </Border>
+                                <TextBlock IsVisible="{Binding Preview.IsAudioActive}"
+                                           Text="🎵" FontSize="96"
+                                           Foreground="{DynamicResource KrosteGoldBrush}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                            </Grid>
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8"
+                                        HorizontalAlignment="Center" Margin="0,10,0,12">
+                                <Button Classes="accent" Content="⏯"
+                                        Command="{Binding Preview.TogglePlayCommand}"
+                                        ToolTip.Tip="{loc:Tr Preview_Media_TogglePlay}" />
+                                <Button Content="⏹"
+                                        Command="{Binding Preview.StopMediaCommand}"
+                                        ToolTip.Tip="{loc:Tr Preview_Media_Stop}" />
+                            </StackPanel>
+                        </Grid>
 
                         <!-- Text-Preview: monospaced, scrollbar. -->
                         <ScrollViewer IsVisible="{Binding Preview.IsText}"
