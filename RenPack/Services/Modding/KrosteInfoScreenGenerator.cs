@@ -148,6 +148,14 @@ public sealed class KrosteInfoScreenGenerator
         sb.AppendLine("            return '<unset>'");
         sb.AppendLine("        return krostemod_escape(s)");
         sb.AppendLine();
+        // Setter fuer das Filter-Input: braucht eine Callable die 1 Argument
+        // nimmt (den neuen Text). SetVariable(name, val) nimmt 2 fixed args
+        // und der Input-changed-Handler ruft den Callback mit (new_text) auf
+        // → TypeError "takes 1 positional argument but 2 were given"
+        // (verifiziert an Sophia Parker 0.230, v0.9.1-Bug).
+        sb.AppendLine("    def krostemod_set_filter(new_text):");
+        sb.AppendLine("        store.krostemod_filter = new_text or ''");
+        sb.AppendLine();
     }
 
     /// <summary>Emittiert den <c>screen krostemod_info</c> und den unsichtbaren
@@ -182,7 +190,7 @@ public sealed class KrosteInfoScreenGenerator
         sb.AppendLine("            hbox:");
         sb.AppendLine("                spacing 8");
         sb.AppendLine("                text \"Filter:\" size 14 yalign 0.5");
-        sb.AppendLine("                input default krostemod_filter length 60 pixel_width 300 size 14 color \"#ffffff\" changed SetVariable(\"krostemod_filter\", _)");
+        sb.AppendLine("                input default krostemod_filter length 60 pixel_width 300 size 14 color \"#ffffff\" changed krostemod_set_filter");
         sb.AppendLine("                textbutton \"clear\" action SetVariable(\"krostemod_filter\", \"\") text_size 12");
         sb.AppendLine();
         sb.AppendLine("            null height 4");

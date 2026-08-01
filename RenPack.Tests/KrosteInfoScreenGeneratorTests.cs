@@ -135,4 +135,21 @@ public sealed class KrosteInfoScreenGeneratorTests : IDisposable
         // Snippet-Rendering muss auch escapen (entry[4])
         content.Should().Contain("krostemod_escape(entry[4])");
     }
+
+    [Fact]
+    public void Filter_input_uses_single_arg_callback_not_SetVariable()
+    {
+        // Regression-Test fuer v0.9.1-Bug (Sophia Parker):
+        // `input changed SetVariable("x", _)` crashed mit
+        // "takes 1 positional argument but 2 were given", weil der
+        // Input-changed-Handler den Callback mit (new_text) aufruft.
+        // Muss eine Python-Funktion sein, die genau 1 Argument nimmt.
+        var path = _gen.Generate(_tmp, MakeAnalysis());
+        var content = File.ReadAllText(path);
+        content.Should().Contain("def krostemod_set_filter(new_text):");
+        content.Should().Contain("input default krostemod_filter");
+        content.Should().Contain("changed krostemod_set_filter");
+        // Das alte kaputte Muster darf nicht mehr da sein
+        content.Should().NotContain("SetVariable(\"krostemod_filter\", _)");
+    }
 }
