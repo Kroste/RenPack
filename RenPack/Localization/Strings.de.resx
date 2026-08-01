@@ -120,6 +120,8 @@
   <data name="OllamaPull_Starting" xml:space="preserve"><value>Starte Pull …</value></data>
   <data name="Status_Cancelled" xml:space="preserve"><value>Abgebrochen.</value></data>
   <data name="Status_Done" xml:space="preserve"><value>Fertig.</value></data>
+  <data name="Tray_Show" xml:space="preserve"><value>Anzeigen</value></data>
+  <data name="Tray_Quit" xml:space="preserve"><value>Beenden</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 

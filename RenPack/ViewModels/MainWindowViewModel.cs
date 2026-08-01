@@ -8,16 +8,6 @@ using RenPack.Services;
 
 namespace RenPack.ViewModels;
 
-/// <summary>Kurzform fuer <c>LocalizationService.Instance[key]</c> — die
-/// StatusTexte und Message-Titel gehen durch die Resx-Ressourcen, damit die
-/// UI-Sprache konsistent bleibt.</summary>
-internal static class L
-{
-    public static string T(string key) => LocalizationService.Instance[key];
-    public static string F(string key, params object?[] args)
-        => string.Format(LocalizationService.Instance[key], args);
-}
-
 public sealed partial class MainWindowViewModel : ObservableObject
 {
     private static readonly Logger Log = LogManager.GetCurrentClassLogger();

@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using NLog;
 using RenPack.Localization;
@@ -17,6 +18,16 @@ public partial class App : Application
     /// <summary>Globaler DI-Container. Auflösung erfolgt hier in App.axaml.cs (Kroste-Standard).</summary>
     public static IServiceProvider Services { get; private set; } = null!;
 
+    /// <summary>Vom Program.Main gesetzt, sobald der Guard erfolgreich
+    /// die primaere Instanz reklamiert hat. Wir uebernehmen ihn hier,
+    /// verkabeln den ActivationRequested-Event mit dem Tray-Restore und
+    /// disposen ihn beim regulaeren App-Ende.</summary>
+    public static SingleInstanceGuard? PendingGuard { get; set; }
+
+    // GC-Referenz halten — sonst wird das Tray-Icon nach einer Weile eingesammelt.
+    private TrayController? _tray;
+    private SingleInstanceGuard? _guard;
+
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
     public override void OnFrameworkInitializationCompleted()
@@ -29,22 +40,32 @@ public partial class App : Application
         var settings = Services.GetRequiredService<AiSettingsService>().Current;
         LocalizationService.Instance.SetCulture(settings.UiCulture);
 
-        // Der Sprachwechsel triggert die {loc:Tr}-Bindings, aber die
-        // SupportedUiCultures-Liste im SettingsWindow wird nur einmal
-        // beim ViewModel-Aufbau erzeugt (also mit den nativen Namen der
-        // Bereitstellungs-Kultur). Nichts weiter zu tun — der native
-        // Name jeder Sprache aendert sich ohnehin nicht, egal welche
-        // UI-Sprache aktiv ist (English bleibt "English", Русский
-        // bleibt "Русский").
-
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             GlobalExceptionHandler.Attach(desktop);
-            desktop.MainWindow = new MainWindow
+
+            var mainWindow = new MainWindow
             {
                 DataContext = Services.GetRequiredService<MainWindowViewModel>(),
             };
+            Services.GetRequiredService<WindowStateService>().Attach(mainWindow);
+            desktop.MainWindow = mainWindow;
             Log.Info("Hauptfenster erstellt");
+
+            // System-Tray nach MainWindow-Erzeugung (Kroste-Standard).
+            _tray = new TrayController(this, mainWindow);
+            _tray.Install();
+
+            // Single-Instance-Guard uebernehmen: Zweitstart-Aktivierung
+            // holt das Hauptfenster aus dem Tray zurueck.
+            _guard = PendingGuard;
+            PendingGuard = null;
+            if (_guard is not null)
+            {
+                _guard.ActivationRequested += () =>
+                    Dispatcher.UIThread.Post(() => _tray?.Restore());
+            }
+            desktop.Exit += (_, _) => _guard?.Dispose();
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -61,6 +82,8 @@ public partial class App : Application
         services.AddSingleton<RenpyRpycDecompiler>();
         services.AddSingleton<RpycBatchService>();
         services.AddSingleton<UpdateService>();
+
+        services.AddSingleton<WindowStateService>();
 
         // KI-Services (v0.4b — Multi-Provider)
         services.AddSingleton<AiSettingsService>();

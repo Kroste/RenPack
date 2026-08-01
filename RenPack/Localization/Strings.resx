@@ -126,6 +126,8 @@
   <data name="OllamaPull_Starting" xml:space="preserve"><value>Starting pull …</value></data>
   <data name="Status_Cancelled" xml:space="preserve"><value>Cancelled.</value></data>
   <data name="Status_Done" xml:space="preserve"><value>Done.</value></data>
+  <data name="Tray_Show" xml:space="preserve"><value>Show</value></data>
+  <data name="Tray_Quit" xml:space="preserve"><value>Quit</value></data>
 
   <!-- ============ MessageBox ============ -->
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
