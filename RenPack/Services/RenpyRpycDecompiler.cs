@@ -307,6 +307,55 @@ public sealed class RenpyRpycDecompiler
                 continue;
             }
 
+            // Scene/Show/Hide + With → in einer Zeile emittieren:
+            // `scene X with fade` statt `scene X\nwith fade`. Der With-Node
+            // ist ein Compiler-Artefakt der user-syntax `scene X with fade`.
+            if ((node.ClassName is "renpy.ast.Scene" or "renpy.ast.Show" or "renpy.ast.Hide")
+                && i + 1 < list.Count
+                && list[i + 1] is ClassDict maybeWith
+                && maybeWith.ClassName == "renpy.ast.With")
+            {
+                var withExpr = maybeWith.GetValueOrDefault("expr")
+                    ?? maybeWith.GetValueOrDefault("expression");
+                string withTrans = AsString(withExpr);
+                // Nur mergen wenn transition non-empty und nicht None.
+                if (!string.IsNullOrEmpty(withTrans) && withTrans != "None")
+                {
+                    string keyword = node.ClassName switch
+                    {
+                        "renpy.ast.Scene" => "scene",
+                        "renpy.ast.Show" => "show",
+                        _ => "hide",
+                    };
+                    EmitShowHideScene(sb, node, indent, keyword, withTrans);
+                    i++; // With-Node konsumieren
+                    emitted++;
+                    continue;
+                }
+            }
+
+            // Label + Menu → `menu name:` (spart `label X:\n  pass\n  menu:`).
+            // Ren'Py-Compiler generiert fuer `menu X:` intern ein Label(X)
+            // gefolgt von einem Menu-Node — kombinieren wir hier wieder.
+            // Der Label-Body muss leer sein (sonst waere es kein Menu-Preamble).
+            if (node.ClassName == "renpy.ast.Label"
+                && i + 1 < list.Count
+                && list[i + 1] is ClassDict maybeMenu
+                && maybeMenu.ClassName == "renpy.ast.Menu")
+            {
+                var labelBlock = node.GetValueOrDefault("block") as IEnumerable;
+                bool labelEmpty = labelBlock is null || !labelBlock.Cast<object?>().Any();
+                if (labelEmpty)
+                {
+                    string menuName = AsString(node.GetValueOrDefault("name")
+                        ?? node.GetValueOrDefault("_name"));
+                    EmitMenu(sb, maybeMenu, indent, namedAs: menuName);
+                    i++; // Menu-Node konsumieren
+                    emitted++;
+                    continue;
+                }
+            }
+
             // Nach Call: Auto-Sync-Sequenz behandeln (siehe Kommentar oben).
             string? fromClause = null;
             if (node.ClassName == "renpy.ast.Call" && i + 1 < list.Count &&
@@ -473,19 +522,39 @@ public sealed class RenpyRpycDecompiler
         AppendIndented(sb, indent, line);
     }
 
-    private void EmitMenu(StringBuilder sb, ClassDict node, int indent)
+    private void EmitMenu(StringBuilder sb, ClassDict node, int indent, string? namedAs = null)
     {
-        AppendIndented(sb, indent, "menu:");
+        // Menu-Header: `menu:`, `menu name:`, `menu name(box_yalign=0.5):` oder
+        // `menu (arg=x):`. Menu-Level-arguments kommen aus dem `arguments`-
+        // Feld am Menu-Node selbst (nicht per Item).
+        string menuArgs = FormatArgumentInfo(node.GetValueOrDefault("arguments"));
+        string head = string.IsNullOrEmpty(namedAs) ? "menu" : $"menu {namedAs}";
+        if (!string.IsNullOrEmpty(menuArgs)) head += menuArgs;
+        AppendIndented(sb, indent, head + ":");
+
         if (node.GetValueOrDefault("items") is not IEnumerable items) return;
+
+        // Ren'Py-Neuere-Versionen (8.x): parallele Liste `item_arguments`
+        // mit ArgumentInfo pro Item (fuer `"text"(wt=…, disabled=…):`).
+        // Aeltere Versionen haben das Feld nicht → alle Items ohne Args.
+        var itemArgs = (node.GetValueOrDefault("item_arguments") as IEnumerable)?
+            .Cast<object?>().ToList() ?? new List<object?>();
+
+        int itemIdx = 0;
         foreach (var it in items)
         {
-            // Menu-Item ist ein Tupel (caption, condition, block)
-            if (it is not object[] arr || arr.Length < 3) continue;
+            // Menu-Item ist ein Tupel (caption, condition, block) — in neueren
+            // Ren'Py-Versionen manchmal 4-Tupel mit inline arguments.
+            if (it is not object[] arr || arr.Length < 3) { itemIdx++; continue; }
             string caption = AsString(arr[0]);
             string condition = AsString(arr[1]);
+            string argsText = "";
+            if (itemIdx < itemArgs.Count) argsText = FormatArgumentInfo(itemArgs[itemIdx]);
+            else if (arr.Length >= 4) argsText = FormatArgumentInfo(arr[3]);
             string suffix = condition is "True" or "" ? "" : $" if {condition}";
-            AppendIndented(sb, indent + 1, $"\"{EscapeString(caption)}\"{suffix}:");
+            AppendIndented(sb, indent + 1, $"\"{EscapeString(caption)}\"{argsText}{suffix}:");
             EmitBlockNonEmpty(sb, arr[2] as IEnumerable ?? Array.Empty<object>(), indent + 2);
+            itemIdx++;
         }
     }
 
@@ -575,7 +644,8 @@ public sealed class RenpyRpycDecompiler
     ///   <item><c>zorder</c> → <c>zorder N</c></item>
     ///   <item><c>atl</c> auf dem Node → Body mit ATL-Block</item>
     /// </list></summary>
-    private static void EmitShowHideScene(StringBuilder sb, ClassDict node, int indent, string keyword)
+    private static void EmitShowHideScene(StringBuilder sb, ClassDict node, int indent, string keyword,
+        string? withTransition = null)
     {
         var imspec = node.GetValueOrDefault("imspec") as object[];
         var parts = new List<string> { keyword };
@@ -651,13 +721,22 @@ public sealed class RenpyRpycDecompiler
             parts.Add(zorderText);
         }
 
-        // ATL-Body (z. B. `show hero: linear 1.0 xpos 100`) — nur bei show/scene
-        // relevant, hide hat nie einen atl-Block.
+        // With-Transition (aus Peek-Ahead in EmitBlock zusammengefuehrt):
+        // `scene X with fade` statt `scene X\nwith fade`. Wird VOR dem `:`
+        // eingefuegt, aber nur wenn kein ATL-Body dranhaengt (ATL kollidiert
+        // mit `with` in derselben Zeile syntaktisch).
         var atl = node.GetValueOrDefault("atl");
-        if (atl is ClassDict atlBlock && atlBlock.ClassName == "renpy.atl.RawBlock")
+        bool hasAtl = atl is ClassDict atlBlock1 && atlBlock1.ClassName == "renpy.atl.RawBlock";
+        if (!string.IsNullOrEmpty(withTransition) && !hasAtl)
+        {
+            parts.Add("with");
+            parts.Add(withTransition);
+        }
+
+        if (hasAtl)
         {
             AppendIndented(sb, indent, string.Join(" ", parts) + ":");
-            RenpyAtlWriter.EmitBlockBody(sb, atlBlock, indent + 1);
+            RenpyAtlWriter.EmitBlockBody(sb, (ClassDict)atl!, indent + 1);
         }
         else
         {
@@ -710,8 +789,30 @@ public sealed class RenpyRpycDecompiler
     private void EmitInit(StringBuilder sb, ClassDict node, int indent)
     {
         int priority = node.GetValueOrDefault("priority") is int p ? p : 0;
+        var block = node.GetValueOrDefault("block") as IEnumerable ?? Array.Empty<object>();
+
+        // Modern-Kompakt-Form: `init N python:` statt `init N:\n  python:`.
+        // Voraussetzung: Block enthaelt genau EIN Python-Statement ohne
+        // hide/store-Modifier (die brauchen den Block-Header sowieso).
+        var kids = block.Cast<object?>().ToList();
+        if (kids.Count == 1 && kids[0] is ClassDict py
+            && py.ClassName is "renpy.ast.Python" or "renpy.ast.EarlyPython")
+        {
+            bool early = py.ClassName == "renpy.ast.EarlyPython";
+            bool hide = py.GetValueOrDefault("hide") is bool h && h;
+            string store = py.GetValueOrDefault("store") as string ?? "store";
+            if (!early && !hide && store == "store")
+            {
+                string code = AsString(py.GetValueOrDefault("code"));
+                AppendIndented(sb, indent, $"init {priority} python:");
+                foreach (var line in code.Split('\n'))
+                    AppendIndented(sb, indent + 1, line);
+                return;
+            }
+        }
+
         AppendIndented(sb, indent, $"init {priority}:");
-        EmitBlockNonEmpty(sb, node.GetValueOrDefault("block") as IEnumerable ?? Array.Empty<object>(), indent + 1);
+        EmitBlockNonEmpty(sb, block, indent + 1);
     }
 
     /// <summary>Emittiert <c>define</c>/<c>default</c>-Statements inklusive

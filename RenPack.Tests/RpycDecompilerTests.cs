@@ -997,4 +997,120 @@ public sealed class RpycDecompilerTests
         var text = _dec.Decompile(script);
         text.Should().Contain("jump expression player_name");
     }
+
+    // ---- v0.8.6-Regressions (Diff gegen unrpyc) ---------------------------
+
+    [Fact]
+    public void Scene_followed_by_with_transition_merges_into_one_line()
+    {
+        // `scene X\nwith fade` → `scene X with fade` (elegantes unrpyc-Format).
+        var imspec = new object?[]
+        {
+            new object[] { "day20_waking_up", "1" }, null, null, null, "master", null, null,
+        };
+        var script = new object[]
+        {
+            Node("renpy.ast.Scene", ("imspec", imspec)),
+            Node("renpy.ast.With", ("expr", "fade")),
+        };
+        var text = _dec.Decompile(script);
+        text.Should().Contain("scene day20_waking_up 1 with fade");
+        // Keine separate `with fade`-Zeile mehr.
+        text.Split('\n').Should().NotContain(l => l.Trim() == "with fade");
+    }
+
+    [Fact]
+    public void Show_followed_by_with_None_does_not_merge()
+    {
+        // `with None` ist ein Compiler-Artefakt (killt implizite Fade-in) —
+        // NICHT in die Scene-Zeile mergen, sondern separat lassen.
+        var imspec = new object?[]
+        {
+            new object[] { "hero" }, null, null, null, "master", null, null,
+        };
+        var script = new object[]
+        {
+            Node("renpy.ast.Show", ("imspec", imspec)),
+            Node("renpy.ast.With", ("expr", "None")),
+        };
+        var text = _dec.Decompile(script);
+        text.Should().Contain("show hero");
+        text.Should().NotContain("show hero with None");
+    }
+
+    [Fact]
+    public void Init_with_single_python_uses_modern_compact_form()
+    {
+        // `init -998:\n  python:\n    x = 1` → `init -998 python:\n    x = 1`.
+        var pyCode = new ClassDict("renpy.ast", "PyCode");
+        pyCode["__args__"] = new object[] { "active_parts.append(2)" };
+        var python = Node("renpy.ast.Python", ("code", pyCode));
+        var init = Node("renpy.ast.Init",
+            ("priority", -998),
+            ("block", new ArrayList { python }));
+        var text = _dec.Decompile(new object[] { init });
+        text.Should().Contain("init -998 python:");
+        text.Should().Contain("    active_parts.append(2)");
+        // Alte doppelt-genestete Form darf nicht mehr da sein.
+        text.Should().NotContain("init -998:\n    python:");
+    }
+
+    [Fact]
+    public void Label_followed_by_menu_becomes_named_menu()
+    {
+        // `label day21_X: <empty>` + `menu:` → `menu day21_X:`.
+        var menu = Node("renpy.ast.Menu",
+            ("items", new ArrayList
+            {
+                new object?[] { "Choice A", "True", new ArrayList() },
+            }));
+        var label = Node("renpy.ast.Label",
+            ("_name", "day21_Sophia_decides"),
+            ("block", new ArrayList()));
+        var text = _dec.Decompile(new object[] { label, menu });
+        text.Should().Contain("menu day21_Sophia_decides:");
+        text.Should().NotContain("label day21_Sophia_decides:");
+    }
+
+    [Fact]
+    public void Menu_with_item_arguments_emits_kwarg_tuple_on_choices()
+    {
+        // Menu-Items koennen Attribute wie `(wt={…}, disabled={…})` haben —
+        // in Ren'Py 8.x als parallele item_arguments-Liste am Menu-Node.
+        var argInfo = new ClassDict("renpy.ast", "ArgumentInfo");
+        argInfo["arguments"] = new object[]
+        {
+            new object[] { "wt", "{\"filthy\": 1}" },
+        };
+        var menu = Node("renpy.ast.Menu",
+            ("items", new ArrayList
+            {
+                new object?[] { "Indulge in the fun", "True", new ArrayList() },
+            }),
+            ("item_arguments", new ArrayList { argInfo }));
+        var text = _dec.Decompile(new object[] { menu });
+        text.Should().Contain("\"Indulge in the fun\"(wt={\"filthy\": 1}):");
+    }
+
+    [Fact]
+    public void Menu_with_own_arguments_emits_menu_args()
+    {
+        // `menu name(box_yalign=0.5):` — Attribute am Menu-Level (nicht per Item).
+        var argInfo = new ClassDict("renpy.ast", "ArgumentInfo");
+        argInfo["arguments"] = new object[]
+        {
+            new object[] { "box_yalign", "0.5" },
+        };
+        var menu = Node("renpy.ast.Menu",
+            ("items", new ArrayList
+            {
+                new object?[] { "OK", "True", new ArrayList() },
+            }),
+            ("arguments", argInfo));
+        var label = Node("renpy.ast.Label",
+            ("_name", "start_choice"),
+            ("block", new ArrayList()));
+        var text = _dec.Decompile(new object[] { label, menu });
+        text.Should().Contain("menu start_choice(box_yalign=0.5):");
+    }
 }
