@@ -31,6 +31,7 @@ Open, pack and unpack Ren'Py archives (`.rpa`) — cross-platform desktop app fo
 - **Save-to-save migration** (v0.7): in the save diff view, right-click a row to copy the value from save B into the current session.
 - **Content filter when packing** (v0.7): `.DS_Store`, `Thumbs.db`, `__pycache__`, `.git*` are skipped automatically when building an archive from a folder.
 - **CLI** (v0.7): `renpack extract archive.rpa`, `renpack decompile <path>`, `renpack diff <a> <b>` for scripting and CI. Run `renpack --help` for details.
+- **KrosteMod walkthrough generator** (v0.8): analyses a decompiled Ren'Py game (extracted `.rpa` + `renpack decompile`) and produces a walkthrough mod that annotates every `menu:` choice with what it does — `{color=#e0b14c}[K love+3] [K respect-1]{/color}`. Rule-based, no AI, works on any Ren'Py game with `$ var += N` style stat changes. CLI: `renpack mod walkthrough <folder>`. More mod types (cheat menu, character rename) coming.
 - **Self-update** (v0.6): the About dialog can download and install a new release with one click (Windows ZIP, Linux AppImage or tar.gz) and restart the app automatically. No silent install — you always confirm.
 - **Update check:** queries GitHub Releases (proxy-aware) and offers a hint when a new version is available.
 

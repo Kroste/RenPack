@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using NLog;
 using RenPack.Services;
+using RenPack.Services.Modding;
 
 namespace RenPack.Cli;
 
@@ -22,7 +23,7 @@ public static class CliRunner
     public static bool IsCliInvocation(string[] args) =>
         args.Length > 0 && args[0] switch
         {
-            "extract" or "decompile" or "diff" or "help"
+            "extract" or "decompile" or "diff" or "mod" or "help"
             or "-h" or "--help" or "-v" or "--version" => true,
             _ => false,
         };
@@ -39,6 +40,7 @@ public static class CliRunner
                 "extract" => RunExtract(args[1..]),
                 "decompile" => RunDecompile(args[1..]),
                 "diff" => RunDiff(args[1..]),
+                "mod" => RunMod(args[1..]),
                 "-v" or "--version" => PrintVersion(),
                 _ => PrintHelp(exitCode: 0),
             };
@@ -162,6 +164,64 @@ public static class CliRunner
         return 0;
     }
 
+    // ---- mod ---------------------------------------------------------------
+
+    private static int RunMod(string[] args)
+    {
+        if (args.Length == 0) return Bail("mod needs a sub-command (walkthrough)");
+        return args[0] switch
+        {
+            "walkthrough" => RunModWalkthrough(args[1..]),
+            "analyze" => RunModAnalyze(args[1..]),
+            _ => Bail($"unknown mod sub-command: {args[0]}"),
+        };
+    }
+
+    private static int RunModWalkthrough(string[] args)
+    {
+        if (args.Length == 0) return Bail("mod walkthrough needs <source-dir> [--dest <dir>]");
+        string src = args[0];
+        string dest = GetOption(args, "--dest") ?? Path.Combine(src, "KrosteMod-Walkthrough");
+        if (!Directory.Exists(src)) return Bail($"source folder not found: {src}");
+
+        var analysis = new RenpyModAnalyzer().Analyze(src);
+        Console.WriteLine($"Analyzed {analysis.AnalyzedFiles.Count} .rpy file(s): "
+            + $"{analysis.Choices.Count} choices, {analysis.StoreVariables.Count} store vars, "
+            + $"{analysis.Characters.Count} characters");
+        if (analysis.Choices.Count == 0)
+        {
+            Console.WriteLine("No menu choices found — nothing to annotate.");
+            return 0;
+        }
+        var gen = new KrosteWalkthroughGenerator();
+        int written = gen.Generate(src, dest, analysis);
+        Console.WriteLine($"Wrote {written} patched .rpy file(s) to {Path.GetFullPath(dest)}");
+        Console.WriteLine("See KROSTEMOD_README.md in the output for installation instructions.");
+        return 0;
+    }
+
+    private static int RunModAnalyze(string[] args)
+    {
+        if (args.Length == 0) return Bail("mod analyze needs <source-dir>");
+        string src = args[0];
+        if (!Directory.Exists(src)) return Bail($"source folder not found: {src}");
+
+        var analysis = new RenpyModAnalyzer().Analyze(src);
+        Console.WriteLine($"Files:      {analysis.AnalyzedFiles.Count}");
+        Console.WriteLine($"Choices:    {analysis.Choices.Count}");
+        Console.WriteLine($"Store vars: {analysis.StoreVariables.Count}");
+        Console.WriteLine($"Characters: {analysis.Characters.Count}");
+        Console.WriteLine();
+        Console.WriteLine("Top store variables (by numeric-delta occurrence):");
+        var topVars = analysis.Choices.SelectMany(c => c.Deltas)
+            .Where(d => d.Op is "+=" or "-=")
+            .GroupBy(d => d.Variable)
+            .OrderByDescending(g => g.Count())
+            .Take(10);
+        foreach (var g in topVars) Console.WriteLine($"  {g.Key}: {g.Count()} changes");
+        return 0;
+    }
+
     // ---- helpers -----------------------------------------------------------
 
     private static int PrintVersion()
@@ -182,6 +242,10 @@ public static class CliRunner
                                              (file or folder; recursive for folders)
               renpack diff <a.save> <b.save>
               renpack diff <a.rpa>  <b.rpa>
+              renpack mod analyze <source-dir>
+                                             (source = decompiled Ren'Py game folder)
+              renpack mod walkthrough <source-dir> [--dest <dir>]
+                                             (generates KrosteMod hint tags in menu choices)
               renpack --version
               renpack --help
 
