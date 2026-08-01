@@ -172,6 +172,17 @@
 {1}</value></data>
   <data name="Msg_BatchExtractDoneWithErrors_Body_Format" xml:space="preserve"><value>{0} из {1} архивов успешно, {2} с ошибкой:</value></data>
   <data name="Main_Recent_Tip" xml:space="preserve"><value>Недавно открытые архивы</value></data>
+  <data name="About_InstallUpdate" xml:space="preserve"><value>⬇ Установить обновление</value></data>
+  <data name="Update_Checking" xml:space="preserve"><value>Проверка …</value></data>
+  <data name="Update_AvailableFormat" xml:space="preserve"><value>Доступна версия {0}!</value></data>
+  <data name="Update_NoAccess" xml:space="preserve"><value>Нет доступа к GitHub.</value></data>
+  <data name="Update_UpToDate" xml:space="preserve"><value>У вас последняя версия.</value></data>
+  <data name="Update_CheckFailed" xml:space="preserve"><value>Проверка обновлений не удалась.</value></data>
+  <data name="Update_ConfirmTitle" xml:space="preserve"><value>Установить обновление?</value></data>
+  <data name="Update_ConfirmBodyFormat" xml:space="preserve"><value>Загрузить и установить версию {0} сейчас? Приложение перезапустится автоматически.</value></data>
+  <data name="Update_Downloading" xml:space="preserve"><value>Загрузка обновления …</value></data>
+  <data name="Update_Installing" xml:space="preserve"><value>Установка, перезапуск …</value></data>
+  <data name="Update_InstallFailedFormat" xml:space="preserve"><value>Ошибка обновления: {0}</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 

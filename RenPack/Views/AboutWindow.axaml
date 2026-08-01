@@ -21,9 +21,15 @@
 
             <Rectangle Classes="divider-h" />
 
-            <StackPanel Orientation="Horizontal" Spacing="10">
-                <Button x:Name="UpdateButton" Classes="accent" Content="{loc:Tr About_CheckUpdates}" />
-                <TextBlock x:Name="UpdateResult" VerticalAlignment="Center" Classes="secondary" />
+            <StackPanel Spacing="8">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Button x:Name="UpdateButton" Classes="accent" Content="{loc:Tr About_CheckUpdates}" />
+                    <Button x:Name="InstallUpdateButton" Content="{loc:Tr About_InstallUpdate}"
+                            IsVisible="False" />
+                    <TextBlock x:Name="UpdateResult" VerticalAlignment="Center" Classes="secondary" />
+                </StackPanel>
+                <ProgressBar x:Name="UpdateProgress" Minimum="0" Maximum="1"
+                             IsVisible="False" Height="6" />
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" Spacing="10">

@@ -172,6 +172,17 @@
 {1}</value></data>
   <data name="Msg_BatchExtractDoneWithErrors_Body_Format" xml:space="preserve"><value>{0} von {1} Archiven erfolgreich, {2} fehlgeschlagen:</value></data>
   <data name="Main_Recent_Tip" xml:space="preserve"><value>Zuletzt geöffnete Archive</value></data>
+  <data name="About_InstallUpdate" xml:space="preserve"><value>⬇ Update installieren</value></data>
+  <data name="Update_Checking" xml:space="preserve"><value>Prüfe …</value></data>
+  <data name="Update_AvailableFormat" xml:space="preserve"><value>Version {0} verfügbar!</value></data>
+  <data name="Update_NoAccess" xml:space="preserve"><value>Kein Zugriff auf GitHub.</value></data>
+  <data name="Update_UpToDate" xml:space="preserve"><value>Du hast die aktuelle Version.</value></data>
+  <data name="Update_CheckFailed" xml:space="preserve"><value>Update-Prüfung fehlgeschlagen.</value></data>
+  <data name="Update_ConfirmTitle" xml:space="preserve"><value>Update installieren?</value></data>
+  <data name="Update_ConfirmBodyFormat" xml:space="preserve"><value>Version {0} jetzt herunterladen und installieren? Die App wird automatisch neu gestartet.</value></data>
+  <data name="Update_Downloading" xml:space="preserve"><value>Lade Update herunter …</value></data>
+  <data name="Update_Installing" xml:space="preserve"><value>Installiere Update, starte neu …</value></data>
+  <data name="Update_InstallFailedFormat" xml:space="preserve"><value>Update fehlgeschlagen: {0}</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 

@@ -178,6 +178,17 @@
 {1}</value></data>
   <data name="Msg_BatchExtractDoneWithErrors_Body_Format" xml:space="preserve"><value>{0} of {1} archives succeeded, {2} failed:</value></data>
   <data name="Main_Recent_Tip" xml:space="preserve"><value>Recently opened archives</value></data>
+  <data name="About_InstallUpdate" xml:space="preserve"><value>⬇ Install update</value></data>
+  <data name="Update_Checking" xml:space="preserve"><value>Checking …</value></data>
+  <data name="Update_AvailableFormat" xml:space="preserve"><value>Version {0} available!</value></data>
+  <data name="Update_NoAccess" xml:space="preserve"><value>No access to GitHub.</value></data>
+  <data name="Update_UpToDate" xml:space="preserve"><value>You have the latest version.</value></data>
+  <data name="Update_CheckFailed" xml:space="preserve"><value>Update check failed.</value></data>
+  <data name="Update_ConfirmTitle" xml:space="preserve"><value>Install update?</value></data>
+  <data name="Update_ConfirmBodyFormat" xml:space="preserve"><value>Download and install version {0} now? The app will restart automatically.</value></data>
+  <data name="Update_Downloading" xml:space="preserve"><value>Downloading update …</value></data>
+  <data name="Update_Installing" xml:space="preserve"><value>Installing update, restarting …</value></data>
+  <data name="Update_InstallFailedFormat" xml:space="preserve"><value>Update failed: {0}</value></data>
 
   <!-- ============ MessageBox ============ -->
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
