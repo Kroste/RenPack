@@ -168,13 +168,48 @@ public static class CliRunner
 
     private static int RunMod(string[] args)
     {
-        if (args.Length == 0) return Bail("mod needs a sub-command (walkthrough)");
+        if (args.Length == 0) return Bail("mod needs a sub-command (install/uninstall/walkthrough/analyze)");
         return args[0] switch
         {
+            "install" => RunModInstall(args[1..]),
+            "uninstall" => RunModUninstall(args[1..]),
             "walkthrough" => RunModWalkthrough(args[1..]),
             "analyze" => RunModAnalyze(args[1..]),
             _ => Bail($"unknown mod sub-command: {args[0]}"),
         };
+    }
+
+    private static int RunModInstall(string[] args)
+    {
+        if (args.Length == 0) return Bail("mod install needs <game-folder> [--type walkthrough]");
+        string picked = args[0];
+        string typeArg = GetOption(args, "--type") ?? "walkthrough";
+        if (!Enum.TryParse<ModTypeId>(typeArg, ignoreCase: true, out var modType))
+            return Bail($"unknown mod type: {typeArg}");
+        if (!Directory.Exists(picked)) return Bail($"folder not found: {picked}");
+
+        var builder = new OneClickModBuilder();
+        var progress = new Progress<OneClickProgress>(p =>
+            Console.WriteLine($"[{p.Phase}] {(p.Total > 0 ? $"{p.Done}/{p.Total} " : "")}{p.CurrentFile}"));
+        var result = builder.Build(picked, modType, progress);
+        Console.WriteLine();
+        Console.WriteLine($"Installed {result.DeployedFileCount} .rpy file(s) into {result.GameDir}");
+        Console.WriteLine($"Annotated {result.Analysis.Choices.Count} choice(s) across {result.Analysis.AnalyzedFiles.Count} file(s).");
+        Console.WriteLine("Use 'renpack mod uninstall <game-folder>' to revert.");
+        return 0;
+    }
+
+    private static int RunModUninstall(string[] args)
+    {
+        if (args.Length == 0) return Bail("mod uninstall needs <game-folder>");
+        string picked = args[0];
+        if (!Directory.Exists(picked)) return Bail($"folder not found: {picked}");
+        var gameDir = OneClickModBuilder.ResolveGameDir(picked);
+        if (gameDir is null) return Bail($"no Ren'Py game found under {picked}");
+        var builder = new OneClickModBuilder();
+        var result = builder.Uninstall(gameDir);
+        Console.WriteLine($"Removed {result.RemovedFiles} mod file(s), restored {result.RestoredBackups} backup(s).");
+        return 0;
     }
 
     private static int RunModWalkthrough(string[] args)
@@ -242,10 +277,14 @@ public static class CliRunner
                                              (file or folder; recursive for folders)
               renpack diff <a.save> <b.save>
               renpack diff <a.rpa>  <b.rpa>
+              renpack mod install <game-folder> [--type walkthrough]
+                                             (one-shot: decompile + analyse + generate + install into game/)
+              renpack mod uninstall <game-folder>
+                                             (restores originals via the .krostemod manifest)
               renpack mod analyze <source-dir>
-                                             (source = decompiled Ren'Py game folder)
+                                             (advanced: source = already-decompiled game folder)
               renpack mod walkthrough <source-dir> [--dest <dir>]
-                                             (generates KrosteMod hint tags in menu choices)
+                                             (advanced: generate mod into <dir>, do not install)
               renpack --version
               renpack --help
 

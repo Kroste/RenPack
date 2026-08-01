@@ -177,46 +177,49 @@
 {1}</value></data>
   <data name="Msg_BatchExtractDoneWithErrors_Body_Format" xml:space="preserve"><value>{0} archives sur {1} réussies, {2} échouées :</value></data>
   <data name="Main_Recent_Tip" xml:space="preserve"><value>Archives récemment ouvertes</value></data>
-  <data name="Main_ModGenerator" xml:space="preserve"><value>🛠 Générateur de mods</value></data>
-  <data name="Main_ModGenerator_Tip" xml:space="preserve"><value>Génère des fichiers KrosteMod à partir d'un jeu Ren'Py décompilé</value></data>
-  <data name="Window_ModGenerator" xml:space="preserve"><value>RenPack — Générateur de mods</value></data>
-  <data name="Mod_Subtitle" xml:space="preserve"><value>Analyser un jeu Ren'Py décompilé et générer des fichiers KrosteMod (walkthrough, autres types de mods à venir).</value></data>
-  <data name="Mod_Section_Source" xml:space="preserve"><value>SOURCE</value></data>
-  <data name="Mod_Source_Description" xml:space="preserve"><value>Dossier avec les fichiers .rpy décompilés — typiquement le dossier game/ après 'extract' + 'decompile'.</value></data>
-  <data name="Mod_Source_Placeholder" xml:space="preserve"><value>/chemin/vers/jeu/decompile</value></data>
+  <data name="Main_ModGenerator" xml:space="preserve"><value>🛠 Auto-Mod</value></data>
+  <data name="Main_ModGenerator_Tip" xml:space="preserve"><value>Créateur de mod en un clic — choisis le dossier du jeu Ren'Py, c'est tout</value></data>
+  <data name="Window_ModGenerator" xml:space="preserve"><value>RenPack — Auto-Mod</value></data>
+  <data name="Mod_Subtitle" xml:space="preserve"><value>Choisis un dossier de jeu Ren'Py, clique sur Créer — RenPack décompile, analyse et installe le mod automatiquement.</value></data>
+  <data name="Mod_Section_Game" xml:space="preserve"><value>DOSSIER DU JEU</value></data>
+  <data name="Mod_Game_Description" xml:space="preserve"><value>Choisis la racine du jeu ou son sous-dossier game/ — RenPack trouve les fichiers .rpyc automatiquement.</value></data>
+  <data name="Mod_Game_Placeholder" xml:space="preserve"><value>/chemin/vers/JeuRenpy ou son dossier game/</value></data>
   <data name="Mod_Pick" xml:space="preserve"><value>📁 Parcourir…</value></data>
-  <data name="Mod_Analyze" xml:space="preserve"><value>🔍 Analyser</value></data>
-  <data name="Mod_Analyzing" xml:space="preserve"><value>Analyse en cours …</value></data>
-  <data name="Mod_AnalyzeDoneFormat" xml:space="preserve"><value>Analysé : {0} fichier(s) .rpy, {1} choix.</value></data>
-  <data name="Mod_AnalyzeFailedFormat" xml:space="preserve"><value>Échec de l'analyse : {0}</value></data>
-  <data name="Mod_SourceNotFound" xml:space="preserve"><value>Le dossier source n'existe pas.</value></data>
-  <data name="Mod_Section_Analysis" xml:space="preserve"><value>ANALYSE</value></data>
-  <data name="Mod_Stat_Files" xml:space="preserve"><value>fichiers</value></data>
-  <data name="Mod_Stat_Choices" xml:space="preserve"><value>choix</value></data>
-  <data name="Mod_Stat_StoreVars" xml:space="preserve"><value>vars store</value></data>
-  <data name="Mod_Stat_Characters" xml:space="preserve"><value>personnages</value></data>
-  <data name="Mod_TopStats_Title" xml:space="preserve"><value>Variables stat principales (par nombre de changements) :</value></data>
-  <data name="Mod_Section_Generate" xml:space="preserve"><value>GÉNÉRER</value></data>
+  <data name="Mod_PickGame_Title" xml:space="preserve"><value>Choisir le dossier du jeu Ren'Py</value></data>
+  <data name="Mod_Resolved_Prefix" xml:space="preserve"><value>Dossier du jeu détecté : </value></data>
+  <data name="Mod_Section_Build" xml:space="preserve"><value>CRÉER</value></data>
   <data name="Mod_Type" xml:space="preserve"><value>Type de mod</value></data>
-  <data name="Mod_Destination" xml:space="preserve"><value>Dossier de destination</value></data>
-  <data name="Mod_Destination_Placeholder" xml:space="preserve"><value>/chemin/vers/sortie/mod</value></data>
-  <data name="Mod_Generate" xml:space="preserve"><value>🛠 Générer le mod</value></data>
-  <data name="Mod_Generating" xml:space="preserve"><value>Génération en cours …</value></data>
-  <data name="Mod_GenerateDoneFormat" xml:space="preserve"><value>{0} fichier(s) écrit(s) vers {1}</value></data>
-  <data name="Mod_GenerateFailedFormat" xml:space="preserve"><value>Échec de la génération : {0}</value></data>
-  <data name="Mod_GenerateDone_Title" xml:space="preserve"><value>Mod généré</value></data>
-  <data name="Mod_GenerateDone_Body_Format" xml:space="preserve"><value>{0} fichier(s) .rpy écrit(s) vers :
-{1}
+  <data name="Mod_BuildAction" xml:space="preserve"><value>🚀 Créer et installer le mod</value></data>
+  <data name="Mod_UninstallAction" xml:space="preserve"><value>🗑 Supprimer le mod</value></data>
+  <data name="Mod_Hint_Backup" xml:space="preserve"><value>Les originaux sont sauvegardés en tant que .rpyc.krostemod-bak — utilise « Supprimer le mod » pour les restaurer.</value></data>
+  <data name="Mod_Section_Result" xml:space="preserve"><value>RÉSULTAT</value></data>
+  <data name="Mod_Result_Files" xml:space="preserve"><value>fichiers .rpy déployés</value></data>
+  <data name="Mod_Result_Choices" xml:space="preserve"><value>choix annotés</value></data>
+  <data name="Mod_Result_DeployedTo" xml:space="preserve"><value>Déployé vers : </value></data>
+  <data name="Mod_Building" xml:space="preserve"><value>Création du mod …</value></data>
+  <data name="Mod_Uninstalling" xml:space="preserve"><value>Suppression du mod …</value></data>
+  <data name="Mod_Phase_Scanning" xml:space="preserve"><value>Recherche des .rpyc …</value></data>
+  <data name="Mod_Phase_Decompiling_Format" xml:space="preserve"><value>Décompilation {0}/{1} …</value></data>
+  <data name="Mod_Phase_Analyzing" xml:space="preserve"><value>Analyse des choix …</value></data>
+  <data name="Mod_Phase_Generating" xml:space="preserve"><value>Génération du mod …</value></data>
+  <data name="Mod_Phase_Deploying_Format" xml:space="preserve"><value>Déploiement {0}/{1} …</value></data>
+  <data name="Mod_Phase_Cleaning" xml:space="preserve"><value>Nettoyage …</value></data>
+  <data name="Mod_BuildDoneFormat" xml:space="preserve"><value>Mod prêt — {0} fichier(s) déployé(s) vers {1}.</value></data>
+  <data name="Mod_BuildDone_Title" xml:space="preserve"><value>Mod installé</value></data>
+  <data name="Mod_BuildDone_Body_Format" xml:space="preserve"><value>{0} fichier(s) .rpy avec {1} choix annotés déployés vers :
+{2}
 
-Copiez-les dans le dossier game/ du jeu (sauvegarde d'abord) et démarrez Ren'Py.</value></data>
-  <data name="Mod_GenerateFailed_Title" xml:space="preserve"><value>Échec de la génération du mod</value></data>
-  <data name="Mod_DestRequired" xml:space="preserve"><value>Veuillez choisir un dossier de destination.</value></data>
-  <data name="Mod_DestExists_Title" xml:space="preserve"><value>Destination non vide</value></data>
-  <data name="Mod_DestExists_Body_Format" xml:space="preserve"><value>{0}
-
-Le dossier de destination contient déjà des fichiers. Écraser ?</value></data>
-  <data name="Mod_PickSource_Title" xml:space="preserve"><value>Choisir le dossier du jeu décompilé</value></data>
-  <data name="Mod_PickDest_Title" xml:space="preserve"><value>Choisir le dossier de sortie du mod</value></data>
+Lance le jeu — les indices apparaissent comme [K love+3] etc. dans les options de menu.</value></data>
+  <data name="Mod_BuildFailed_Title" xml:space="preserve"><value>Échec de la création du mod</value></data>
+  <data name="Mod_BuildFailedFormat" xml:space="preserve"><value>Échec de la création : {0}</value></data>
+  <data name="Mod_AlreadyInstalled_Title" xml:space="preserve"><value>Mod déjà installé</value></data>
+  <data name="Mod_AlreadyInstalled_Body" xml:space="preserve"><value>Un KrosteMod est déjà présent dans ce jeu. La recréation l'écrasera (les sauvegardes sont conservées). Continuer ?</value></data>
+  <data name="Mod_Uninstall_Confirm_Title" xml:space="preserve"><value>Supprimer le mod ?</value></data>
+  <data name="Mod_Uninstall_Confirm_Body" xml:space="preserve"><value>Ceci restaure les fichiers .rpyc originaux à partir des sauvegardes .krostemod-bak et supprime tous les fichiers du mod. Continuer ?</value></data>
+  <data name="Mod_UninstallDoneFormat" xml:space="preserve"><value>Mod supprimé — {0} fichier(s) supprimé(s), {1} original(aux) restauré(s).</value></data>
+  <data name="Mod_UninstallDone_Title" xml:space="preserve"><value>Mod supprimé</value></data>
+  <data name="Mod_UninstallDone_Body_Format" xml:space="preserve"><value>{0} fichier(s) de mod supprimé(s) et {1} sauvegarde(s) .rpyc originale(s) restaurée(s). Le jeu est de retour à son état d'origine.</value></data>
+  <data name="Mod_UninstallFailed_Title" xml:space="preserve"><value>Échec de la suppression du mod</value></data>
   <data name="Main_RecentFolders_Tip" xml:space="preserve"><value>Dossiers récemment décompilés</value></data>
   <data name="Save_Recent_Tip" xml:space="preserve"><value>Sauvegardes récemment ouvertes</value></data>
   <data name="Main_CompareArchive" xml:space="preserve"><value>🔀 Comparer…</value></data>

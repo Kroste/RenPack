@@ -177,46 +177,49 @@
 {1}</value></data>
   <data name="Msg_BatchExtractDoneWithErrors_Body_Format" xml:space="preserve"><value>{0} из {1} архивов успешно, {2} с ошибкой:</value></data>
   <data name="Main_Recent_Tip" xml:space="preserve"><value>Недавно открытые архивы</value></data>
-  <data name="Main_ModGenerator" xml:space="preserve"><value>🛠 Генератор модов</value></data>
-  <data name="Main_ModGenerator_Tip" xml:space="preserve"><value>Создание файлов KrosteMod из декомпилированной игры Ren'Py</value></data>
-  <data name="Window_ModGenerator" xml:space="preserve"><value>RenPack — Генератор модов</value></data>
-  <data name="Mod_Subtitle" xml:space="preserve"><value>Анализ декомпилированной игры Ren'Py и создание файлов KrosteMod (walkthrough, другие типы модов позже).</value></data>
-  <data name="Mod_Section_Source" xml:space="preserve"><value>ИСТОЧНИК</value></data>
-  <data name="Mod_Source_Description" xml:space="preserve"><value>Папка с декомпилированными файлами .rpy — обычно каталог game/ после 'extract' + 'decompile'.</value></data>
-  <data name="Mod_Source_Placeholder" xml:space="preserve"><value>/путь/к/декомпилированной/игре</value></data>
+  <data name="Main_ModGenerator" xml:space="preserve"><value>🛠 Авто-мод</value></data>
+  <data name="Main_ModGenerator_Tip" xml:space="preserve"><value>Мод одним кликом — выбери папку игры Ren'Py, готово</value></data>
+  <data name="Window_ModGenerator" xml:space="preserve"><value>RenPack — Авто-мод</value></data>
+  <data name="Mod_Subtitle" xml:space="preserve"><value>Выбери папку игры Ren'Py, нажми «Создать» — RenPack декомпилирует, анализирует и устанавливает мод автоматически.</value></data>
+  <data name="Mod_Section_Game" xml:space="preserve"><value>ПАПКА ИГРЫ</value></data>
+  <data name="Mod_Game_Description" xml:space="preserve"><value>Выбери корень игры или её подпапку game/ — RenPack автоматически найдёт файлы .rpyc.</value></data>
+  <data name="Mod_Game_Placeholder" xml:space="preserve"><value>/путь/к/RenpyИгре или её папке game/</value></data>
   <data name="Mod_Pick" xml:space="preserve"><value>📁 Обзор…</value></data>
-  <data name="Mod_Analyze" xml:space="preserve"><value>🔍 Анализировать</value></data>
-  <data name="Mod_Analyzing" xml:space="preserve"><value>Анализ …</value></data>
-  <data name="Mod_AnalyzeDoneFormat" xml:space="preserve"><value>Проанализировано: {0} файл(ов) .rpy, {1} выборов.</value></data>
-  <data name="Mod_AnalyzeFailedFormat" xml:space="preserve"><value>Ошибка анализа: {0}</value></data>
-  <data name="Mod_SourceNotFound" xml:space="preserve"><value>Исходная папка не существует.</value></data>
-  <data name="Mod_Section_Analysis" xml:space="preserve"><value>АНАЛИЗ</value></data>
-  <data name="Mod_Stat_Files" xml:space="preserve"><value>файлов</value></data>
-  <data name="Mod_Stat_Choices" xml:space="preserve"><value>выборов</value></data>
-  <data name="Mod_Stat_StoreVars" xml:space="preserve"><value>переменных</value></data>
-  <data name="Mod_Stat_Characters" xml:space="preserve"><value>персонажей</value></data>
-  <data name="Mod_TopStats_Title" xml:space="preserve"><value>Топ стат-переменных (по числу изменений):</value></data>
-  <data name="Mod_Section_Generate" xml:space="preserve"><value>СОЗДАТЬ</value></data>
+  <data name="Mod_PickGame_Title" xml:space="preserve"><value>Выберите папку игры Ren'Py</value></data>
+  <data name="Mod_Resolved_Prefix" xml:space="preserve"><value>Обнаруженная папка игры: </value></data>
+  <data name="Mod_Section_Build" xml:space="preserve"><value>СОЗДАТЬ</value></data>
   <data name="Mod_Type" xml:space="preserve"><value>Тип мода</value></data>
-  <data name="Mod_Destination" xml:space="preserve"><value>Целевая папка</value></data>
-  <data name="Mod_Destination_Placeholder" xml:space="preserve"><value>/путь/к/выводу/мода</value></data>
-  <data name="Mod_Generate" xml:space="preserve"><value>🛠 Создать мод</value></data>
-  <data name="Mod_Generating" xml:space="preserve"><value>Создание …</value></data>
-  <data name="Mod_GenerateDoneFormat" xml:space="preserve"><value>Записано {0} файл(ов) в {1}</value></data>
-  <data name="Mod_GenerateFailedFormat" xml:space="preserve"><value>Ошибка создания: {0}</value></data>
-  <data name="Mod_GenerateDone_Title" xml:space="preserve"><value>Мод создан</value></data>
-  <data name="Mod_GenerateDone_Body_Format" xml:space="preserve"><value>{0} файл(ов) .rpy записано в:
-{1}
+  <data name="Mod_BuildAction" xml:space="preserve"><value>🚀 Создать и установить мод</value></data>
+  <data name="Mod_UninstallAction" xml:space="preserve"><value>🗑 Удалить мод</value></data>
+  <data name="Mod_Hint_Backup" xml:space="preserve"><value>Оригиналы сохраняются как .rpyc.krostemod-bak — используйте «Удалить мод» для восстановления.</value></data>
+  <data name="Mod_Section_Result" xml:space="preserve"><value>РЕЗУЛЬТАТ</value></data>
+  <data name="Mod_Result_Files" xml:space="preserve"><value>файлов .rpy установлено</value></data>
+  <data name="Mod_Result_Choices" xml:space="preserve"><value>выборов аннотировано</value></data>
+  <data name="Mod_Result_DeployedTo" xml:space="preserve"><value>Установлено в: </value></data>
+  <data name="Mod_Building" xml:space="preserve"><value>Создание мода …</value></data>
+  <data name="Mod_Uninstalling" xml:space="preserve"><value>Удаление мода …</value></data>
+  <data name="Mod_Phase_Scanning" xml:space="preserve"><value>Поиск .rpyc …</value></data>
+  <data name="Mod_Phase_Decompiling_Format" xml:space="preserve"><value>Декомпиляция {0}/{1} …</value></data>
+  <data name="Mod_Phase_Analyzing" xml:space="preserve"><value>Анализ выборов …</value></data>
+  <data name="Mod_Phase_Generating" xml:space="preserve"><value>Генерация мода …</value></data>
+  <data name="Mod_Phase_Deploying_Format" xml:space="preserve"><value>Установка {0}/{1} …</value></data>
+  <data name="Mod_Phase_Cleaning" xml:space="preserve"><value>Очистка …</value></data>
+  <data name="Mod_BuildDoneFormat" xml:space="preserve"><value>Мод готов — {0} файл(ов) установлено в {1}.</value></data>
+  <data name="Mod_BuildDone_Title" xml:space="preserve"><value>Мод установлен</value></data>
+  <data name="Mod_BuildDone_Body_Format" xml:space="preserve"><value>{0} файл(ов) .rpy с {1} аннотированными выборами установлено в:
+{2}
 
-Скопируйте их в папку game/ игры (сначала резервная копия) и запустите Ren'Py.</value></data>
-  <data name="Mod_GenerateFailed_Title" xml:space="preserve"><value>Ошибка создания мода</value></data>
-  <data name="Mod_DestRequired" xml:space="preserve"><value>Пожалуйста, выберите целевую папку.</value></data>
-  <data name="Mod_DestExists_Title" xml:space="preserve"><value>Папка не пуста</value></data>
-  <data name="Mod_DestExists_Body_Format" xml:space="preserve"><value>{0}
-
-Целевая папка уже содержит файлы. Перезаписать?</value></data>
-  <data name="Mod_PickSource_Title" xml:space="preserve"><value>Выберите папку декомпилированной игры</value></data>
-  <data name="Mod_PickDest_Title" xml:space="preserve"><value>Выберите папку вывода мода</value></data>
+Запустите игру — подсказки появятся как [K love+3] и т.п. в опциях меню.</value></data>
+  <data name="Mod_BuildFailed_Title" xml:space="preserve"><value>Ошибка создания мода</value></data>
+  <data name="Mod_BuildFailedFormat" xml:space="preserve"><value>Ошибка создания: {0}</value></data>
+  <data name="Mod_AlreadyInstalled_Title" xml:space="preserve"><value>Мод уже установлен</value></data>
+  <data name="Mod_AlreadyInstalled_Body" xml:space="preserve"><value>В этой игре уже установлен KrosteMod. Пересоздание перезапишет его (резервные копии сохраняются). Продолжить?</value></data>
+  <data name="Mod_Uninstall_Confirm_Title" xml:space="preserve"><value>Удалить мод?</value></data>
+  <data name="Mod_Uninstall_Confirm_Body" xml:space="preserve"><value>Оригинальные файлы .rpyc будут восстановлены из резервных копий .krostemod-bak, а все файлы мода удалены. Продолжить?</value></data>
+  <data name="Mod_UninstallDoneFormat" xml:space="preserve"><value>Мод удалён — {0} файл(ов) удалено, {1} оригинал(ов) восстановлено.</value></data>
+  <data name="Mod_UninstallDone_Title" xml:space="preserve"><value>Мод удалён</value></data>
+  <data name="Mod_UninstallDone_Body_Format" xml:space="preserve"><value>Удалено {0} файл(ов) мода и восстановлено {1} оригинальных .rpyc резервных копий. Игра возвращена в исходное состояние.</value></data>
+  <data name="Mod_UninstallFailed_Title" xml:space="preserve"><value>Ошибка удаления мода</value></data>
   <data name="Main_RecentFolders_Tip" xml:space="preserve"><value>Недавно декомпилированные папки</value></data>
   <data name="Save_Recent_Tip" xml:space="preserve"><value>Недавно открытые сохранения</value></data>
   <data name="Main_CompareArchive" xml:space="preserve"><value>🔀 Сравнить…</value></data>

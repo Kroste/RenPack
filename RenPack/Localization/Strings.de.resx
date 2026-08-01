@@ -177,46 +177,49 @@
 {1}</value></data>
   <data name="Msg_BatchExtractDoneWithErrors_Body_Format" xml:space="preserve"><value>{0} von {1} Archiven erfolgreich, {2} fehlgeschlagen:</value></data>
   <data name="Main_Recent_Tip" xml:space="preserve"><value>Zuletzt geöffnete Archive</value></data>
-  <data name="Main_ModGenerator" xml:space="preserve"><value>🛠 Mod-Generator</value></data>
-  <data name="Main_ModGenerator_Tip" xml:space="preserve"><value>KrosteMod-Dateien aus einem dekompilierten Ren'Py-Spiel erzeugen</value></data>
-  <data name="Window_ModGenerator" xml:space="preserve"><value>RenPack — Mod-Generator</value></data>
-  <data name="Mod_Subtitle" xml:space="preserve"><value>Dekompiliertes Ren'Py-Spiel analysieren und KrosteMod-Dateien erzeugen (Walkthrough, weitere Mod-Typen folgen).</value></data>
-  <data name="Mod_Section_Source" xml:space="preserve"><value>QUELLE</value></data>
-  <data name="Mod_Source_Description" xml:space="preserve"><value>Ordner mit dekompilierten .rpy-Dateien — typischerweise das game/-Verzeichnis nach 'extract' + 'decompile'.</value></data>
-  <data name="Mod_Source_Placeholder" xml:space="preserve"><value>/pfad/zum/dekompilierten/spiel</value></data>
+  <data name="Main_ModGenerator" xml:space="preserve"><value>🛠 Auto-Mod</value></data>
+  <data name="Main_ModGenerator_Tip" xml:space="preserve"><value>Ein-Klick-Mod-Builder — Spiel-Ordner auswählen, fertig</value></data>
+  <data name="Window_ModGenerator" xml:space="preserve"><value>RenPack — Auto-Mod</value></data>
+  <data name="Mod_Subtitle" xml:space="preserve"><value>Ren'Py-Spiel-Ordner wählen, „Mod bauen" klicken — RenPack dekompiliert, analysiert und installiert den Mod automatisch.</value></data>
+  <data name="Mod_Section_Game" xml:space="preserve"><value>SPIEL-ORDNER</value></data>
+  <data name="Mod_Game_Description" xml:space="preserve"><value>Wähle den Spiel-Root oder den game/-Unterordner — RenPack findet die .rpyc-Dateien automatisch.</value></data>
+  <data name="Mod_Game_Placeholder" xml:space="preserve"><value>/pfad/zum/RenpySpiel oder dessen game/-Ordner</value></data>
   <data name="Mod_Pick" xml:space="preserve"><value>📁 Wählen…</value></data>
-  <data name="Mod_Analyze" xml:space="preserve"><value>🔍 Analysieren</value></data>
-  <data name="Mod_Analyzing" xml:space="preserve"><value>Analysiere …</value></data>
-  <data name="Mod_AnalyzeDoneFormat" xml:space="preserve"><value>Analysiert: {0} .rpy-Datei(en), {1} Choices.</value></data>
-  <data name="Mod_AnalyzeFailedFormat" xml:space="preserve"><value>Analyse fehlgeschlagen: {0}</value></data>
-  <data name="Mod_SourceNotFound" xml:space="preserve"><value>Quell-Ordner existiert nicht.</value></data>
-  <data name="Mod_Section_Analysis" xml:space="preserve"><value>ANALYSE</value></data>
-  <data name="Mod_Stat_Files" xml:space="preserve"><value>Dateien</value></data>
-  <data name="Mod_Stat_Choices" xml:space="preserve"><value>Choices</value></data>
-  <data name="Mod_Stat_StoreVars" xml:space="preserve"><value>Store-Vars</value></data>
-  <data name="Mod_Stat_Characters" xml:space="preserve"><value>Charaktere</value></data>
-  <data name="Mod_TopStats_Title" xml:space="preserve"><value>Top-Stat-Variablen (nach Änderungshäufigkeit):</value></data>
-  <data name="Mod_Section_Generate" xml:space="preserve"><value>GENERIEREN</value></data>
+  <data name="Mod_PickGame_Title" xml:space="preserve"><value>Ren'Py-Spiel-Ordner wählen</value></data>
+  <data name="Mod_Resolved_Prefix" xml:space="preserve"><value>Erkannter Spiel-Ordner: </value></data>
+  <data name="Mod_Section_Build" xml:space="preserve"><value>BAUEN</value></data>
   <data name="Mod_Type" xml:space="preserve"><value>Mod-Typ</value></data>
-  <data name="Mod_Destination" xml:space="preserve"><value>Ziel-Ordner</value></data>
-  <data name="Mod_Destination_Placeholder" xml:space="preserve"><value>/pfad/zum/mod-ausgabe</value></data>
-  <data name="Mod_Generate" xml:space="preserve"><value>🛠 Mod erzeugen</value></data>
-  <data name="Mod_Generating" xml:space="preserve"><value>Generiere …</value></data>
-  <data name="Mod_GenerateDoneFormat" xml:space="preserve"><value>{0} Datei(en) geschrieben nach {1}</value></data>
-  <data name="Mod_GenerateFailedFormat" xml:space="preserve"><value>Generierung fehlgeschlagen: {0}</value></data>
-  <data name="Mod_GenerateDone_Title" xml:space="preserve"><value>Mod erzeugt</value></data>
-  <data name="Mod_GenerateDone_Body_Format" xml:space="preserve"><value>{0} .rpy-Datei(en) geschrieben nach:
-{1}
+  <data name="Mod_BuildAction" xml:space="preserve"><value>🚀 Mod bauen &amp; installieren</value></data>
+  <data name="Mod_UninstallAction" xml:space="preserve"><value>🗑 Mod entfernen</value></data>
+  <data name="Mod_Hint_Backup" xml:space="preserve"><value>Originale werden als .rpyc.krostemod-bak gesichert — mit „Mod entfernen" lässt sich alles wieder herstellen.</value></data>
+  <data name="Mod_Section_Result" xml:space="preserve"><value>ERGEBNIS</value></data>
+  <data name="Mod_Result_Files" xml:space="preserve"><value>.rpy-Dateien installiert</value></data>
+  <data name="Mod_Result_Choices" xml:space="preserve"><value>Choices annotiert</value></data>
+  <data name="Mod_Result_DeployedTo" xml:space="preserve"><value>Installiert nach: </value></data>
+  <data name="Mod_Building" xml:space="preserve"><value>Baue Mod …</value></data>
+  <data name="Mod_Uninstalling" xml:space="preserve"><value>Entferne Mod …</value></data>
+  <data name="Mod_Phase_Scanning" xml:space="preserve"><value>Suche .rpyc …</value></data>
+  <data name="Mod_Phase_Decompiling_Format" xml:space="preserve"><value>Dekompiliere {0}/{1} …</value></data>
+  <data name="Mod_Phase_Analyzing" xml:space="preserve"><value>Analysiere Choices …</value></data>
+  <data name="Mod_Phase_Generating" xml:space="preserve"><value>Generiere Mod …</value></data>
+  <data name="Mod_Phase_Deploying_Format" xml:space="preserve"><value>Installiere {0}/{1} …</value></data>
+  <data name="Mod_Phase_Cleaning" xml:space="preserve"><value>Räume auf …</value></data>
+  <data name="Mod_BuildDoneFormat" xml:space="preserve"><value>Mod fertig — {0} Datei(en) installiert nach {1}.</value></data>
+  <data name="Mod_BuildDone_Title" xml:space="preserve"><value>Mod installiert</value></data>
+  <data name="Mod_BuildDone_Body_Format" xml:space="preserve"><value>{0} .rpy-Datei(en) mit {1} annotierten Choices installiert nach:
+{2}
 
-Kopiere sie in den game/-Ordner des Spiels (Backup vorher) und starte Ren'Py.</value></data>
-  <data name="Mod_GenerateFailed_Title" xml:space="preserve"><value>Mod-Generierung fehlgeschlagen</value></data>
-  <data name="Mod_DestRequired" xml:space="preserve"><value>Bitte einen Ziel-Ordner wählen.</value></data>
-  <data name="Mod_DestExists_Title" xml:space="preserve"><value>Ziel-Ordner nicht leer</value></data>
-  <data name="Mod_DestExists_Body_Format" xml:space="preserve"><value>{0}
-
-Der Ziel-Ordner enthält bereits Dateien. Überschreiben?</value></data>
-  <data name="Mod_PickSource_Title" xml:space="preserve"><value>Dekompilierten Spiel-Ordner wählen</value></data>
-  <data name="Mod_PickDest_Title" xml:space="preserve"><value>Mod-Ausgabe-Ordner wählen</value></data>
+Spiel starten — Hinweise erscheinen als [K love+3] etc. in den Menu-Optionen.</value></data>
+  <data name="Mod_BuildFailed_Title" xml:space="preserve"><value>Mod-Build fehlgeschlagen</value></data>
+  <data name="Mod_BuildFailedFormat" xml:space="preserve"><value>Build fehlgeschlagen: {0}</value></data>
+  <data name="Mod_AlreadyInstalled_Title" xml:space="preserve"><value>Mod bereits installiert</value></data>
+  <data name="Mod_AlreadyInstalled_Body" xml:space="preserve"><value>In diesem Spiel ist bereits ein KrosteMod installiert. Neu bauen überschreibt ihn (Backups bleiben erhalten). Fortfahren?</value></data>
+  <data name="Mod_Uninstall_Confirm_Title" xml:space="preserve"><value>Mod entfernen?</value></data>
+  <data name="Mod_Uninstall_Confirm_Body" xml:space="preserve"><value>Die Original-.rpyc werden aus den .krostemod-bak-Backups wiederhergestellt und alle Mod-Dateien gelöscht. Fortfahren?</value></data>
+  <data name="Mod_UninstallDoneFormat" xml:space="preserve"><value>Mod entfernt — {0} Datei(en) gelöscht, {1} Original(e) wiederhergestellt.</value></data>
+  <data name="Mod_UninstallDone_Title" xml:space="preserve"><value>Mod entfernt</value></data>
+  <data name="Mod_UninstallDone_Body_Format" xml:space="preserve"><value>{0} Mod-Datei(en) gelöscht und {1} Original-.rpyc-Backup(s) wiederhergestellt. Das Spiel ist im Original-Zustand.</value></data>
+  <data name="Mod_UninstallFailed_Title" xml:space="preserve"><value>Mod-Entfernen fehlgeschlagen</value></data>
   <data name="Main_RecentFolders_Tip" xml:space="preserve"><value>Zuletzt dekompilierte Ordner</value></data>
   <data name="Save_Recent_Tip" xml:space="preserve"><value>Zuletzt geöffnete Save-Dateien</value></data>
   <data name="Main_CompareArchive" xml:space="preserve"><value>🔀 Vergleichen…</value></data>

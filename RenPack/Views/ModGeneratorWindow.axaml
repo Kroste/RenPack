@@ -6,10 +6,10 @@
         xmlns:controls="using:RenPack.Controls"
         xmlns:vm="using:RenPack.ViewModels"
         xmlns:loc="using:RenPack.Localization"
-        mc:Ignorable="d" d:DesignWidth="820" d:DesignHeight="680"
+        mc:Ignorable="d" d:DesignWidth="720" d:DesignHeight="620"
         x:Class="RenPack.Views.ModGeneratorWindow"
         x:DataType="vm:ModGeneratorViewModel"
-        Width="820" Height="720" MinWidth="620" MinHeight="520"
+        Width="720" Height="620" MinWidth="560" MinHeight="480"
         WindowStartupLocation="CenterOwner"
         Title="{loc:Tr Window_ModGenerator}"
         Background="{DynamicResource KrosteBackgroundBrush}">
@@ -25,8 +25,13 @@
         <Border DockPanel.Dock="Bottom" Padding="18,10"
                 BorderBrush="{DynamicResource KrosteBorderBrush}" BorderThickness="0,1,0,0"
                 Background="{DynamicResource KrosteTitleBarBrush}">
-            <TextBlock Text="{Binding StatusText}" Classes="secondary"
-                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="{Binding StatusText}" Classes="secondary"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding ProgressDetail}" Classes="muted"
+                           FontFamily="Cascadia Mono,Consolas,monospace"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
         </Border>
 
         <ScrollViewer>
@@ -39,89 +44,83 @@
                                Margin="0,2,0,0" TextWrapping="Wrap" />
                 </StackPanel>
 
-                <!-- Schritt 1: Quelle -->
+                <!-- Karte 1: Spiel-Ordner -->
                 <Border Classes="card">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="{loc:Tr Mod_Section_Source}" Classes="section-label" />
-                        <TextBlock Text="{loc:Tr Mod_Source_Description}" Classes="muted"
+                        <TextBlock Text="{loc:Tr Mod_Section_Game}" Classes="section-label" />
+                        <TextBlock Text="{loc:Tr Mod_Game_Description}" Classes="muted"
                                    FontSize="11" TextWrapping="Wrap" />
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                            <TextBox Grid.Column="0" Text="{Binding SourceDirectory}"
-                                     PlaceholderText="{loc:Tr Mod_Source_Placeholder}" />
+                            <TextBox Grid.Column="0" Text="{Binding GameFolder}"
+                                     PlaceholderText="{loc:Tr Mod_Game_Placeholder}"
+                                     IsEnabled="{Binding !IsBusy}" />
                             <Button Grid.Column="1" Content="{loc:Tr Mod_Pick}"
-                                    Command="{Binding PickSourceCommand}" />
+                                    Command="{Binding PickFolderCommand}" />
                         </Grid>
-                        <Button Classes="accent" Content="{loc:Tr Mod_Analyze}"
-                                Command="{Binding AnalyzeCommand}"
-                                HorizontalAlignment="Left" Margin="0,4,0,0" />
+                        <!-- Auflösung des game/-Ordners anzeigen wenn abweichend -->
+                        <TextBlock FontSize="11" Classes="muted"
+                                   IsVisible="{Binding ResolvedGameDir, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                   TextWrapping="Wrap">
+                            <Run Text="{loc:Tr Mod_Resolved_Prefix}" />
+                            <Run Text="{Binding ResolvedGameDir}"
+                                 FontFamily="Cascadia Mono,Consolas,monospace"
+                                 Foreground="{DynamicResource KrosteGoldBrush}" />
+                        </TextBlock>
                     </StackPanel>
                 </Border>
 
-                <!-- Schritt 2: Analyse-Ergebnis -->
-                <Border Classes="card" IsVisible="{Binding HasAnalysis}">
-                    <StackPanel Spacing="10">
-                        <TextBlock Text="{loc:Tr Mod_Section_Analysis}" Classes="section-label" />
-                        <UniformGrid Columns="4" Rows="1">
-                            <StackPanel Spacing="2" HorizontalAlignment="Center">
-                                <TextBlock Text="{Binding AnalyzedFilesCount}" Classes="h2" HorizontalAlignment="Center" />
-                                <TextBlock Text="{loc:Tr Mod_Stat_Files}" Classes="muted" FontSize="11" HorizontalAlignment="Center" />
-                            </StackPanel>
-                            <StackPanel Spacing="2" HorizontalAlignment="Center">
-                                <TextBlock Text="{Binding ChoiceCount}" Classes="h2" HorizontalAlignment="Center" />
-                                <TextBlock Text="{loc:Tr Mod_Stat_Choices}" Classes="muted" FontSize="11" HorizontalAlignment="Center" />
-                            </StackPanel>
-                            <StackPanel Spacing="2" HorizontalAlignment="Center">
-                                <TextBlock Text="{Binding StoreVarCount}" Classes="h2" HorizontalAlignment="Center" />
-                                <TextBlock Text="{loc:Tr Mod_Stat_StoreVars}" Classes="muted" FontSize="11" HorizontalAlignment="Center" />
-                            </StackPanel>
-                            <StackPanel Spacing="2" HorizontalAlignment="Center">
-                                <TextBlock Text="{Binding CharacterCount}" Classes="h2" HorizontalAlignment="Center" />
-                                <TextBlock Text="{loc:Tr Mod_Stat_Characters}" Classes="muted" FontSize="11" HorizontalAlignment="Center" />
-                            </StackPanel>
-                        </UniformGrid>
-                        <Rectangle Classes="divider-h" Margin="0,6,0,0" />
-                        <TextBlock Text="{loc:Tr Mod_TopStats_Title}" Classes="secondary" FontSize="11" />
-                        <ItemsControl ItemsSource="{Binding TopStats}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:StatCandidate">
-                                    <Grid ColumnDefinitions="*,Auto" Margin="0,2">
-                                        <TextBlock Grid.Column="0" Text="{Binding Variable}"
-                                                   FontFamily="Cascadia Mono,Consolas,monospace" />
-                                        <TextBlock Grid.Column="1"
-                                                   Text="{Binding ChangeCount, StringFormat='{}{0}×'}"
-                                                   Foreground="{DynamicResource KrosteGoldBrush}" />
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </Border>
-
-                <!-- Schritt 3: Mod-Typ + Ziel + Generieren -->
-                <Border Classes="card" IsVisible="{Binding HasAnalysis}">
-                    <StackPanel Spacing="10">
-                        <TextBlock Text="{loc:Tr Mod_Section_Generate}" Classes="section-label" />
+                <!-- Karte 2: Mod-Typ + Start -->
+                <Border Classes="card">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="{loc:Tr Mod_Section_Build}" Classes="section-label" />
 
                         <StackPanel Spacing="6">
                             <TextBlock Text="{loc:Tr Mod_Type}" Classes="secondary" />
                             <ComboBox ItemsSource="{Binding AvailableModTypes}"
                                       SelectedItem="{Binding SelectedModType}"
-                                      HorizontalAlignment="Stretch" />
+                                      HorizontalAlignment="Stretch"
+                                      IsEnabled="{Binding !IsBusy}" />
                         </StackPanel>
 
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="{loc:Tr Mod_Destination}" Classes="secondary" />
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                <TextBox Grid.Column="0" Text="{Binding DestinationDirectory}"
-                                         PlaceholderText="{loc:Tr Mod_Destination_Placeholder}" />
-                                <Button Grid.Column="1" Content="{loc:Tr Mod_Pick}"
-                                        Command="{Binding PickDestinationCommand}" />
-                            </Grid>
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Button Classes="accent" Content="{loc:Tr Mod_BuildAction}"
+                                    Command="{Binding BuildCommand}"
+                                    Padding="18,10" FontSize="14" />
+                            <Button Classes="danger" Content="{loc:Tr Mod_UninstallAction}"
+                                    Command="{Binding UninstallCommand}"
+                                    IsVisible="{Binding HasInstalledMod}"
+                                    Padding="18,10" FontSize="14" />
+                            <ProgressBar IsIndeterminate="True"
+                                         IsVisible="{Binding IsBusy}"
+                                         Width="160" VerticalAlignment="Center" />
                         </StackPanel>
 
-                        <Button Classes="accent" Content="{loc:Tr Mod_Generate}"
-                                Command="{Binding GenerateCommand}"
-                                HorizontalAlignment="Left" Margin="0,4,0,0" />
+                        <TextBlock Text="{loc:Tr Mod_Hint_Backup}" Classes="muted"
+                                   FontSize="11" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Karte 3: Ergebnis-Statistik (nur nach erfolgreichem Build) -->
+                <Border Classes="card" IsVisible="{Binding HasResult}">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="{loc:Tr Mod_Section_Result}" Classes="section-label" />
+                        <UniformGrid Columns="2" Rows="1">
+                            <StackPanel Spacing="2" HorizontalAlignment="Center">
+                                <TextBlock Text="{Binding ResultFilesText}" Classes="h2" HorizontalAlignment="Center" />
+                                <TextBlock Text="{loc:Tr Mod_Result_Files}" Classes="muted" FontSize="11" HorizontalAlignment="Center" />
+                            </StackPanel>
+                            <StackPanel Spacing="2" HorizontalAlignment="Center">
+                                <TextBlock Text="{Binding ResultChoicesText}" Classes="h2" HorizontalAlignment="Center" />
+                                <TextBlock Text="{loc:Tr Mod_Result_Choices}" Classes="muted" FontSize="11" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </UniformGrid>
+                        <Rectangle Classes="divider-h" Margin="0,6,0,0" />
+                        <TextBlock TextWrapping="Wrap" FontSize="11">
+                            <Run Text="{loc:Tr Mod_Result_DeployedTo}" Classes="secondary" />
+                            <Run Text="{Binding ResultDirText}"
+                                 FontFamily="Cascadia Mono,Consolas,monospace"
+                                 Foreground="{DynamicResource KrosteGoldBrush}" />
+                        </TextBlock>
                     </StackPanel>
                 </Border>
 

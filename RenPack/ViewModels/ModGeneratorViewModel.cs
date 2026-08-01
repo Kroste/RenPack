@@ -8,96 +8,80 @@ using RenPack.Services.Modding;
 namespace RenPack.ViewModels;
 
 /// <summary>
-/// UI-State fuer das Mod-Generator-Fenster. Kapselt den 3-Schritt-Workflow:
-/// (1) Quell-Ordner (dekompiliertes Spiel) waehlen,
-/// (2) analysieren — zeigt Statistik und Top-Stats,
-/// (3) Mod-Typ + Ziel-Ordner waehlen und generieren.
+/// UI-State fuer den „Knopf-fuer-Dumme"-Mod-Generator: User waehlt den
+/// Spiel-Ordner (Root oder <c>game/</c>), klickt einen Button, und die
+/// gesamte Pipeline (decompile → analyze → generate → deploy → cleanup)
+/// laeuft durch <see cref="OneClickModBuilder"/>.
 ///
-/// Aktuell ist nur der Walkthrough-Mod implementiert; die
-/// <see cref="AvailableModTypes"/>-Liste ist so aufgebaut dass spaeter
-/// Cheat-Mod und Rename-Patch dazukommen koennen ohne UI-Umbau.
+/// Zeigt live den Phase-Status („Dekompiliere script.rpyc..."), am Ende
+/// die Ergebnis-Statistik. Wenn im gewaehlten Spiel bereits ein Mod
+/// installiert ist (Manifest gefunden), wird zusaetzlich ein
+/// „Mod entfernen"-Button freigeschaltet.
 /// </summary>
 public sealed partial class ModGeneratorViewModel : ObservableObject
 {
     private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
-    private readonly RenpyModAnalyzer _analyzer = new();
-    private readonly KrosteWalkthroughGenerator _walkthrough = new();
+    private readonly OneClickModBuilder _builder = new();
 
     public IModGeneratorUi? Ui { get; set; }
 
-    // ---- Schritt 1: Quelle ------------------------------------------------
+    // ---- Spiel-Ordner -----------------------------------------------------
 
-    /// <summary>Ordner mit dekompilierten <c>.rpy</c>-Dateien (typischerweise
-    /// das <c>game/</c>-Verzeichnis des Spiels nach extract+decompile).</summary>
+    /// <summary>Vom User gewaehlter Ordner — entweder Spiel-Root oder direkt
+    /// <c>game/</c>. Der Builder findet das echte <c>game/</c> selbst.</summary>
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(AnalyzeCommand))]
-    [NotifyCanExecuteChangedFor(nameof(GenerateCommand))]
-    [NotifyPropertyChangedFor(nameof(DestinationDirectory))]
-    private string _sourceDirectory = "";
+    [NotifyCanExecuteChangedFor(nameof(BuildCommand))]
+    [NotifyCanExecuteChangedFor(nameof(UninstallCommand))]
+    [NotifyPropertyChangedFor(nameof(HasInstalledMod))]
+    [NotifyPropertyChangedFor(nameof(ResolvedGameDir))]
+    private string _gameFolder = "";
 
-    // ---- Schritt 2: Analyse -----------------------------------------------
+    /// <summary>Der aufgeloeste <c>game/</c>-Pfad (falls User nur den Root
+    /// gewaehlt hat) — nur zur Anzeige, damit der User sieht was wir treffen.</summary>
+    public string? ResolvedGameDir => string.IsNullOrWhiteSpace(GameFolder)
+        ? null
+        : OneClickModBuilder.ResolveGameDir(GameFolder);
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasAnalysis))]
-    [NotifyPropertyChangedFor(nameof(AnalyzedFilesCount))]
-    [NotifyPropertyChangedFor(nameof(ChoiceCount))]
-    [NotifyPropertyChangedFor(nameof(StoreVarCount))]
-    [NotifyPropertyChangedFor(nameof(CharacterCount))]
-    [NotifyCanExecuteChangedFor(nameof(GenerateCommand))]
-    private ModAnalysis? _analysis;
+    /// <summary>True, wenn im gewaehlten Spiel bereits ein KrosteMod-
+    /// Manifest liegt (dann Uninstall-Button anzeigen).</summary>
+    public bool HasInstalledMod => !string.IsNullOrWhiteSpace(GameFolder)
+        && _builder.FindInstalledManifest(GameFolder) is not null;
 
-    public bool HasAnalysis => Analysis is not null;
-    public int AnalyzedFilesCount => Analysis?.AnalyzedFiles.Count ?? 0;
-    public int ChoiceCount => Analysis?.Choices.Count ?? 0;
-    public int StoreVarCount => Analysis?.StoreVariables.Count ?? 0;
-    public int CharacterCount => Analysis?.Characters.Count ?? 0;
-
-    /// <summary>Top-Stat-Kandidaten nach Aenderungshaeufigkeit — hilft dem
-    /// User zu sehen, welche Variablen das Spiel als „Stats" behandelt
-    /// (Vorbereitung fuer den spaeteren Cheat-Mod-Generator in E3).</summary>
-    public ObservableCollection<StatCandidate> TopStats { get; } = [];
-
-    // ---- Schritt 3: Ziel + Typ --------------------------------------------
+    // ---- Mod-Typ ----------------------------------------------------------
 
     public ObservableCollection<ModType> AvailableModTypes { get; } =
     [
         new ModType(ModTypeId.Walkthrough, "Walkthrough"),
-        // spaeter: new ModType(ModTypeId.Cheat, "Cheat menu"),
-        //          new ModType(ModTypeId.Rename, "Character rename (AI)"),
+        // spaeter: Cheat, Rename …
     ];
 
     [ObservableProperty] private ModType _selectedModType;
 
-    /// <summary>Ziel-Ordner fuer die generierten Mod-Dateien. Default:
-    /// <c>&lt;source&gt;/../KrosteMod-&lt;typ&gt;/</c> — direkt neben dem
-    /// Spiel-Ordner, damit man's leicht zum Spiel kopieren kann.</summary>
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(GenerateCommand))]
-    private string _destinationDirectory = "";
-
-    partial void OnSourceDirectoryChanged(string value) => UpdateDefaultDest();
-    partial void OnSelectedModTypeChanged(ModType value) => UpdateDefaultDest();
-
-    private void UpdateDefaultDest()
-    {
-        if (string.IsNullOrWhiteSpace(SourceDirectory)) return;
-        var parent = System.IO.Path.GetDirectoryName(SourceDirectory.TrimEnd('/', '\\'))
-                     ?? SourceDirectory;
-        DestinationDirectory = System.IO.Path.Combine(parent,
-            $"KrosteMod-{SelectedModType.Id}");
-    }
-
-    // ---- Status / Busy ----------------------------------------------------
+    // ---- Status / Progress ------------------------------------------------
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(AnalyzeCommand))]
-    [NotifyCanExecuteChangedFor(nameof(GenerateCommand))]
-    [NotifyCanExecuteChangedFor(nameof(PickSourceCommand))]
-    [NotifyCanExecuteChangedFor(nameof(PickDestinationCommand))]
+    [NotifyCanExecuteChangedFor(nameof(BuildCommand))]
+    [NotifyCanExecuteChangedFor(nameof(UninstallCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PickFolderCommand))]
     private bool _isBusy;
 
     [ObservableProperty] private string _statusText = "";
+    [ObservableProperty] private string _progressDetail = "";
+
+    /// <summary>Nach erfolgreichem Build gefuellt — dient als Erfolgsanzeige
+    /// und blendet die Statistik-Karte ein.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasResult))]
+    [NotifyPropertyChangedFor(nameof(ResultFilesText))]
+    [NotifyPropertyChangedFor(nameof(ResultChoicesText))]
+    [NotifyPropertyChangedFor(nameof(ResultDirText))]
+    private OneClickResult? _lastResult;
+
+    public bool HasResult => LastResult is not null;
+    public string ResultFilesText => LastResult?.DeployedFileCount.ToString() ?? "";
+    public string ResultChoicesText => LastResult?.Analysis.Choices.Count.ToString() ?? "";
+    public string ResultDirText => LastResult?.GameDir ?? "";
 
     public ModGeneratorViewModel()
     {
@@ -107,105 +91,121 @@ public sealed partial class ModGeneratorViewModel : ObservableObject
     // ---- Commands ---------------------------------------------------------
 
     [RelayCommand(CanExecute = nameof(CanInteract))]
-    private async Task PickSourceAsync()
+    private async Task PickFolderAsync()
     {
         if (Ui is null) return;
-        var picked = await Ui.PickFolderAsync(L.T("Mod_PickSource_Title"));
-        if (picked is not null) SourceDirectory = picked;
+        var picked = await Ui.PickFolderAsync(L.T("Mod_PickGame_Title"));
+        if (picked is not null) GameFolder = picked;
     }
 
-    [RelayCommand(CanExecute = nameof(CanInteract))]
-    private async Task PickDestinationAsync()
+    [RelayCommand(CanExecute = nameof(CanBuild))]
+    private async Task BuildAsync()
     {
         if (Ui is null) return;
-        var picked = await Ui.PickFolderAsync(L.T("Mod_PickDest_Title"));
-        if (picked is not null) DestinationDirectory = picked;
-    }
 
-    [RelayCommand(CanExecute = nameof(CanAnalyze))]
-    private async Task AnalyzeAsync()
-    {
-        if (!Directory.Exists(SourceDirectory))
+        // Vor-Check: gibt schon einen Mod → User warnen.
+        if (HasInstalledMod)
         {
-            StatusText = L.T("Mod_SourceNotFound");
-            return;
+            bool proceed = await Ui.ConfirmAsync(
+                L.T("Mod_AlreadyInstalled_Title"),
+                L.T("Mod_AlreadyInstalled_Body"));
+            if (!proceed) return;
         }
+
         IsBusy = true;
-        StatusText = L.T("Mod_Analyzing");
+        LastResult = null;
+        StatusText = L.T("Mod_Building");
+        ProgressDetail = "";
+
+        var pickedType = SelectedModType.Id;
+        var pickedFolder = GameFolder;
+
+        var progress = new Progress<OneClickProgress>(p =>
+        {
+            var phaseText = p.Phase switch
+            {
+                OneClickPhase.Scanning => L.T("Mod_Phase_Scanning"),
+                OneClickPhase.Decompiling => L.F("Mod_Phase_Decompiling_Format", p.Done, p.Total),
+                OneClickPhase.Analyzing => L.T("Mod_Phase_Analyzing"),
+                OneClickPhase.Generating => L.T("Mod_Phase_Generating"),
+                OneClickPhase.Deploying => L.F("Mod_Phase_Deploying_Format", p.Done, p.Total),
+                OneClickPhase.Cleaning => L.T("Mod_Phase_Cleaning"),
+                _ => "",
+            };
+            StatusText = phaseText;
+            ProgressDetail = p.CurrentFile;
+        });
+
         try
         {
-            var analysis = await Task.Run(() => _analyzer.Analyze(SourceDirectory));
-            Analysis = analysis;
-            RefreshTopStats(analysis);
-            StatusText = L.F("Mod_AnalyzeDoneFormat",
-                analysis.AnalyzedFiles.Count, analysis.Choices.Count);
+            var result = await Task.Run(() =>
+                _builder.Build(pickedFolder, pickedType, progress));
+            LastResult = result;
+            StatusText = L.F("Mod_BuildDoneFormat", result.DeployedFileCount, result.GameDir);
+            ProgressDetail = "";
+            OnPropertyChanged(nameof(HasInstalledMod));
+
+            await Ui.ShowMessageAsync(
+                L.T("Mod_BuildDone_Title"),
+                L.F("Mod_BuildDone_Body_Format",
+                    result.DeployedFileCount,
+                    result.Analysis.Choices.Count,
+                    result.GameDir));
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Mod-Analyse fehlgeschlagen");
-            StatusText = L.F("Mod_AnalyzeFailedFormat", ex.Message);
+            Log.Error(ex, "One-Click-Mod-Build fehlgeschlagen");
+            StatusText = L.F("Mod_BuildFailedFormat", ex.Message);
+            ProgressDetail = "";
+            await Ui.ShowMessageAsync(L.T("Mod_BuildFailed_Title"), ex.Message);
         }
         finally { IsBusy = false; }
     }
 
-    private void RefreshTopStats(ModAnalysis analysis)
+    [RelayCommand(CanExecute = nameof(CanUninstall))]
+    private async Task UninstallAsync()
     {
-        TopStats.Clear();
-        var stats = analysis.Choices.SelectMany(c => c.Deltas)
-            .Where(d => d.Op is "+=" or "-=")
-            .GroupBy(d => d.Variable)
-            .Select(g => new StatCandidate(g.Key, g.Count()))
-            .OrderByDescending(s => s.ChangeCount)
-            .Take(10);
-        foreach (var s in stats) TopStats.Add(s);
-    }
+        if (Ui is null) return;
 
-    [RelayCommand(CanExecute = nameof(CanGenerate))]
-    private async Task GenerateAsync()
-    {
-        if (Ui is null || Analysis is null) return;
-        if (string.IsNullOrWhiteSpace(DestinationDirectory))
-        {
-            StatusText = L.T("Mod_DestRequired");
-            return;
-        }
-        if (Directory.Exists(DestinationDirectory) &&
-            Directory.EnumerateFileSystemEntries(DestinationDirectory).Any())
-        {
-            bool overwrite = await Ui.ConfirmAsync(
-                L.T("Mod_DestExists_Title"),
-                L.F("Mod_DestExists_Body_Format", DestinationDirectory));
-            if (!overwrite) return;
-        }
+        bool confirmed = await Ui.ConfirmAsync(
+            L.T("Mod_Uninstall_Confirm_Title"),
+            L.T("Mod_Uninstall_Confirm_Body"));
+        if (!confirmed) return;
 
         IsBusy = true;
-        StatusText = L.T("Mod_Generating");
+        StatusText = L.T("Mod_Uninstalling");
+        ProgressDetail = "";
+
+        var pickedFolder = GameFolder;
         try
         {
-            int written = await Task.Run(() => SelectedModType.Id switch
+            var result = await Task.Run(() =>
             {
-                ModTypeId.Walkthrough => _walkthrough.Generate(
-                    SourceDirectory, DestinationDirectory, Analysis),
-                _ => throw new NotSupportedException($"Unbekannter Mod-Typ: {SelectedModType.Id}"),
+                var gameDir = OneClickModBuilder.ResolveGameDir(pickedFolder)
+                    ?? throw new DirectoryNotFoundException(pickedFolder);
+                return _builder.Uninstall(gameDir);
             });
-            StatusText = L.F("Mod_GenerateDoneFormat", written, DestinationDirectory);
+            StatusText = L.F("Mod_UninstallDoneFormat",
+                result.RemovedFiles, result.RestoredBackups);
+            LastResult = null;
+            OnPropertyChanged(nameof(HasInstalledMod));
             await Ui.ShowMessageAsync(
-                L.T("Mod_GenerateDone_Title"),
-                L.F("Mod_GenerateDone_Body_Format", written, DestinationDirectory));
+                L.T("Mod_UninstallDone_Title"),
+                L.F("Mod_UninstallDone_Body_Format",
+                    result.RemovedFiles, result.RestoredBackups));
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Mod-Generierung fehlgeschlagen");
-            StatusText = L.F("Mod_GenerateFailedFormat", ex.Message);
-            await Ui.ShowMessageAsync(L.T("Mod_GenerateFailed_Title"), ex.Message);
+            Log.Error(ex, "Mod-Uninstall fehlgeschlagen");
+            StatusText = L.F("Mod_BuildFailedFormat", ex.Message);
+            await Ui.ShowMessageAsync(L.T("Mod_UninstallFailed_Title"), ex.Message);
         }
         finally { IsBusy = false; }
     }
 
     private bool CanInteract() => !IsBusy;
-    private bool CanAnalyze() => !IsBusy && !string.IsNullOrWhiteSpace(SourceDirectory);
-    private bool CanGenerate() => !IsBusy && HasAnalysis
-        && !string.IsNullOrWhiteSpace(DestinationDirectory);
+    private bool CanBuild() => !IsBusy && !string.IsNullOrWhiteSpace(GameFolder);
+    private bool CanUninstall() => !IsBusy && HasInstalledMod;
 }
 
 public interface IModGeneratorUi
@@ -215,11 +215,7 @@ public interface IModGeneratorUi
     Task<bool> ConfirmAsync(string title, string message);
 }
 
-public enum ModTypeId { Walkthrough, Cheat, Rename }
-
 public sealed record ModType(ModTypeId Id, string DisplayName)
 {
     public override string ToString() => DisplayName;
 }
-
-public sealed record StatCandidate(string Variable, int ChangeCount);

@@ -1,5 +1,10 @@
 namespace RenPack.Services.Modding;
 
+/// <summary>Welchen Mod-Typ soll die <see cref="OneClickModBuilder"/>-
+/// Pipeline erzeugen? Aktuell ist nur <c>Walkthrough</c> implementiert;
+/// <c>Cheat</c> und <c>Rename</c> sind Etappen 3 und 4.</summary>
+public enum ModTypeId { Walkthrough, Cheat, Rename }
+
 /// <summary>Ergebnis einer <see cref="RenpyModAnalyzer.Analyze(string)"/>-
 /// Auswertung eines dekompilierten Ren'Py-Spiels.</summary>
 public sealed record ModAnalysis(
