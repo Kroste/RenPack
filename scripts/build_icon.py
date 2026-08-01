@@ -3,9 +3,10 @@
 Build RenPack's app icon (PNG + ICO) from scratch — reproducible design
 via Pillow instead of shipping opaque binary files.
 
-Motif: a stylised "package/archive" — abstract box with lid line and a
-vertical tie strap, all in Kroste-Gold on a dark rounded-square base.
-No text: must stay readable at 16x16.
+Motif (v0.10.2, updated from the "package" design in v0.7.0):
+Anonymous-/V-for-Vendetta-style mask silhouette on a dark rounded-square
+base. Passt zum "RenPack modded Ren'Py"-Vibe und ist in Familie mit den
+Cheat- und Info-Overlay-Icons (siehe build_cheat_icon.py, build_hint_icon.py).
 
 Design rules (from kroste-avalonia/references/design.md):
 - 256x256 canvas, rounded corners (radius ~48).
@@ -24,9 +25,46 @@ OUT_DIR = REPO / "RenPack" / "Assets"
 
 CANVAS = 256
 RADIUS = 48
-BG = (22, 28, 35, 255)            # dark, matches Kroste palette
-GOLD = (224, 177, 76, 255)         # Kroste gold — the app accent
-BLUE = (18, 62, 107, 255)          # Kroste accent blue — subtle border
+BG        = (22, 28, 35, 255)        # dark backdrop
+BLUE      = (18, 62, 107, 255)       # base outline
+MASK_FILL = (196, 205, 214, 255)     # helles Grau (Maskenkoerper)
+OUTLINE   = (10, 12, 18, 255)        # schwarze Kontur
+EYE_DARK  = (10, 12, 18, 255)        # geschlossene Augen
+CHIN_DARK = (108, 118, 132, 255)     # innere Kinn-Schattierung
+GOLD_HI   = (224, 177, 76, 255)      # Kroste-Gold-Akzent (Kinn-Highlight)
+
+
+def draw_mask(draw: ImageDraw.ImageDraw, W: int, xoff: int = 0, yoff: int = 0):
+    """Zeichnet die Anonymous-V-Maske skaliert auf W (im Canvas W x W).
+    Wird auch von build_hint_icon.py und build_cheat_icon.py verwendet."""
+    top_left    = (int(W * 0.20) + xoff, int(W * 0.14) + yoff)
+    top_bump    = (int(W * 0.50) + xoff, int(W * 0.05) + yoff)
+    top_right   = (int(W * 0.80) + xoff, int(W * 0.14) + yoff)
+    right_curve = (int(W * 0.72) + xoff, int(W * 0.55) + yoff)
+    bottom      = (int(W * 0.50) + xoff, int(W * 0.92) + yoff)
+    left_curve  = (int(W * 0.28) + xoff, int(W * 0.55) + yoff)
+
+    poly = [top_left, top_bump, top_right, right_curve, bottom, left_curve]
+    draw.polygon(poly, fill=MASK_FILL)
+    draw.line(poly + [top_left], fill=OUTLINE, width=max(2, int(W * 0.02)))
+
+    # Geschlossene Augen — Halbkreise, nach unten offen
+    eye_y = int(W * 0.30) + yoff
+    for cx in (int(W * 0.35) + xoff, int(W * 0.65) + xoff):
+        bbox = (cx - int(W * 0.07), eye_y - int(W * 0.02),
+                cx + int(W * 0.07), eye_y + int(W * 0.06))
+        draw.arc(bbox, start=180, end=360, fill=EYE_DARK,
+                 width=max(2, int(W * 0.02)))
+
+    # Kinn-Innendreieck
+    inner_chin = [
+        (int(W * 0.42) + xoff, int(W * 0.55) + yoff),
+        (int(W * 0.58) + xoff, int(W * 0.55) + yoff),
+        (int(W * 0.50) + xoff, int(W * 0.75) + yoff),
+    ]
+    draw.polygon(inner_chin, fill=CHIN_DARK)
+    draw.line(inner_chin + [inner_chin[0]], fill=OUTLINE,
+              width=max(2, int(W * 0.015)))
 
 
 def build_master() -> Image.Image:
@@ -39,25 +77,14 @@ def build_master() -> Image.Image:
                            radius=RADIUS, fill=BG,
                            outline=BLUE, width=3)
 
-    # Package outline
-    stroke = 10
-    inset = 60
-    box = (inset, inset + 18, CANVAS - inset, CANVAS - inset)
-    draw.rectangle(box, outline=GOLD, width=stroke)
+    # Maske zentriert in der Rounded-Base — leichter Rand oben/unten,
+    # damit sie nicht am Bezel klebt
+    draw_mask(draw, CANVAS)
 
-    # Lid line — horizontal, upper third
-    lid_y = box[1] + (box[3] - box[1]) // 3
-    draw.line((box[0], lid_y, box[2], lid_y), fill=GOLD, width=stroke)
-
-    # Vertical tie strap
-    mid_x = CANVAS // 2
-    draw.line((mid_x, box[1], mid_x, box[3]), fill=GOLD, width=stroke)
-
-    # Small notch at the top centre — reads as a bow / opening
-    notch = 12
-    draw.ellipse((mid_x - notch, box[1] - notch // 2 - 2,
-                  mid_x + notch, box[1] + notch // 2 + 2),
-                 fill=GOLD)
+    # Kleiner Kroste-Gold-Akzent unter dem Kinn (Marker "Kroste-App")
+    draw.line((CANVAS // 2 - 22, CANVAS - 24,
+               CANVAS // 2 + 22, CANVAS - 24),
+              fill=GOLD_HI, width=5)
 
     return img
 
