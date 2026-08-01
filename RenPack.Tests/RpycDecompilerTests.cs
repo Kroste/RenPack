@@ -725,6 +725,81 @@ public sealed class RpycDecompilerTests
     }
 
     [Fact]
+    public void Transform_extracts_parameter_name_from_atl_body_pyexpr()
+    {
+        // Original: transform delayed_blink(delay):
+        //              pause delay
+        // Ren'Py speichert den Parameternamen "delay" nicht im rpyc. Wenn
+        // wir nur "_arg0=None" emittieren, referenziert der ATL-Body noch
+        // immer "delay" → NameError: name 'delay' is not defined.
+        // Fix: freie Identifier aus PyExpr-Bodys ausschlachten und als
+        // echte Parameternamen ausgeben.
+        var delayExpr = new ClassDict("renpy.astsupport", "PyExpr");
+        delayExpr["__args__"] = new object[] { "delay" };
+        var pauseStmt = new ClassDict("renpy.atl", "RawMultipurpose");
+        pauseStmt["warper"] = "pause"; pauseStmt["duration"] = delayExpr;
+        pauseStmt["expressions"] = new ArrayList(); pauseStmt["properties"] = new ArrayList();
+        var block = new ClassDict("renpy.atl", "RawBlock");
+        block["statements"] = new ArrayList { pauseStmt };
+        var tr = Node("renpy.ast.Transform", ("varname", "delayed_blink"), ("atl", block));
+
+        var text = _dec.Decompile(new object[] { tr });
+        text.Should().Contain("transform delayed_blink(delay=None):");
+        text.Should().Contain("    pause delay");
+        text.Should().NotContain("_arg0");
+    }
+
+    [Fact]
+    public void Transform_filters_python_and_renpy_globals_from_extracted_params()
+    {
+        // In der PyExpr "int(config.rollback_length + margin)" ist "margin"
+        // der einzige echte Parameter — "int" und "config" sind Globals.
+        var expr = new ClassDict("renpy.astsupport", "PyExpr");
+        expr["__args__"] = new object[] { "int(config.rollback_length + margin)" };
+        var stmt = new ClassDict("renpy.atl", "RawMultipurpose");
+        stmt["warper"] = "linear"; stmt["duration"] = expr;
+        stmt["expressions"] = new ArrayList();
+        stmt["properties"] = new ArrayList { new object[] { "alpha", "1.0" } };
+        var block = new ClassDict("renpy.atl", "RawBlock");
+        block["statements"] = new ArrayList { stmt };
+        var tr = Node("renpy.ast.Transform", ("varname", "fade_in"), ("atl", block));
+
+        var text = _dec.Decompile(new object[] { tr });
+        text.Should().Contain("transform fade_in(margin=None):");
+        text.Should().NotContain("int=");
+        text.Should().NotContain("config=");
+    }
+
+    [Fact]
+    public void Transform_merges_call_arg_count_and_extracted_names()
+    {
+        // Body verwendet nur "a", aber Aufrufer übergibt 3 Argumente.
+        // Erwartung: 1× extrahierter Name + 2× _argN-Fallback.
+        var expr = new ClassDict("renpy.astsupport", "PyExpr");
+        expr["__args__"] = new object[] { "a" };
+        var stmt = new ClassDict("renpy.atl", "RawMultipurpose");
+        stmt["warper"] = "linear"; stmt["duration"] = expr;
+        stmt["expressions"] = new ArrayList(); stmt["properties"] = new ArrayList();
+        var block = new ClassDict("renpy.atl", "RawBlock");
+        block["statements"] = new ArrayList { stmt };
+        var transform = Node("renpy.ast.Transform", ("varname", "mixed"), ("atl", block));
+
+        var addNode = new ClassDict("renpy.sl2.slast", "SLDisplayable");
+        addNode["name"] = "add"; addNode["positional"] = new ArrayList { "Text(\"x\")" };
+        addNode["keyword"] = new ArrayList { new object[] { "at", "mixed(1, 2, 3)" } };
+        addNode["children"] = new ArrayList();
+        var slBlock = new ClassDict("renpy.sl2.slast", "SLBlock");
+        slBlock["keyword"] = new ArrayList(); slBlock["children"] = new ArrayList { addNode };
+        var slScreen = new ClassDict("renpy.sl2.slast", "SLScreen");
+        slScreen["name"] = "s"; slScreen["keyword"] = new ArrayList();
+        slScreen["children"] = new ArrayList { slBlock };
+        var astScreen = Node("renpy.ast.Screen", ("screen", slScreen));
+
+        var text = _dec.Decompile(new object[] { transform, astScreen });
+        text.Should().Contain("transform mixed(a=None, _arg1=None, _arg2=None):");
+    }
+
+    [Fact]
     public void Transform_declaration_uses_atl_writer_for_body()
     {
         var pauseStmt = new ClassDict("renpy.atl", "RawMultipurpose");

@@ -36,14 +36,20 @@ public sealed class RenpyRpycDecompiler
         // Parameter emittiert wird, interpretiert Ren'Py das Argument als
         // Child-Displayable → "Not a displayable: 0". Wir merken uns die
         // Namen inklusive Argument-Anzahl und ergänzen bei der Transform-
-        // Deklaration passend viele Fallback-Parameter (_arg0=None, …).
+        // Deklaration passend viele Fallback-Parameter.
         _transformCallArgCount = CollectTransformCallArgCounts(statements);
+        // Und die *echten* Parameternamen aus dem ATL-Body raten: jeder
+        // Python-Identifier, der weder Keyword noch Ren'Py-Global ist, ist
+        // mit hoher Wahrscheinlichkeit ein Parameter — sonst würde Ren'Py
+        // ihn zur Laufzeit als NameError aufmachen.
+        _transformParamNames = CollectTransformParamNames(statements);
 
         EmitBlock(sb, statements, indent: 0);
         return sb.ToString();
     }
 
     private Dictionary<string, int> _transformCallArgCount = new(StringComparer.Ordinal);
+    private Dictionary<string, List<string>> _transformParamNames = new(StringComparer.Ordinal);
 
     private static Dictionary<string, int> CollectTransformCallArgCounts(IEnumerable statements)
     {
@@ -139,6 +145,106 @@ public sealed class RenpyRpycDecompiler
                 && args[0] is string first) return first;
         }
         return v?.ToString() ?? "";
+    }
+
+    /// <summary>Walkt alle <c>renpy.ast.Transform</c>-Nodes und rät die
+    /// Original-Parameternamen: jeder freie Python-Identifier im ATL-Body,
+    /// der kein Python-Keyword, Ren'Py-Global oder ATL-Warper ist, dürfte
+    /// ein Transform-Parameter sein — sonst würde er zur Laufzeit als
+    /// <c>NameError</c> knallen. Reihenfolge = Reihenfolge des ersten
+    /// Vorkommens im Body (grobe Näherung an die Original-Parameter-
+    /// Signatur, exakt lässt es sich aus dem rpyc nicht rekonstruieren).</summary>
+    private static Dictionary<string, List<string>> CollectTransformParamNames(IEnumerable statements)
+    {
+        var result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        var seen = new HashSet<object>(ReferenceEqualityComparer.Instance);
+        void Walk(object? o)
+        {
+            if (o is null || (o.GetType().IsClass && !seen.Add(o))) return;
+            if (o is ClassDict cd)
+            {
+                if (cd.ClassName == "renpy.ast.Transform")
+                {
+                    string name = AsString(cd.GetValueOrDefault("varname") ?? cd.GetValueOrDefault("name"));
+                    var idents = new List<string>();
+                    var uniq = new HashSet<string>(StringComparer.Ordinal);
+                    foreach (var expr in CollectPyExprStrings(cd.GetValueOrDefault("atl")))
+                        foreach (var id in ExtractFreeIdentifiers(expr))
+                            if (uniq.Add(id)) idents.Add(id);
+                    if (idents.Count > 0) result[name] = idents;
+                }
+                foreach (var v in cd.Values) Walk(v);
+            }
+            else if (o is IEnumerable en && o is not string)
+                foreach (var v in en) Walk(v);
+        }
+        Walk(statements);
+        return result;
+    }
+
+    /// <summary>Sammelt alle in einem AST-Teilbaum enthaltenen PyExpr-
+    /// Ausdrücke (Class-Namen enden mit <c>PyExpr</c> oder <c>PyCode</c>) —
+    /// beim Unpickeln landet der Ausdruck-Text in <c>__args__[0]</c>.</summary>
+    private static List<string> CollectPyExprStrings(object? root)
+    {
+        var results = new List<string>();
+        var seen = new HashSet<object>(ReferenceEqualityComparer.Instance);
+        void Walk(object? o)
+        {
+            if (o is null || (o.GetType().IsClass && !seen.Add(o))) return;
+            if (o is ClassDict cd)
+            {
+                if ((cd.ClassName.EndsWith("PyExpr", StringComparison.Ordinal)
+                     || cd.ClassName.EndsWith("PyCode", StringComparison.Ordinal))
+                    && cd.TryGetValue("__args__", out var av)
+                    && av is object[] { Length: >= 1 } args
+                    && args[0] is string first
+                    && !string.IsNullOrWhiteSpace(first))
+                    results.Add(first);
+                foreach (var v in cd.Values) Walk(v);
+            }
+            else if (o is IEnumerable en && o is not string)
+                foreach (var v in en) Walk(v);
+        }
+        Walk(root);
+        return results;
+    }
+
+    /// <summary>Python-Keywords, Builtins, Ren'Py-Namespaces und ATL-Warper —
+    /// alles, was in einer PyExpr auftauchen kann, aber kein Parameter ist.</summary>
+    private static readonly HashSet<string> NonParameterIdentifiers = new(StringComparer.Ordinal)
+    {
+        "True", "False", "None",
+        "and", "or", "not", "if", "else", "for", "in", "is", "lambda",
+        "int", "float", "str", "bool", "list", "dict", "tuple", "set",
+        "range", "len", "min", "max", "abs", "round", "map", "filter", "sum",
+        "any", "all", "sorted", "reversed", "enumerate", "zip",
+        "renpy", "store", "persistent", "config", "gui", "preferences",
+        "math", "random", "_", "_p",
+        "linear", "ease", "easein", "easeout",
+        "easein_quad", "easeout_quad", "easein_cubic", "easeout_cubic",
+        "easein_quart", "easeout_quart", "easein_quint", "easeout_quint",
+        "easein_expo", "easeout_expo", "easein_circ", "easeout_circ",
+        "easein_back", "easeout_back", "easein_bounce", "easeout_bounce",
+        "easein_elastic", "easeout_elastic",
+        "pause", "time", "repeat", "parallel", "block", "choice", "on",
+        "event", "function", "contains", "clockwise", "counterclockwise",
+    };
+
+    private static readonly System.Text.RegularExpressions.Regex FreeIdentifierRegex =
+        new(@"(?<![\w.])([A-Za-z_][A-Za-z0-9_]*)",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    private static IEnumerable<string> ExtractFreeIdentifiers(string expr)
+    {
+        // String-Literale ausblenden, damit "foo" darin nicht als Identifier zählt.
+        string noStrings = System.Text.RegularExpressions.Regex.Replace(
+            expr, @"'([^'\\]|\\.)*'|""([^""\\]|\\.)*""", "\"\"");
+        foreach (System.Text.RegularExpressions.Match m in FreeIdentifierRegex.Matches(noStrings))
+        {
+            string id = m.Groups[1].Value;
+            if (!NonParameterIdentifiers.Contains(id)) yield return id;
+        }
     }
 
     // ---- Block-Emit --------------------------------------------------------
@@ -641,24 +747,40 @@ public sealed class RenpyRpycDecompiler
     /// wiederverwendbar per <c>at NAME</c> auf beliebigen Displayables.
     ///
     /// Sonderfall: Ren'Py speichert die Transform-Parameter nicht in der
-    /// .rpyc. Wenn ein Aufrufer <c>at NAME(arg)</c> nutzt und wir keinen
-    /// Parameter emittieren, wraps Ren'Py das Argument als Child-
-    /// Displayable — bei Zahl-Werten kracht das mit "Not a displayable: 0".
-    ///
-    /// Fallback bei gefundenem Aufruf: benannte Parameter mit Defaults
-    /// emittieren, so viele wie die Aufrufe brauchen. Ren'Py verbietet
-    /// <c>*args</c>/<c>**kwargs</c> in <c>transform</c>-Statements
-    /// explizit ("the transform statement does not take *args"), also
-    /// gehen nur reguläre Named-Parameter.</summary>
+    /// .rpyc. Wir rekonstruieren zwei Dinge:
+    /// <list type="number">
+    ///   <item>Wie <b>viele</b> Parameter — aus dem Maximum der Argument-
+    ///     Anzahl aller Aufrufer (<c>at NAME(a, b, c)</c>).</item>
+    ///   <item>Wie sie <b>heißen</b> — aus den freien Identifiern im ATL-
+    ///     Body (<c>pause delay</c> → Parameter <c>delay</c>).</item>
+    /// </list>
+    /// Sonst würde ein Zahl-Argument als Child-Displayable interpretiert
+    /// ("Not a displayable: 0") oder ein Body-Reference auf einen fehlenden
+    /// Parameter als <c>NameError</c> knallen. Ren'Py verbietet
+    /// <c>*args</c>/<c>**kwargs</c> auf <c>transform</c>-Statements explizit
+    /// ("the transform statement does not take *args"), also nur benannte
+    /// Parameter mit Default <c>None</c>.</summary>
     private void EmitTransform(StringBuilder sb, ClassDict node, int indent)
     {
         string name = AsString(node.GetValueOrDefault("varname") ?? node.GetValueOrDefault("name"));
+
+        _transformCallArgCount.TryGetValue(name, out int callArgCount);
+        _transformParamNames.TryGetValue(name, out var extractedNames);
+        extractedNames ??= new List<string>();
+
+        int totalArgs = Math.Max(callArgCount, extractedNames.Count);
         string paramSuffix = "";
-        if (_transformCallArgCount.TryGetValue(name, out int argCount) && argCount > 0)
+        if (totalArgs > 0)
         {
-            var parts = Enumerable.Range(0, argCount).Select(i => $"_arg{i}=None");
+            var parts = new List<string>(totalArgs);
+            for (int i = 0; i < totalArgs; i++)
+            {
+                string paramName = i < extractedNames.Count ? extractedNames[i] : $"_arg{i}";
+                parts.Add($"{paramName}=None");
+            }
             paramSuffix = "(" + string.Join(", ", parts) + ")";
         }
+
         AppendIndented(sb, indent, $"transform {name}{paramSuffix}:");
         RenpyAtlWriter.EmitBlockBody(sb, node.GetValueOrDefault("atl"), indent + 1);
     }
