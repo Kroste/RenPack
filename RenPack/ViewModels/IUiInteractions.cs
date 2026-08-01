@@ -8,6 +8,7 @@ namespace RenPack.ViewModels;
 public interface IUiInteractions
 {
     Task<string?> PickOpenArchiveAsync();
+    Task<IReadOnlyList<string>> PickOpenArchivesAsync();
     Task<string?> PickFolderAsync(string title);
     Task<string?> PickSaveArchiveAsync(string suggestedName);
     Task<string?> PickSaveArchiveOrFileAsync(string suggestedName);

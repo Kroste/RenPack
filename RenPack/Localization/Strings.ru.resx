@@ -164,6 +164,13 @@
   <data name="Diff_Filter_Placeholder" xml:space="preserve"><value>🔍  Фильтр по имени …</value></data>
   <data name="Diff_OnlyDifferences" xml:space="preserve"><value>Только различия</value></data>
   <data name="Diff_SummaryFormat" xml:space="preserve"><value>+ {0} добавлено · − {1} удалено · ≠ {2} изменено · = {3} без изменений</value></data>
+  <data name="Main_BatchExtract" xml:space="preserve"><value>📤 Пакетная распаковка…</value></data>
+  <data name="Main_BatchExtract_Tip" xml:space="preserve"><value>Выберите несколько архивов .rpa и распакуйте каждый в свою подпапку</value></data>
+  <data name="Status_BatchExtractProgressFormat" xml:space="preserve"><value>Распаковка архива {0}/{1}: {2}</value></data>
+  <data name="Status_BatchExtractDoneFormat" xml:space="preserve"><value>Пакет готов: {0}/{1} архив(ов) ({2} с ошибкой)</value></data>
+  <data name="Msg_BatchExtractDone_Body_Format" xml:space="preserve"><value>{0} архив(ов) распаковано в подпапки:
+{1}</value></data>
+  <data name="Msg_BatchExtractDoneWithErrors_Body_Format" xml:space="preserve"><value>{0} из {1} архивов успешно, {2} с ошибкой:</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 

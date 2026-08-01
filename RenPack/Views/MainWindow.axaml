@@ -78,6 +78,9 @@
                             <Button Content="{loc:Tr Main_CreateArchive}"
                                     Command="{Binding CreateArchiveCommand}"
                                     ToolTip.Tip="{loc:Tr Main_CreateArchive_Tip}" />
+                            <Button Content="{loc:Tr Main_BatchExtract}"
+                                    Command="{Binding BatchExtractCommand}"
+                                    ToolTip.Tip="{loc:Tr Main_BatchExtract_Tip}" />
                         </StackPanel>
                     </StackPanel>
 

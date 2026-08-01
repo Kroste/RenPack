@@ -170,6 +170,13 @@
   <data name="Diff_Filter_Placeholder" xml:space="preserve"><value>🔍  Filter by name …</value></data>
   <data name="Diff_OnlyDifferences" xml:space="preserve"><value>Only differences</value></data>
   <data name="Diff_SummaryFormat" xml:space="preserve"><value>+ {0} added · − {1} removed · ≠ {2} modified · = {3} unchanged</value></data>
+  <data name="Main_BatchExtract" xml:space="preserve"><value>📤 Batch-Extract…</value></data>
+  <data name="Main_BatchExtract_Tip" xml:space="preserve"><value>Pick multiple .rpa archives and extract each into its own subfolder</value></data>
+  <data name="Status_BatchExtractProgressFormat" xml:space="preserve"><value>Extracting archive {0}/{1}: {2}</value></data>
+  <data name="Status_BatchExtractDoneFormat" xml:space="preserve"><value>Batch done: {0}/{1} archives ({2} failed)</value></data>
+  <data name="Msg_BatchExtractDone_Body_Format" xml:space="preserve"><value>{0} archive(s) extracted into subfolders of:
+{1}</value></data>
+  <data name="Msg_BatchExtractDoneWithErrors_Body_Format" xml:space="preserve"><value>{0} of {1} archives succeeded, {2} failed:</value></data>
 
   <!-- ============ MessageBox ============ -->
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>

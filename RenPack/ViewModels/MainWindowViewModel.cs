@@ -264,6 +264,63 @@ public sealed partial class MainWindowViewModel : ObservableObject
         finally { IsBusy = false; }
     }
 
+    /// <summary>Batch-Extract: mehrere Archive gleichzeitig in einen
+    /// Zielordner entpacken. Pro Archiv wird ein Unterordner unter dem
+    /// Ziel angelegt (Name ohne .rpa-Extension), damit sich die Inhalte
+    /// nicht ueberschreiben.</summary>
+    [RelayCommand(CanExecute = nameof(CanInteract))]
+    private async Task BatchExtractAsync()
+    {
+        if (Ui is null) return;
+        var archives = await Ui.PickOpenArchivesAsync();
+        if (archives.Count == 0) return;
+        string? destRoot = await Ui.PickFolderAsync(L.F("Msg_PickDestFormat", L.T("Extract_All")));
+        if (destRoot is null) return;
+
+        IsBusy = true;
+        Progress = 0;
+        int totalArchives = archives.Count;
+        int okArchives = 0, failedArchives = 0;
+        var errors = new List<string>();
+
+        try
+        {
+            for (int i = 0; i < archives.Count; i++)
+            {
+                var arc = archives[i];
+                string subFolder = System.IO.Path.Combine(destRoot,
+                    System.IO.Path.GetFileNameWithoutExtension(arc));
+                StatusText = L.F("Status_BatchExtractProgressFormat", i + 1, totalArchives,
+                    System.IO.Path.GetFileName(arc));
+                try
+                {
+                    var info = await Task.Run(() => _archiveService.ReadIndex(arc));
+                    await Task.Run(() => _archiveService.ExtractAll(info, subFolder));
+                    okArchives++;
+                }
+                catch (Exception ex)
+                {
+                    failedArchives++;
+                    errors.Add($"{System.IO.Path.GetFileName(arc)}: {ex.Message}");
+                    Log.Warn(ex, "Batch-Extract fehlgeschlagen: {arc}", arc);
+                }
+                Progress = (double)(i + 1) / totalArchives;
+            }
+
+            StatusText = L.F("Status_BatchExtractDoneFormat", okArchives, totalArchives, failedArchives);
+            string body = failedArchives == 0
+                ? L.F("Msg_BatchExtractDone_Body_Format", okArchives, destRoot)
+                : L.F("Msg_BatchExtractDoneWithErrors_Body_Format", okArchives, totalArchives, failedArchives)
+                    + "\n\n" + string.Join("\n", errors.Take(10));
+            await Ui.ShowMessageAsync(L.T("Msg_ExtractDone_Title"), body);
+        }
+        finally
+        {
+            IsBusy = false;
+            Progress = 0;
+        }
+    }
+
     /// <summary>Kontextmenue: Pfad des hervorgehobenen Eintrags in die
     /// System-Zwischenablage kopieren.</summary>
     [RelayCommand]

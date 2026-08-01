@@ -164,6 +164,13 @@
   <data name="Diff_Filter_Placeholder" xml:space="preserve"><value>🔍  Filtrer par nom …</value></data>
   <data name="Diff_OnlyDifferences" xml:space="preserve"><value>Uniquement les différences</value></data>
   <data name="Diff_SummaryFormat" xml:space="preserve"><value>+ {0} ajoutés · − {1} supprimés · ≠ {2} modifiés · = {3} inchangés</value></data>
+  <data name="Main_BatchExtract" xml:space="preserve"><value>📤 Extraction en lot…</value></data>
+  <data name="Main_BatchExtract_Tip" xml:space="preserve"><value>Sélectionner plusieurs archives .rpa et extraire chacune dans son propre sous-dossier</value></data>
+  <data name="Status_BatchExtractProgressFormat" xml:space="preserve"><value>Extraction de l'archive {0}/{1} : {2}</value></data>
+  <data name="Status_BatchExtractDoneFormat" xml:space="preserve"><value>Lot terminé : {0}/{1} archives ({2} échouées)</value></data>
+  <data name="Msg_BatchExtractDone_Body_Format" xml:space="preserve"><value>{0} archive(s) extraite(s) dans des sous-dossiers de :
+{1}</value></data>
+  <data name="Msg_BatchExtractDoneWithErrors_Body_Format" xml:space="preserve"><value>{0} archives sur {1} réussies, {2} échouées :</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 

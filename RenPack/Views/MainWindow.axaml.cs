@@ -247,6 +247,21 @@ public partial class MainWindow : ChromeWindow, IUiInteractions
         return files.Count > 0 ? files[0].TryGetLocalPath() : null;
     }
 
+    public async Task<IReadOnlyList<string>> PickOpenArchivesAsync()
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = L.T("Main_BatchExtract"),
+            AllowMultiple = true,
+            FileTypeFilter =
+            [
+                new FilePickerFileType("Ren'Py-Archive (*.rpa)") { Patterns = ["*.rpa"] },
+                new FilePickerFileType("Alle Dateien") { Patterns = ["*"] },
+            ],
+        });
+        return [.. files.Select(f => f.TryGetLocalPath()).Where(p => p is not null).Cast<string>()];
+    }
+
     public async Task<string?> PickFolderAsync(string title)
     {
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions

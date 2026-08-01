@@ -164,6 +164,13 @@
   <data name="Diff_Filter_Placeholder" xml:space="preserve"><value>🔍  Nach Name filtern …</value></data>
   <data name="Diff_OnlyDifferences" xml:space="preserve"><value>Nur Unterschiede</value></data>
   <data name="Diff_SummaryFormat" xml:space="preserve"><value>+ {0} hinzugefügt · − {1} entfernt · ≠ {2} geändert · = {3} unverändert</value></data>
+  <data name="Main_BatchExtract" xml:space="preserve"><value>📤 Batch-Extract…</value></data>
+  <data name="Main_BatchExtract_Tip" xml:space="preserve"><value>Mehrere .rpa-Archive auswählen und jedes in einen eigenen Unterordner entpacken</value></data>
+  <data name="Status_BatchExtractProgressFormat" xml:space="preserve"><value>Entpacke Archiv {0}/{1}: {2}</value></data>
+  <data name="Status_BatchExtractDoneFormat" xml:space="preserve"><value>Batch fertig: {0}/{1} Archive ({2} fehlgeschlagen)</value></data>
+  <data name="Msg_BatchExtractDone_Body_Format" xml:space="preserve"><value>{0} Archiv(e) in Unterordner entpackt unter:
+{1}</value></data>
+  <data name="Msg_BatchExtractDoneWithErrors_Body_Format" xml:space="preserve"><value>{0} von {1} Archiven erfolgreich, {2} fehlgeschlagen:</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 
