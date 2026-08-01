@@ -6,10 +6,10 @@
         xmlns:controls="using:RenPack.Controls"
         xmlns:chrome="using:Avalonia.Controls.Chrome"
         xmlns:vm="using:RenPack.ViewModels"
-        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
+        mc:Ignorable="d" d:DesignWidth="960" d:DesignHeight="660"
         x:Class="RenPack.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Width="900" Height="620" MinWidth="640" MinHeight="420"
+        Width="960" Height="680" MinWidth="720" MinHeight="480"
         Title="RenPack"
         DragDrop.AllowDrop="True"
         Background="{DynamicResource KrosteBackgroundBrush}">
@@ -19,87 +19,134 @@
     </Design.DataContext>
 
     <DockPanel>
-        <controls:TitleBar DockPanel.Dock="Top" Title="RenPack — Ren'Py-Archive">
+        <controls:TitleBar DockPanel.Dock="Top" Title="RenPack">
             <controls:TitleBar.RightContent>
                 <Button x:Name="AboutButton" Classes="chrome" Content="ⓘ" ToolTip.Tip="Über RenPack"
                         chrome:WindowDecorationProperties.ElementRole="User" />
             </controls:TitleBar.RightContent>
         </controls:TitleBar>
 
-        <!-- Toolbar -->
-        <Border DockPanel.Dock="Top" Background="{DynamicResource KrosteTitleBarBrush}" Padding="12,8">
-            <WrapPanel Orientation="Horizontal">
-                <Button Classes="accent" Content="📂 Archiv öffnen" Margin="0,0,8,0"
-                        Command="{Binding OpenArchiveCommand}" />
-                <Button Content="📦 Ordner packen …" Margin="0,0,8,0"
-                        Command="{Binding CreateArchiveCommand}" />
-                <Rectangle Width="1" Margin="4,2" Fill="#33FFFFFF" />
-                <Button x:Name="OpenSaveButton" Content="💾 Save öffnen …" Margin="8,0,8,0"
-                        ToolTip.Tip="Ren'Py-Save-Datei inspizieren und editieren (.save)" />
-                <Button x:Name="SettingsButton" Content="⚙ Einstellungen" Margin="0,0,8,0"
-                        ToolTip.Tip="KI-Anbieter, Modell und Zielsprache konfigurieren" />
-                <Rectangle Width="1" Margin="4,2" Fill="#33FFFFFF" />
-                <Button Content="⬇ Alles entpacken" Margin="8,0,8,0"
-                        Command="{Binding ExtractAllCommand}" />
-                <Button Content="⬇ Auswahl entpacken" Margin="0,0,8,0"
-                        Command="{Binding ExtractSelectedCommand}" />
-                <Rectangle Width="1" Margin="4,2" Fill="#33FFFFFF" />
-                <Button x:Name="DecompileFileButton" Content="🔓 .rpyc dekompilieren" Margin="8,0,8,0"
-                        ToolTip.Tip="Einzelne oder mehrere .rpyc-Dateien zu .rpy dekompilieren (kein Ren'Py-Start nötig, kein Python)" />
-                <Button x:Name="DecompileFolderButton" Content="🔓 Ordner dekompilieren …" Margin="0,0,8,0"
-                        ToolTip.Tip="Alle .rpyc-Dateien in einem Ordner rekursiv zu .rpy dekompilieren" />
-            </WrapPanel>
-        </Border>
-
-        <!-- Statuszeile unten -->
-        <Border DockPanel.Dock="Bottom" Background="{DynamicResource KrosteTitleBarBrush}" Padding="12,6">
+        <!-- Statuszeile unten: linker Text + rechts Progress. Border ohne
+             starke Farbe, nur dünner Divider zum Content-Bereich. -->
+        <Border DockPanel.Dock="Bottom" Padding="18,10"
+                BorderBrush="{DynamicResource KrosteBorderBrush}" BorderThickness="0,1,0,0"
+                Background="{DynamicResource KrosteTitleBarBrush}">
             <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Grid.Column="0" Text="{Binding StatusText}" Foreground="#B7BEC7"
-                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                <ProgressBar Grid.Column="1" Width="180" Height="8" VerticalAlignment="Center"
+                <TextBlock Grid.Column="0" Text="{Binding StatusText}"
+                           Classes="secondary" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+                <ProgressBar Grid.Column="1" Width="200" Height="6" VerticalAlignment="Center"
                              Minimum="0" Maximum="1" Value="{Binding Progress}"
                              IsIndeterminate="{Binding ProgressIndeterminate}"
-                             IsVisible="{Binding IsBusy}"
-                             Foreground="{DynamicResource KrosteGoldBrush}" />
+                             IsVisible="{Binding IsBusy}" />
             </Grid>
         </Border>
 
-        <!-- Filter + Auswahl -->
-        <Border DockPanel.Dock="Top" Padding="12,8">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
-                <TextBox Grid.Column="0" PlaceholderText="Filtern nach Dateiname …"
+        <!-- Content-Bereich mit einheitlichem Padding. Grid teilt in Header,
+             Toolbar, Filter und Dateiliste. -->
+        <Grid Margin="18" RowDefinitions="Auto,Auto,Auto,Auto,*">
+
+            <!-- Header: Titel + Untertitel -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,16">
+                <TextBlock Text="RenPack" Classes="h1" />
+                <TextBlock Text="Ren'Py-Archive öffnen, packen und entpacken · Save-Editor · .rpyc-Decompiler"
+                           Classes="muted" FontSize="12" Margin="0,2,0,0" />
+            </StackPanel>
+
+            <!-- Aktions-Karte: 3 semantische Gruppen nebeneinander. -->
+            <Border Grid.Row="1" Classes="card" Margin="0,0,0,12">
+                <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto" HorizontalAlignment="Left">
+                    <!-- Gruppe: Archiv -->
+                    <StackPanel Grid.Column="0" Spacing="8">
+                        <TextBlock Text="ARCHIV" Classes="section-label" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Classes="accent" Content="📂 Öffnen"
+                                    Command="{Binding OpenArchiveCommand}"
+                                    ToolTip.Tip="Ren'Py-Archiv (.rpa) öffnen — auch per Drag &amp; Drop" />
+                            <Button Content="📦 Packen …"
+                                    Command="{Binding CreateArchiveCommand}"
+                                    ToolTip.Tip="Ordner zu einem RPA-3.0-Archiv packen" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Rectangle Grid.Column="1" Classes="divider-v" Margin="16,4" />
+
+                    <!-- Gruppe: Werkzeuge -->
+                    <StackPanel Grid.Column="2" Spacing="8">
+                        <TextBlock Text="WERKZEUGE" Classes="section-label" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button x:Name="OpenSaveButton" Content="💾 Save-Editor"
+                                    ToolTip.Tip="Ren'Py-Save-Datei inspizieren und editieren (.save)" />
+                            <Button x:Name="DecompileFileButton" Content="🔓 .rpyc → .rpy"
+                                    ToolTip.Tip="Einzelne oder mehrere .rpyc-Dateien zu .rpy dekompilieren" />
+                            <Button x:Name="DecompileFolderButton" Content="🔓 Ordner …"
+                                    ToolTip.Tip="Alle .rpyc-Dateien in einem Ordner rekursiv dekompilieren" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Rectangle Grid.Column="3" Classes="divider-v" Margin="16,4" />
+
+                    <!-- Gruppe: KI / Einstellungen -->
+                    <StackPanel Grid.Column="4" Spacing="8">
+                        <TextBlock Text="KONFIGURATION" Classes="section-label" />
+                        <Button x:Name="SettingsButton" Content="⚙ Einstellungen"
+                                ToolTip.Tip="KI-Anbieter, Modell und Zielsprache konfigurieren" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Extraktions-Aktionen + Archiv-Info: zusammen als schmale Zeile,
+                 damit klar wird, dass sie sich auf die geladene Datei beziehen. -->
+            <Border Grid.Row="2" Classes="card" Padding="14,10" Margin="0,0,0,12">
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto">
+                    <TextBlock Grid.Column="0" Text="{Binding ArchiveSummary}"
+                               Classes="muted" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" FontSize="12" />
+                    <TextBlock Grid.Column="1" Text="{Binding SelectedSummary}"
+                               Foreground="{DynamicResource KrosteGoldBrush}"
+                               VerticalAlignment="Center" Margin="12,0" FontSize="12" />
+                    <Button Grid.Column="2" Classes="ghost" Content="Alle" Padding="10,4"
+                            Command="{Binding SelectAllCommand}"
+                            ToolTip.Tip="Alle Einträge auswählen" />
+                    <Button Grid.Column="3" Classes="ghost" Content="Keine" Padding="10,4"
+                            Command="{Binding DeselectAllCommand}"
+                            ToolTip.Tip="Auswahl aufheben" />
+                    <Rectangle Grid.Column="4" Classes="divider-v" Margin="8,4" />
+                    <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8">
+                        <Button Content="⬇ Alles entpacken"
+                                Command="{Binding ExtractAllCommand}"
+                                ToolTip.Tip="Kompletten Archiv-Inhalt in einen Zielordner entpacken" />
+                        <Button Classes="accent" Content="⬇ Auswahl entpacken"
+                                Command="{Binding ExtractSelectedCommand}"
+                                ToolTip.Tip="Nur die markierten Einträge entpacken" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Filter-Zeile -->
+            <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                <TextBox Grid.Column="0" PlaceholderText="🔍  Dateien filtern nach Name …"
                          Text="{Binding FilterText}" />
-                <TextBlock Grid.Column="1" Text="{Binding SelectedSummary}" Margin="12,0"
-                           VerticalAlignment="Center" Foreground="{DynamicResource KrosteGoldBrush}" />
-                <Button Grid.Column="2" Content="Alle" Margin="0,0,6,0"
-                        Command="{Binding SelectAllCommand}" />
-                <Button Grid.Column="3" Content="Keine"
-                        Command="{Binding DeselectAllCommand}" />
             </Grid>
-        </Border>
 
-        <!-- Archiv-Info -->
-        <TextBlock DockPanel.Dock="Top" Text="{Binding ArchiveSummary}" Margin="12,0,12,6"
-                   Foreground="#8A93A0" FontSize="12" />
-
-        <!-- Dateiliste -->
-        <Border Margin="12,0,12,12" CornerRadius="6" ClipToBounds="True"
-                Background="{DynamicResource KrosteSurfaceBrush}">
-            <DataGrid ItemsSource="{Binding Entries}"
-                      IsReadOnly="False"
-                      CanUserReorderColumns="True"
-                      CanUserSortColumns="True"
-                      GridLinesVisibility="Horizontal"
-                      Background="Transparent">
-                <DataGrid.Columns>
-                    <DataGridCheckBoxColumn Header="✓" Width="40"
-                        Binding="{Binding IsSelected}" />
-                    <DataGridTextColumn Header="Datei" Width="*" IsReadOnly="True"
-                        Binding="{Binding Path}" />
-                    <DataGridTextColumn Header="Größe" Width="110" IsReadOnly="True"
-                        Binding="{Binding SizeDisplay}" />
-                </DataGrid.Columns>
-            </DataGrid>
-        </Border>
+            <!-- Dateiliste als Card -->
+            <Border Grid.Row="4" Classes="card-flat" ClipToBounds="True">
+                <DataGrid ItemsSource="{Binding Entries}"
+                          IsReadOnly="False"
+                          CanUserReorderColumns="True"
+                          CanUserSortColumns="True"
+                          GridLinesVisibility="Horizontal"
+                          Background="Transparent">
+                    <DataGrid.Columns>
+                        <DataGridCheckBoxColumn Header="✓" Width="42"
+                            Binding="{Binding IsSelected}" />
+                        <DataGridTextColumn Header="DATEI" Width="*" IsReadOnly="True"
+                            Binding="{Binding Path}" />
+                        <DataGridTextColumn Header="GRÖSSE" Width="120" IsReadOnly="True"
+                            Binding="{Binding SizeDisplay}" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+        </Grid>
     </DockPanel>
 </views:ChromeWindow>

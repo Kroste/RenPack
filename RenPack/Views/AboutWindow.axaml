@@ -10,16 +10,19 @@
         Background="{DynamicResource KrosteBackgroundBrush}">
     <DockPanel>
         <controls:TitleBar DockPanel.Dock="Top" Title="Über RenPack" />
-        <StackPanel Margin="24" Spacing="14">
-            <TextBlock Text="RenPack" FontSize="22" FontWeight="Bold"
-                       Foreground="{DynamicResource KrosteGoldBrush}" />
-            <TextBlock Text="Ren'Py-Archive (.rpa) entpacken und packen"
-                       Foreground="#C5CBD3" TextWrapping="Wrap" />
-            <TextBlock x:Name="VersionText" Foreground="#8A93A0" />
+        <StackPanel Margin="24" Spacing="16">
+            <StackPanel Spacing="4">
+                <TextBlock Text="RenPack" Classes="h1" FontSize="22" />
+                <TextBlock Text="Ren'Py-Archive · Save-Editor · .rpyc-Decompiler"
+                           Classes="secondary" TextWrapping="Wrap" />
+                <TextBlock x:Name="VersionText" Classes="muted" FontSize="12" Margin="0,4,0,0" />
+            </StackPanel>
+
+            <Rectangle Classes="divider-h" />
 
             <StackPanel Orientation="Horizontal" Spacing="10">
                 <Button x:Name="UpdateButton" Classes="accent" Content="Auf Updates prüfen" />
-                <TextBlock x:Name="UpdateResult" VerticalAlignment="Center" Foreground="#B7BEC7" />
+                <TextBlock x:Name="UpdateResult" VerticalAlignment="Center" Classes="secondary" />
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" Spacing="10">

@@ -5,10 +5,10 @@
         xmlns:views="using:RenPack.Views"
         xmlns:controls="using:RenPack.Controls"
         xmlns:vm="using:RenPack.ViewModels"
-        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="620"
+        mc:Ignorable="d" d:DesignWidth="960" d:DesignHeight="680"
         x:Class="RenPack.Views.SaveWindow"
         x:DataType="vm:SaveWindowViewModel"
-        Width="900" Height="640" MinWidth="640" MinHeight="440"
+        Width="960" Height="700" MinWidth="720" MinHeight="500"
         Title="RenPack — Save-Editor"
         WindowStartupLocation="CenterOwner"
         DragDrop.AllowDrop="True"
@@ -21,105 +21,140 @@
     <DockPanel>
         <controls:TitleBar DockPanel.Dock="Top" Title="RenPack — Save-Editor" />
 
-        <!-- Toolbar -->
-        <Border DockPanel.Dock="Top" Background="{DynamicResource KrosteTitleBarBrush}" Padding="12,8">
-            <WrapPanel Orientation="Horizontal">
-                <Button Classes="accent" Content="💾 Save öffnen" Margin="0,0,8,0"
-                        Command="{Binding OpenSaveCommand}" />
-                <Rectangle Width="1" Margin="4,2" Fill="#33FFFFFF" />
-                <Button Content="💾 Speichern" Margin="8,0,8,0"
-                        Command="{Binding SaveCommand}" />
-                <Button Content="💾 Speichern unter …" Margin="0,0,8,0"
-                        Command="{Binding SaveAsCommand}" />
-                <Button Content="↩ Verwerfen" Margin="0,0,8,0"
-                        Command="{Binding RevertCommand}" />
-                <Rectangle Width="1" Margin="4,2" Fill="#33FFFFFF" />
-                <Button Content="🌐 Übersetzen" Margin="8,0,8,0"
-                        Command="{Binding TranslateCommand}"
-                        ToolTip.Tip="Variablennamen per KI in die Zielsprache übersetzen (Einstellungen prüfen)" />
-                <TextBlock Text="{Binding DirtySummary}" Margin="12,0,0,0"
-                           VerticalAlignment="Center" Foreground="{DynamicResource KrosteGoldBrush}" />
-                <CheckBox Content="_interne (mit _)" Margin="24,0,0,0"
-                          IsChecked="{Binding ShowInternal}"
-                          VerticalAlignment="Center" Foreground="#B7BEC7" />
-            </WrapPanel>
-        </Border>
-
-        <!-- Statuszeile -->
-        <Border DockPanel.Dock="Bottom" Background="{DynamicResource KrosteTitleBarBrush}" Padding="12,6">
-            <TextBlock Text="{Binding StatusText}" Foreground="#B7BEC7"
+        <!-- Statuszeile unten -->
+        <Border DockPanel.Dock="Bottom" Padding="18,10"
+                BorderBrush="{DynamicResource KrosteBorderBrush}" BorderThickness="0,1,0,0"
+                Background="{DynamicResource KrosteTitleBarBrush}">
+            <TextBlock Text="{Binding StatusText}" Classes="secondary"
                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
         </Border>
 
-        <!-- Fehler-Banner -->
-        <Border DockPanel.Dock="Top" Background="#3A2020" Padding="12,8"
+        <!-- Fehler-Banner: bleibt ganz oben, weil kritisch für den Nutzer. -->
+        <Border DockPanel.Dock="Top" Background="#3A2020" Padding="18,10"
+                BorderBrush="#5A3030" BorderThickness="0,0,0,1"
                 IsVisible="{Binding HasLogError}">
             <TextBlock Foreground="#FFD1D1" TextWrapping="Wrap"
                        Text="{Binding LogErrorText, StringFormat='⚠ Log konnte nicht dekodiert werden: {0}. Metadaten und Screenshot sind trotzdem verfügbar; Editieren nicht möglich.'}" />
         </Border>
 
-        <!-- Kopfzeile -->
-        <Border DockPanel.Dock="Top" Padding="12,10,12,4">
-            <TextBlock Text="{Binding SaveSummary}" Foreground="{DynamicResource KrosteGoldBrush}"
-                       FontSize="13" TextTrimming="CharacterEllipsis" />
-        </Border>
+        <Grid Margin="18" RowDefinitions="Auto,Auto,Auto,Auto,*">
 
-        <!-- Filter -->
-        <Border DockPanel.Dock="Top" Padding="12,4,12,8" IsVisible="{Binding HasSave}">
-            <TextBox PlaceholderText="Variablen filtern nach Name …"
-                     Text="{Binding FilterText}" />
-        </Border>
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,16">
+                <TextBlock Text="Save-Editor" Classes="h1" />
+                <TextBlock Text="Ren'Py-Save-Dateien lesen und Store-Variablen byte-preserving editieren"
+                           Classes="muted" FontSize="12" Margin="0,2,0,0" />
+            </StackPanel>
 
-        <!-- Hauptbereich: Screenshot links, editierbare Variablen rechts -->
-        <Grid Margin="12,0,12,12" ColumnDefinitions="Auto,*">
-            <Border Grid.Column="0" Width="280" MinHeight="180" Margin="0,0,12,0"
-                    CornerRadius="6" ClipToBounds="True"
-                    Background="{DynamicResource KrosteSurfaceBrush}"
-                    IsVisible="{Binding HasScreenshot}">
-                <Image Source="{Binding Screenshot}" Stretch="Uniform"
-                       VerticalAlignment="Top" />
+            <!-- Aktionen: 3 Gruppen -->
+            <Border Grid.Row="1" Classes="card" Margin="0,0,0,12">
+                <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*">
+                    <StackPanel Grid.Column="0" Spacing="8">
+                        <TextBlock Text="DATEI" Classes="section-label" />
+                        <Button Classes="accent" Content="💾 Save öffnen"
+                                Command="{Binding OpenSaveCommand}"
+                                ToolTip.Tip="Ren'Py-Save-Datei (.save) öffnen" />
+                    </StackPanel>
+
+                    <Rectangle Grid.Column="1" Classes="divider-v" Margin="16,4" />
+
+                    <StackPanel Grid.Column="2" Spacing="8">
+                        <TextBlock Text="ÄNDERUNGEN" Classes="section-label" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="💾 Speichern"
+                                    Command="{Binding SaveCommand}"
+                                    ToolTip.Tip="Änderungen in die Original-Datei zurückschreiben" />
+                            <Button Content="💾 Speichern unter …"
+                                    Command="{Binding SaveAsCommand}"
+                                    ToolTip.Tip="Änderungen in eine neue Datei schreiben" />
+                            <Button Classes="danger" Content="↩ Verwerfen"
+                                    Command="{Binding RevertCommand}"
+                                    ToolTip.Tip="Alle Änderungen zurückrollen" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Rectangle Grid.Column="3" Classes="divider-v" Margin="16,4" />
+
+                    <StackPanel Grid.Column="4" Spacing="8">
+                        <TextBlock Text="KI" Classes="section-label" />
+                        <Button Content="🌐 Übersetzen"
+                                Command="{Binding TranslateCommand}"
+                                ToolTip.Tip="Variablennamen per KI in die Zielsprache übersetzen (Einstellungen prüfen)" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="5" Orientation="Horizontal"
+                                HorizontalAlignment="Right" VerticalAlignment="Bottom" Spacing="12">
+                        <TextBlock Text="{Binding DirtySummary}"
+                                   Foreground="{DynamicResource KrosteGoldBrush}"
+                                   VerticalAlignment="Center" />
+                        <CheckBox Content="Interne (_) anzeigen"
+                                  IsChecked="{Binding ShowInternal}"
+                                  VerticalAlignment="Center" Foreground="{DynamicResource KrosteSecondaryTextBrush}" />
+                    </StackPanel>
+                </Grid>
             </Border>
 
-            <Border Grid.Column="1" CornerRadius="6" ClipToBounds="True"
-                    Background="{DynamicResource KrosteSurfaceBrush}">
-                <DataGrid ItemsSource="{Binding Variables}"
-                          CanUserReorderColumns="True"
-                          CanUserSortColumns="True"
-                          GridLinesVisibility="Horizontal"
-                          Background="Transparent">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Name" Width="*" IsReadOnly="True"
-                            Binding="{Binding Name}" />
-                        <DataGridTextColumn Header="Beschreibung" Width="*" IsReadOnly="True"
-                            Binding="{Binding Description}" />
-                        <DataGridTextColumn Header="Typ" Width="110" IsReadOnly="True"
-                            Binding="{Binding TypeName}" />
-                        <!-- Wert-Spalte: editierbar, wenn IsEditable=true.
-                             Ein visueller Marker "*" wird bei Dirty gezeigt. -->
-                        <DataGridTemplateColumn Header="Wert" Width="2*" CanUserSort="True"
-                                                SortMemberPath="EditableValue">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate DataType="vm:SaveVariableViewModel">
-                                    <Grid ColumnDefinitions="*,Auto" Margin="4,0">
-                                        <TextBlock Grid.Column="0" Text="{Binding EditableValue}"
-                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                        <TextBlock Grid.Column="1" Text="●" Margin="6,0,0,0"
-                                                   VerticalAlignment="Center"
-                                                   Foreground="{DynamicResource KrosteGoldBrush}"
-                                                   IsVisible="{Binding IsDirty}" />
-                                    </Grid>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                            <DataGridTemplateColumn.CellEditingTemplate>
-                                <DataTemplate DataType="vm:SaveVariableViewModel">
-                                    <TextBox Text="{Binding EditableValue, Mode=TwoWay}"
-                                             IsEnabled="{Binding IsEditable}" />
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellEditingTemplate>
-                        </DataGridTemplateColumn>
-                    </DataGrid.Columns>
-                </DataGrid>
+            <!-- Kopfzeile mit Save-Info + Filter -->
+            <Border Grid.Row="2" Classes="card" Padding="14,10" Margin="0,0,0,12"
+                    IsVisible="{Binding HasSave}">
+                <TextBlock Text="{Binding SaveSummary}" Foreground="{DynamicResource KrosteGoldBrush}"
+                           FontSize="12" TextTrimming="CharacterEllipsis" />
             </Border>
+
+            <TextBox Grid.Row="3" Margin="0,0,0,12"
+                     PlaceholderText="🔍  Variablen filtern nach Name …"
+                     Text="{Binding FilterText}"
+                     IsVisible="{Binding HasSave}" />
+
+            <!-- Hauptbereich: Screenshot links, Variablen rechts -->
+            <Grid Grid.Row="4" ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                <Border Grid.Column="0" Classes="card-flat" Width="280" MinHeight="180"
+                        ClipToBounds="True" VerticalAlignment="Top"
+                        IsVisible="{Binding HasScreenshot}">
+                    <Image Source="{Binding Screenshot}" Stretch="Uniform"
+                           VerticalAlignment="Top" />
+                </Border>
+
+                <Border Grid.Column="1" Classes="card-flat" ClipToBounds="True">
+                    <DataGrid ItemsSource="{Binding Variables}"
+                              CanUserReorderColumns="True"
+                              CanUserSortColumns="True"
+                              GridLinesVisibility="Horizontal"
+                              Background="Transparent">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="NAME" Width="*" IsReadOnly="True"
+                                Binding="{Binding Name}" />
+                            <DataGridTextColumn Header="BESCHREIBUNG" Width="*" IsReadOnly="True"
+                                Binding="{Binding Description}" />
+                            <DataGridTextColumn Header="TYP" Width="110" IsReadOnly="True"
+                                Binding="{Binding TypeName}" />
+                            <!-- Wert-Spalte: editierbar, wenn IsEditable=true.
+                                 Visueller Marker ● bei Dirty. -->
+                            <DataGridTemplateColumn Header="WERT" Width="2*" CanUserSort="True"
+                                                    SortMemberPath="EditableValue">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate DataType="vm:SaveVariableViewModel">
+                                        <Grid ColumnDefinitions="*,Auto" Margin="4,0">
+                                            <TextBlock Grid.Column="0" Text="{Binding EditableValue}"
+                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Grid.Column="1" Text="●" Margin="6,0,0,0"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource KrosteGoldBrush}"
+                                                       IsVisible="{Binding IsDirty}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                                <DataGridTemplateColumn.CellEditingTemplate>
+                                    <DataTemplate DataType="vm:SaveVariableViewModel">
+                                        <TextBox Text="{Binding EditableValue, Mode=TwoWay}"
+                                                 IsEnabled="{Binding IsEditable}" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellEditingTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+            </Grid>
         </Grid>
     </DockPanel>
 </views:ChromeWindow>

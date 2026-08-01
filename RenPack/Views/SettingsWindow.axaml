@@ -6,10 +6,10 @@
         xmlns:controls="using:RenPack.Controls"
         xmlns:vm="using:RenPack.ViewModels"
         xmlns:svc="using:RenPack.Services"
-        mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="640"
+        mc:Ignorable="d" d:DesignWidth="680" d:DesignHeight="720"
         x:Class="RenPack.Views.SettingsWindow"
         x:DataType="vm:SettingsWindowViewModel"
-        Width="640" Height="720" MinWidth="520" MinHeight="480"
+        Width="680" Height="760" MinWidth="560" MinHeight="500"
         Title="RenPack — Einstellungen"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource KrosteBackgroundBrush}">
@@ -21,15 +21,18 @@
     <DockPanel>
         <controls:TitleBar DockPanel.Dock="Top" Title="RenPack — Einstellungen" />
 
-        <!-- Buttons unten -->
-        <Border DockPanel.Dock="Bottom" Background="{DynamicResource KrosteTitleBarBrush}" Padding="12,10">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+        <!-- Footer: Statustext + Aktionen. Der Speichern-Button ist die
+             primäre Aktion und liegt rechts (Kroste-Konvention). -->
+        <Border DockPanel.Dock="Bottom" Padding="18,12"
+                BorderBrush="{DynamicResource KrosteBorderBrush}" BorderThickness="0,1,0,0"
+                Background="{DynamicResource KrosteTitleBarBrush}">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
                 <TextBlock Grid.Column="0" Text="{Binding StatusText}"
                            Foreground="{DynamicResource KrosteGoldBrush}"
                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                <Button Grid.Column="1" Content="Verbindung testen" Margin="0,0,8,0"
+                <Button Grid.Column="1" Classes="ghost" Content="Verbindung testen"
                         Command="{Binding TestConnectionCommand}" />
-                <Button Grid.Column="2" Content="Abbrechen" Margin="0,0,8,0"
+                <Button Grid.Column="2" Content="Abbrechen"
                         Command="{Binding CancelCommand}" />
                 <Button Grid.Column="3" Classes="accent" Content="Speichern"
                         Command="{Binding SaveCommand}" />
@@ -37,64 +40,68 @@
         </Border>
 
         <ScrollViewer>
-            <StackPanel Margin="20" Spacing="14">
-                <TextBlock Text="KI-Übersetzung" FontSize="16" FontWeight="Bold"
-                           Foreground="{DynamicResource KrosteGoldBrush}" />
-                <TextBlock Foreground="#B7BEC7" TextWrapping="Wrap"
-                           Text="Übersetzt die Variablennamen im Save-Editor in deine Zielsprache.
-                           Der Variablenname selbst bleibt unverändert (er ist der Splice-Anker beim Speichern)." />
+            <StackPanel Margin="24" Spacing="18">
+
+                <!-- Header -->
+                <StackPanel>
+                    <TextBlock Text="Einstellungen" Classes="h1" />
+                    <TextBlock Classes="muted" FontSize="12" Margin="0,2,0,0" TextWrapping="Wrap"
+                               Text="KI-Anbieter für die Übersetzung der Variablennamen im Save-Editor.
+                               Der Variablenname selbst bleibt unverändert — er ist der Splice-Anker beim Speichern." />
+                </StackPanel>
 
                 <!-- Anbieter + Zielsprache -->
-                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                    <StackPanel Grid.Column="0" Spacing="6">
-                        <TextBlock Text="Anbieter" Foreground="#B7BEC7" />
-                        <ComboBox ItemsSource="{Binding Providers}" SelectedItem="{Binding SelectedProvider}"
-                                  HorizontalAlignment="Stretch" />
+                <Border Classes="card">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="ALLGEMEIN" Classes="section-label" />
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                            <StackPanel Grid.Column="0" Spacing="6">
+                                <TextBlock Text="Anbieter" Classes="secondary" />
+                                <ComboBox ItemsSource="{Binding Providers}" SelectedItem="{Binding SelectedProvider}"
+                                          HorizontalAlignment="Stretch" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="6">
+                                <TextBlock Text="Zielsprache" Classes="secondary" />
+                                <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding TargetLanguage}"
+                                          HorizontalAlignment="Stretch" />
+                            </StackPanel>
+                        </Grid>
                     </StackPanel>
-                    <StackPanel Grid.Column="1" Spacing="6">
-                        <TextBlock Text="Zielsprache" Foreground="#B7BEC7" />
-                        <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding TargetLanguage}"
-                                  HorizontalAlignment="Stretch" />
-                    </StackPanel>
-                </Grid>
+                </Border>
 
                 <!-- OLLAMA -->
-                <Border Padding="14" CornerRadius="6" Background="{DynamicResource KrosteSurfaceBrush}"
-                        IsVisible="{Binding IsOllama}">
+                <Border Classes="card" IsVisible="{Binding IsOllama}">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Ollama (lokal)" FontWeight="Bold"
-                                   Foreground="{DynamicResource KrosteGoldBrush}" />
-                        <TextBlock Foreground="#8A93A0" FontSize="11" TextWrapping="Wrap"
+                        <TextBlock Text="OLLAMA · LOKAL" Classes="section-label" />
+                        <TextBlock Text="Ollama (lokal)" Classes="h2" />
+                        <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
                                    Text="Datenschutzfreundlich, kein API-Key. Ollama lokal starten (ollama serve),
                                    dann Modelle direkt aus der App laden." />
 
-                        <TextBlock Text="Endpunkt" Foreground="#B7BEC7" Margin="0,6,0,0" />
+                        <TextBlock Text="Endpunkt" Classes="secondary" Margin="0,6,0,0" />
                         <TextBox Text="{Binding OllamaEndpoint}" PlaceholderText="http://localhost:11434" />
 
-                        <!-- Modell: installierte per ComboBox + manuelle TextBox darunter (Magnat-Muster) -->
                         <Grid ColumnDefinitions="*,Auto" Margin="0,10,0,0">
                             <TextBlock Grid.Column="0" Text="Modell (installiert)"
-                                       Foreground="#B7BEC7" VerticalAlignment="Bottom" />
-                            <Button Grid.Column="1" Content="↺ Aktualisieren" Padding="10,3"
+                                       Classes="secondary" VerticalAlignment="Bottom" />
+                            <Button Grid.Column="1" Classes="ghost" Content="↺ Aktualisieren" Padding="10,4"
                                     Command="{Binding RefreshOllamaModelsCommand}" />
                         </Grid>
                         <ComboBox ItemsSource="{Binding AvailableOllamaModels}"
                                   SelectedItem="{Binding SelectedInstalledOllamaModel}"
                                   PlaceholderText="Ollama starten und ↺ klicken …"
                                   HorizontalAlignment="Stretch" />
-                        <TextBlock Text="Oder Modell-Namen manuell eintragen:" Foreground="#8A93A0"
+                        <TextBlock Text="Oder Modell-Namen manuell eintragen:" Classes="muted"
                                    FontSize="11" Margin="0,6,0,0" />
                         <TextBox Text="{Binding OllamaModel}" PlaceholderText="z. B. gemma3:1b" />
 
-                        <!-- Empfohlene Modelle mit Größe + Beschreibung -->
-                        <TextBlock Text="Modell herunterladen" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource KrosteGoldBrush}" Margin="0,14,0,0" />
-                        <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Modell herunterladen" Classes="h2" Margin="0,14,0,0" />
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                             <ComboBox Grid.Column="0"
                                       ItemsSource="{Binding CuratedOllamaModels}"
                                       SelectedItem="{Binding SelectedRecommendedModel}"
                                       PlaceholderText="Empfohlenes Modell wählen …"
-                                      HorizontalAlignment="Stretch" Margin="0,0,8,0">
+                                      HorizontalAlignment="Stretch">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="svc:OllamaCuratedModel">
                                         <Grid ColumnDefinitions="150,80,*" Margin="2,4">
@@ -102,43 +109,41 @@
                                                        FontWeight="SemiBold"
                                                        Foreground="{DynamicResource KrosteGoldBrush}" />
                                             <TextBlock Grid.Column="1" Text="{Binding ApproxSize}"
-                                                       Foreground="#8A93A0" FontSize="11"
+                                                       Classes="muted" FontSize="11"
                                                        VerticalAlignment="Center" />
                                             <TextBlock Grid.Column="2" Text="{Binding Description}"
-                                                       Foreground="#B7BEC7" FontSize="11"
+                                                       Classes="secondary" FontSize="11"
                                                        VerticalAlignment="Center" TextWrapping="Wrap" />
                                         </Grid>
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
-                            <Button Grid.Column="1" Content="⬇ Herunterladen" Padding="12,6"
+                            <Button Grid.Column="1" Classes="accent" Content="⬇ Herunterladen"
                                     Command="{Binding PullRecommendedModelCommand}"
-                                    IsEnabled="{Binding SelectedRecommendedModel, Converter={x:Static ObjectConverters.IsNotNull}}"
-                                    FontWeight="SemiBold" />
+                                    IsEnabled="{Binding SelectedRecommendedModel, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         </Grid>
-                        <TextBlock Foreground="#8A93A0" FontSize="11" TextWrapping="Wrap"
+                        <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
                                    Text="Alle Vorschläge sind klein genug für unauffälliges lokales Übersetzen." />
                     </StackPanel>
                 </Border>
 
                 <!-- ANTHROPIC -->
-                <Border Padding="14" CornerRadius="6" Background="{DynamicResource KrosteSurfaceBrush}"
-                        IsVisible="{Binding IsAnthropic}">
+                <Border Classes="card" IsVisible="{Binding IsAnthropic}">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Anthropic Claude" FontWeight="Bold"
-                                   Foreground="{DynamicResource KrosteGoldBrush}" />
-                        <TextBlock Text="API-Key" Foreground="#B7BEC7" />
+                        <TextBlock Text="ANTHROPIC · CLOUD" Classes="section-label" />
+                        <TextBlock Text="Anthropic Claude" Classes="h2" />
+                        <TextBlock Text="API-Key" Classes="secondary" Margin="0,6,0,0" />
                         <TextBox Text="{Binding AnthropicApiKey}" PasswordChar="•"
                                  PlaceholderText="sk-ant-…" />
-                        <TextBlock Text="Modell" Foreground="#B7BEC7" Margin="0,6,0,0" />
+                        <TextBlock Text="Modell" Classes="secondary" Margin="0,6,0,0" />
                         <ComboBox ItemsSource="{Binding AnthropicModels}"
                                   SelectedItem="{Binding SelectedAnthropicModel}"
                                   PlaceholderText="Empfohlenes Modell wählen …"
                                   HorizontalAlignment="Stretch" />
-                        <TextBlock Text="Oder Modell-Namen manuell eintragen:" Foreground="#8A93A0"
+                        <TextBlock Text="Oder Modell-Namen manuell eintragen:" Classes="muted"
                                    FontSize="11" Margin="0,4,0,0" />
                         <TextBox Text="{Binding AnthropicModel}" PlaceholderText="claude-…" />
-                        <TextBlock Text="Endpunkt (nur ändern, wenn eigener Proxy)" Foreground="#8A93A0"
+                        <TextBlock Text="Endpunkt (nur ändern, wenn eigener Proxy)" Classes="muted"
                                    FontSize="11" Margin="0,6,0,0" />
                         <TextBox Text="{Binding AnthropicEndpoint}"
                                  PlaceholderText="https://api.anthropic.com/v1" />
@@ -146,93 +151,90 @@
                 </Border>
 
                 <!-- OPENAI -->
-                <Border Padding="14" CornerRadius="6" Background="{DynamicResource KrosteSurfaceBrush}"
-                        IsVisible="{Binding IsOpenAi}">
+                <Border Classes="card" IsVisible="{Binding IsOpenAi}">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="OpenAI ChatGPT" FontWeight="Bold"
-                                   Foreground="{DynamicResource KrosteGoldBrush}" />
-                        <TextBlock Text="API-Key" Foreground="#B7BEC7" />
+                        <TextBlock Text="OPENAI · CLOUD" Classes="section-label" />
+                        <TextBlock Text="OpenAI ChatGPT" Classes="h2" />
+                        <TextBlock Text="API-Key" Classes="secondary" Margin="0,6,0,0" />
                         <TextBox Text="{Binding OpenAiApiKey}" PasswordChar="•"
                                  PlaceholderText="sk-…" />
-                        <TextBlock Text="Modell" Foreground="#B7BEC7" Margin="0,6,0,0" />
+                        <TextBlock Text="Modell" Classes="secondary" Margin="0,6,0,0" />
                         <ComboBox ItemsSource="{Binding OpenAiModels}"
                                   SelectedItem="{Binding SelectedOpenAiModel}"
                                   PlaceholderText="Empfohlenes Modell wählen …"
                                   HorizontalAlignment="Stretch" />
-                        <TextBlock Text="Oder Modell-Namen manuell eintragen:" Foreground="#8A93A0"
+                        <TextBlock Text="Oder Modell-Namen manuell eintragen:" Classes="muted"
                                    FontSize="11" Margin="0,4,0,0" />
                         <TextBox Text="{Binding OpenAiModel}" PlaceholderText="gpt-…" />
-                        <TextBlock Text="Endpunkt" Foreground="#8A93A0" FontSize="11" Margin="0,6,0,0" />
+                        <TextBlock Text="Endpunkt" Classes="muted" FontSize="11" Margin="0,6,0,0" />
                         <TextBox Text="{Binding OpenAiEndpoint}"
                                  PlaceholderText="https://api.openai.com/v1" />
                     </StackPanel>
                 </Border>
 
                 <!-- GEMINI -->
-                <Border Padding="14" CornerRadius="6" Background="{DynamicResource KrosteSurfaceBrush}"
-                        IsVisible="{Binding IsGemini}">
+                <Border Classes="card" IsVisible="{Binding IsGemini}">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Google Gemini" FontWeight="Bold"
-                                   Foreground="{DynamicResource KrosteGoldBrush}" />
-                        <TextBlock Text="API-Key" Foreground="#B7BEC7" />
+                        <TextBlock Text="GOOGLE · CLOUD" Classes="section-label" />
+                        <TextBlock Text="Google Gemini" Classes="h2" />
+                        <TextBlock Text="API-Key" Classes="secondary" Margin="0,6,0,0" />
                         <TextBox Text="{Binding GeminiApiKey}" PasswordChar="•"
                                  PlaceholderText="AIza…" />
-                        <TextBlock Text="Modell" Foreground="#B7BEC7" Margin="0,6,0,0" />
+                        <TextBlock Text="Modell" Classes="secondary" Margin="0,6,0,0" />
                         <ComboBox ItemsSource="{Binding GeminiModels}"
                                   SelectedItem="{Binding SelectedGeminiModel}"
                                   PlaceholderText="Empfohlenes Modell wählen …"
                                   HorizontalAlignment="Stretch" />
-                        <TextBlock Text="Oder Modell-Namen manuell eintragen:" Foreground="#8A93A0"
+                        <TextBlock Text="Oder Modell-Namen manuell eintragen:" Classes="muted"
                                    FontSize="11" Margin="0,4,0,0" />
                         <TextBox Text="{Binding GeminiModel}" PlaceholderText="gemini-…" />
-                        <TextBlock Text="Endpunkt" Foreground="#8A93A0" FontSize="11" Margin="0,6,0,0" />
+                        <TextBlock Text="Endpunkt" Classes="muted" FontSize="11" Margin="0,6,0,0" />
                         <TextBox Text="{Binding GeminiEndpoint}"
                                  PlaceholderText="https://generativelanguage.googleapis.com/v1beta" />
                     </StackPanel>
                 </Border>
 
                 <!-- MISTRAL -->
-                <Border Padding="14" CornerRadius="6" Background="{DynamicResource KrosteSurfaceBrush}"
-                        IsVisible="{Binding IsMistral}">
+                <Border Classes="card" IsVisible="{Binding IsMistral}">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Mistral" FontWeight="Bold"
-                                   Foreground="{DynamicResource KrosteGoldBrush}" />
-                        <TextBlock Text="API-Key" Foreground="#B7BEC7" />
+                        <TextBlock Text="MISTRAL · CLOUD" Classes="section-label" />
+                        <TextBlock Text="Mistral" Classes="h2" />
+                        <TextBlock Text="API-Key" Classes="secondary" Margin="0,6,0,0" />
                         <TextBox Text="{Binding MistralApiKey}" PasswordChar="•"
                                  PlaceholderText="…" />
-                        <TextBlock Text="Modell" Foreground="#B7BEC7" Margin="0,6,0,0" />
+                        <TextBlock Text="Modell" Classes="secondary" Margin="0,6,0,0" />
                         <ComboBox ItemsSource="{Binding MistralModels}"
                                   SelectedItem="{Binding SelectedMistralModel}"
                                   PlaceholderText="Empfohlenes Modell wählen …"
                                   HorizontalAlignment="Stretch" />
-                        <TextBlock Text="Oder Modell-Namen manuell eintragen:" Foreground="#8A93A0"
+                        <TextBlock Text="Oder Modell-Namen manuell eintragen:" Classes="muted"
                                    FontSize="11" Margin="0,4,0,0" />
                         <TextBox Text="{Binding MistralModel}" PlaceholderText="mistral-…" />
-                        <TextBlock Text="Endpunkt" Foreground="#8A93A0" FontSize="11" Margin="0,6,0,0" />
+                        <TextBlock Text="Endpunkt" Classes="muted" FontSize="11" Margin="0,6,0,0" />
                         <TextBox Text="{Binding MistralEndpoint}"
                                  PlaceholderText="https://api.mistral.ai/v1" />
                     </StackPanel>
                 </Border>
 
-                <!-- OpenAI-kompatibel (generisch: Groq, OpenRouter, LM Studio, …) -->
-                <Border Padding="14" CornerRadius="6" Background="{DynamicResource KrosteSurfaceBrush}"
-                        IsVisible="{Binding IsOpenAiCompatible}">
+                <!-- OpenAI-kompatibel (Groq, OpenRouter, LM Studio, …) -->
+                <Border Classes="card" IsVisible="{Binding IsOpenAiCompatible}">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="OpenAI-kompatibel (Groq, OpenRouter, LM Studio, …)"
-                                   FontWeight="Bold" Foreground="{DynamicResource KrosteGoldBrush}" />
-                        <TextBlock Foreground="#8A93A0" FontSize="11" TextWrapping="Wrap"
+                        <TextBlock Text="OPENAI-KOMPATIBEL" Classes="section-label" />
+                        <TextBlock Text="Groq, OpenRouter, LM Studio, …" Classes="h2" />
+                        <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
                                    Text="Für alle Anbieter, die die OpenAI-Chat-Completions-API sprechen." />
-                        <TextBlock Text="Base-URL" Foreground="#B7BEC7" Margin="0,6,0,0" />
+                        <TextBlock Text="Base-URL" Classes="secondary" Margin="0,6,0,0" />
                         <TextBox Text="{Binding OpenAiCompatibleEndpoint}"
                                  PlaceholderText="http://localhost:8080/v1" />
-                        <TextBlock Text="Modell" Foreground="#B7BEC7" Margin="0,6,0,0" />
+                        <TextBlock Text="Modell" Classes="secondary" Margin="0,6,0,0" />
                         <TextBox Text="{Binding OpenAiCompatibleModel}"
                                  PlaceholderText="z. B. mixtral-8x7b, deepseek-r1, …" />
-                        <TextBlock Text="API-Key (optional bei lokalen Servern)" Foreground="#B7BEC7"
+                        <TextBlock Text="API-Key (optional bei lokalen Servern)" Classes="secondary"
                                    Margin="0,6,0,0" />
                         <TextBox Text="{Binding OpenAiCompatibleApiKey}" PasswordChar="•" />
                     </StackPanel>
                 </Border>
+
             </StackPanel>
         </ScrollViewer>
     </DockPanel>
