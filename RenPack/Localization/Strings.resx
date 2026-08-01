@@ -155,6 +155,14 @@
   <data name="Decompile_DoneWithErrorsFormat" xml:space="preserve"><value>{0} of {1} succeeded, {2} failed, {3} skipped:</value></data>
   <data name="Decompile_DoneTitle" xml:space="preserve"><value>Folder decompilation done</value></data>
   <data name="Decompile_FolderFailed" xml:space="preserve"><value>Folder decompilation failed.</value></data>
+  <data name="About_LogViewer" xml:space="preserve"><value>Show log</value></data>
+  <data name="Log_Title" xml:space="preserve"><value>Log</value></data>
+  <data name="Log_Filter_Placeholder" xml:space="preserve"><value>🔍  Filter log lines …</value></data>
+  <data name="Log_Refresh" xml:space="preserve"><value>↺ Refresh</value></data>
+  <data name="Log_OpenExternal" xml:space="preserve"><value>📁 Open log folder</value></data>
+  <data name="Log_SizeFormat" xml:space="preserve"><value>Log size: {0}</value></data>
+  <data name="Log_NotFoundFormat" xml:space="preserve"><value>Log file not found: {0}</value></data>
+  <data name="Log_ReadFailedFormat" xml:space="preserve"><value>Could not read log: {0}</value></data>
 
   <!-- ============ MessageBox ============ -->
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>

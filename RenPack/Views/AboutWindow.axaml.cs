@@ -26,6 +26,7 @@ public partial class AboutWindow : ChromeWindow
         UpdateButton.Click += OnCheckUpdate;
         GithubButton.Click += (_, _) => Launch(GithubUrl);
         BmcButton.Click += (_, _) => Launch(BmcUrl);
+        LogButton.Click += async (_, _) => await new LogViewerWindow().ShowDialog(this);
     }
 
     private async void OnCheckUpdate(object? sender, RoutedEventArgs e)

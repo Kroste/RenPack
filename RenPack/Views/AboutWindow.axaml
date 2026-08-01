@@ -29,6 +29,7 @@
             <StackPanel Orientation="Horizontal" Spacing="10">
                 <Button x:Name="GithubButton" Content="{loc:Tr About_GitHub}" />
                 <Button x:Name="BmcButton" Content="{loc:Tr About_BuyMeCoffee}" />
+                <Button x:Name="LogButton" Classes="ghost" Content="{loc:Tr About_LogViewer}" />
             </StackPanel>
 
             <TextBlock Text="{loc:Tr About_License}"

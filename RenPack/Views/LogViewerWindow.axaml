@@ -1,0 +1,47 @@
+<views:ChromeWindow xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="using:RenPack.Views"
+        xmlns:controls="using:RenPack.Controls"
+        xmlns:loc="using:RenPack.Localization"
+        x:Class="RenPack.Views.LogViewerWindow"
+        Width="960" Height="640" MinWidth="600" MinHeight="360"
+        WindowStartupLocation="CenterOwner"
+        Title="{loc:Tr Log_Title}"
+        Background="{DynamicResource KrosteBackgroundBrush}">
+    <DockPanel>
+        <controls:TitleBar DockPanel.Dock="Top" Title="{loc:Tr Log_Title}" />
+
+        <Border DockPanel.Dock="Bottom" Padding="18,10"
+                BorderBrush="{DynamicResource KrosteBorderBrush}" BorderThickness="0,1,0,0"
+                Background="{DynamicResource KrosteTitleBarBrush}">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                <TextBlock Grid.Column="0" x:Name="StatusText" Classes="secondary"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <Button Grid.Column="1" Classes="ghost" Content="{loc:Tr Log_OpenExternal}"
+                        x:Name="OpenExternalButton" />
+                <Button Grid.Column="2" Content="{loc:Tr Log_Refresh}" x:Name="RefreshButton" />
+                <Button Grid.Column="3" Classes="accent" Content="{loc:Tr Common_Ok}"
+                        x:Name="CloseButton" IsDefault="True" IsCancel="True" />
+            </Grid>
+        </Border>
+
+        <Grid Margin="18" RowDefinitions="Auto,Auto,*">
+            <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                <TextBlock Text="{loc:Tr Log_Title}" Classes="h1" />
+                <TextBlock x:Name="PathText" Classes="muted" FontSize="12" Margin="0,2,0,0" />
+            </StackPanel>
+
+            <TextBox Grid.Row="1" x:Name="FilterBox" Margin="0,0,0,10"
+                     PlaceholderText="{loc:Tr Log_Filter_Placeholder}" />
+
+            <Border Grid.Row="2" Classes="card-flat" ClipToBounds="True">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" x:Name="LogScroll">
+                    <TextBox x:Name="LogContent" IsReadOnly="True"
+                             FontFamily="Cascadia Mono,Consolas,Menlo,DejaVu Sans Mono,monospace"
+                             FontSize="12" BorderThickness="0" Background="Transparent"
+                             Padding="12" TextWrapping="NoWrap" AcceptsReturn="True" />
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </DockPanel>
+</views:ChromeWindow>

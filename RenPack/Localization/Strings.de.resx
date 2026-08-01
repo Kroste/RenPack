@@ -149,6 +149,14 @@
   <data name="Decompile_DoneWithErrorsFormat" xml:space="preserve"><value>{0} von {1} erfolgreich, {2} fehlgeschlagen, {3} übersprungen:</value></data>
   <data name="Decompile_DoneTitle" xml:space="preserve"><value>Ordner-Dekompilierung fertig</value></data>
   <data name="Decompile_FolderFailed" xml:space="preserve"><value>Fehler bei der Ordner-Dekompilierung.</value></data>
+  <data name="About_LogViewer" xml:space="preserve"><value>Log anzeigen</value></data>
+  <data name="Log_Title" xml:space="preserve"><value>Log</value></data>
+  <data name="Log_Filter_Placeholder" xml:space="preserve"><value>🔍  Log-Zeilen filtern …</value></data>
+  <data name="Log_Refresh" xml:space="preserve"><value>↺ Aktualisieren</value></data>
+  <data name="Log_OpenExternal" xml:space="preserve"><value>📁 Log-Ordner öffnen</value></data>
+  <data name="Log_SizeFormat" xml:space="preserve"><value>Log-Größe: {0}</value></data>
+  <data name="Log_NotFoundFormat" xml:space="preserve"><value>Log-Datei nicht gefunden: {0}</value></data>
+  <data name="Log_ReadFailedFormat" xml:space="preserve"><value>Log konnte nicht gelesen werden: {0}</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 

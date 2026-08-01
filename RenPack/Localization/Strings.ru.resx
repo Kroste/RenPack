@@ -149,6 +149,14 @@
   <data name="Decompile_DoneWithErrorsFormat" xml:space="preserve"><value>{0} из {1} успешно, {2} с ошибкой, {3} пропущено:</value></data>
   <data name="Decompile_DoneTitle" xml:space="preserve"><value>Декомпиляция папки завершена</value></data>
   <data name="Decompile_FolderFailed" xml:space="preserve"><value>Ошибка декомпиляции папки.</value></data>
+  <data name="About_LogViewer" xml:space="preserve"><value>Показать журнал</value></data>
+  <data name="Log_Title" xml:space="preserve"><value>Журнал</value></data>
+  <data name="Log_Filter_Placeholder" xml:space="preserve"><value>🔍  Фильтр строк …</value></data>
+  <data name="Log_Refresh" xml:space="preserve"><value>↺ Обновить</value></data>
+  <data name="Log_OpenExternal" xml:space="preserve"><value>📁 Открыть папку</value></data>
+  <data name="Log_SizeFormat" xml:space="preserve"><value>Размер журнала: {0}</value></data>
+  <data name="Log_NotFoundFormat" xml:space="preserve"><value>Файл журнала не найден: {0}</value></data>
+  <data name="Log_ReadFailedFormat" xml:space="preserve"><value>Не удалось прочитать журнал: {0}</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 

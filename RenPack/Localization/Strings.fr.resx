@@ -149,6 +149,14 @@
   <data name="Decompile_DoneWithErrorsFormat" xml:space="preserve"><value>{0} sur {1} réussis, {2} échoués, {3} ignorés :</value></data>
   <data name="Decompile_DoneTitle" xml:space="preserve"><value>Décompilation du dossier terminée</value></data>
   <data name="Decompile_FolderFailed" xml:space="preserve"><value>Échec de la décompilation du dossier.</value></data>
+  <data name="About_LogViewer" xml:space="preserve"><value>Afficher le journal</value></data>
+  <data name="Log_Title" xml:space="preserve"><value>Journal</value></data>
+  <data name="Log_Filter_Placeholder" xml:space="preserve"><value>🔍  Filtrer les lignes …</value></data>
+  <data name="Log_Refresh" xml:space="preserve"><value>↺ Actualiser</value></data>
+  <data name="Log_OpenExternal" xml:space="preserve"><value>📁 Ouvrir le dossier</value></data>
+  <data name="Log_SizeFormat" xml:space="preserve"><value>Taille du journal : {0}</value></data>
+  <data name="Log_NotFoundFormat" xml:space="preserve"><value>Fichier journal introuvable : {0}</value></data>
+  <data name="Log_ReadFailedFormat" xml:space="preserve"><value>Impossible de lire le journal : {0}</value></data>
 
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
 
