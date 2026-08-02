@@ -522,24 +522,57 @@ public sealed class RenpyRpycDecompiler
         EmitBlockNonEmpty(sb, node.GetValueOrDefault("block") as IEnumerable ?? Array.Empty<object>(), indent + 1);
     }
 
-    /// <summary>Formatiert ein <c>renpy.ast.ParameterInfo</c>-Node in seine
+    /// <summary>Formatiert einen Parameter-Info-Node in seine
     /// <c>(name, name2=default, …)</c>-Deklarationsform fuer <c>label</c>-
-    /// und <c>screen</c>-Definitionen. Struktur: <c>ParameterInfo.parameters
-    /// = [(name, default?), …]</c>. Positional-Args haben <c>default = None</c>.</summary>
+    /// und <c>screen</c>-Definitionen.
+    ///
+    /// Unterstuetzt zwei Ren'Py-Versionen:
+    /// <list type="bullet">
+    ///   <item>Alt (<c>renpy.ast.ParameterInfo</c>): <c>parameters =
+    ///     [(name, default?), …]</c> als Liste von Tupeln.</item>
+    ///   <item>Neu (<c>renpy.parameter.Signature</c>, ab Ren'Py 8.5):
+    ///     <c>parameters</c> ist ein OrderedDict/Dict mit Namen als Keys
+    ///     und <c>Parameter</c>-Objekten (mit <c>kind</c>/<c>default</c>)
+    ///     als Values. Verifiziert an Interview Desires 0.23 wo alter
+    ///     Parser den <c>label try_unlock_truth(unlocked_list, index):</c>
+    ///     ohne Parameter emittiert hat → NameError zur Laufzeit.</item>
+    /// </list></summary>
     private static string FormatParameterInfo(object? parameters)
     {
         if (parameters is not ClassDict cd) return "";
-        if (cd.GetValueOrDefault("parameters") is not IEnumerable list) return "";
+        var inner = cd.GetValueOrDefault("parameters");
         var parts = new List<string>();
-        foreach (var p in list)
+
+        // Neues Format: parameters ist ein Dict (OrderedDict) mit
+        // {name: Parameter-Object}.
+        if (inner is System.Collections.IDictionary dict)
         {
-            if (p is not object[] arr || arr.Length < 1) continue;
-            string pname = AsString(arr[0]);
-            if (string.IsNullOrEmpty(pname)) continue;
-            if (arr.Length >= 2 && arr[1] is not null)
-                parts.Add($"{pname}={AsString(arr[1])}");
-            else
-                parts.Add(pname);
+            foreach (System.Collections.DictionaryEntry e in dict)
+            {
+                string pname = AsString(e.Key);
+                if (string.IsNullOrEmpty(pname)) continue;
+                object? defaultVal = null;
+                if (e.Value is ClassDict param)
+                    defaultVal = param.GetValueOrDefault("default");
+                if (defaultVal is not null)
+                    parts.Add($"{pname}={AsString(defaultVal)}");
+                else
+                    parts.Add(pname);
+            }
+        }
+        // Altes Format: parameters ist eine List von 2-Tupeln [(name, default), …].
+        else if (inner is IEnumerable list)
+        {
+            foreach (var p in list)
+            {
+                if (p is not object[] arr || arr.Length < 1) continue;
+                string pname = AsString(arr[0]);
+                if (string.IsNullOrEmpty(pname)) continue;
+                if (arr.Length >= 2 && arr[1] is not null)
+                    parts.Add($"{pname}={AsString(arr[1])}");
+                else
+                    parts.Add(pname);
+            }
         }
         return parts.Count > 0 ? "(" + string.Join(", ", parts) + ")" : "";
     }
