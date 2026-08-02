@@ -369,7 +369,24 @@ public sealed class RenpyRpycDecompiler
                 }
             }
 
-            // Nach Call: Auto-Sync-Sequenz behandeln (siehe Kommentar oben).
+            // Nach Call: Auto-Sync-Sequenz behandeln. Ren'Py-Compiler fuegt
+            // hinter jedem `call X` intern ein `Label(_call_X_N)` mit `Pass`
+            // als Return-Adresse ein. Wir EMITTIEREN das jetzt IMMER als
+            // `from _call_X_N`-Suffix — auch fuer den ersten Call.
+            //
+            // Warum immer explizit? Ren'Py 8.5+ generiert beim Re-Kompilieren
+            // konsistente Auto-Namen (_call_X_1, _call_X_2, …). Wenn wir das
+            // erste weg-schlucken (`_call_X` ohne Suffix), setzt Ren'Py bei
+            // dem Call einen impliziten `_call_X_1`-Sync-Label. Beim
+            // zweiten Call haben wir aber schon `from _call_X_1` explizit
+            // emittiert → Duplicate-Label-Error (Interview Desires 0.23,
+            // v0.12.8-Bug).
+            //
+            // Ausnahme: das direkte `_call_<target>`-Label (exact match,
+            // ohne _N-Suffix) — das ist der Auto-Sync fuer den ERSTEN Call
+            // an ein Target UND wird von Ren'Py 8.4 und aelter generiert.
+            // Wenn wir das mit `from _call_<target>` emittieren, ist der
+            // Name identisch → kein Konflikt.
             string? fromClause = null;
             if (node.ClassName == "renpy.ast.Call" && i + 1 < list.Count &&
                 list[i + 1] is ClassDict maybeLabel && maybeLabel.ClassName == "renpy.ast.Label")
@@ -379,6 +396,7 @@ public sealed class RenpyRpycDecompiler
                 string target = GetCallTarget(node);
                 if (labelName == $"_call_{target}")
                 {
+                    fromClause = labelName; // explizit als `from _call_<target>`
                     i++;
                     if (i + 1 < list.Count && list[i + 1] is ClassDict p1
                         && p1.ClassName == "renpy.ast.Pass") i++;

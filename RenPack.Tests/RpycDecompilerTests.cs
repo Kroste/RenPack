@@ -957,10 +957,14 @@ public sealed class RpycDecompilerTests
     }
 
     [Fact]
-    public void Call_followed_by_auto_sync_label_omits_the_label()
+    public void Call_followed_by_auto_sync_label_emits_from_clause_explicitly()
     {
-        // Ren'Py-Compiler fügt nach `call X` ein `Label(_call_X)` + `Pass` ein.
-        // Beide sollen weg — im Output nur `call X`.
+        // Ren'Py-Compiler fügt nach `call X` ein `Label(_call_X)` + `Pass`
+        // ein. Wir emittieren das ab v0.12.9 IMMER als `from _call_X` —
+        // auch fuer den ersten Call — weil Ren'Py 8.5+ sonst beim
+        // Re-Kompilieren einen automatischen `_call_X_1` generiert, der
+        // mit spaeteren explizit-benannten `_call_X_N` kollidiert
+        // (Interview Desires 0.23, v0.12.8-Duplicate-Label-Bug).
         var script = new object[]
         {
             Node("renpy.ast.Call", ("label", "target")),
@@ -969,9 +973,11 @@ public sealed class RpycDecompilerTests
             Node("renpy.ast.Say", ("what", "danach")),
         };
         var text = _dec.Decompile(script);
-        text.Should().Contain("call target");
-        text.Should().NotContain("_call_target");
+        text.Should().Contain("call target from _call_target");
         text.Should().Contain("\"danach\"");
+        // Das Label-Statement selbst darf nicht als Zeile emittiert werden —
+        // nur als from-Suffix am Call.
+        text.Split('\n').Should().NotContain(l => l.Trim() == "label _call_target:");
     }
 
     [Fact]
