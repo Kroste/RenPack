@@ -20,7 +20,8 @@ public sealed class KrosteRenameGeneratorTests : IDisposable
         Characters: chars,
         AnalyzedFiles: Array.Empty<string>(),
         VariableConsumers: new Dictionary<string, IReadOnlyList<VarConsumer>>(),
-        MenuLocations: Array.Empty<RpyMenuLocation>());
+        MenuLocations: Array.Empty<RpyMenuLocation>(),
+        SayStatements: Array.Empty<RpySayStatement>());
 
     [Fact]
     public void Generates_rpy_that_mutates_character_name_attributes()

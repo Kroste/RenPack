@@ -27,7 +27,8 @@ public sealed class KrosteInfoScreenGeneratorTests : IDisposable
             Characters: Array.Empty<RpyCharacter>(),
             AnalyzedFiles: Array.Empty<string>(),
             VariableConsumers: consumers ?? new Dictionary<string, IReadOnlyList<VarConsumer>>(),
-            MenuLocations: menus ?? Array.Empty<RpyMenuLocation>());
+            MenuLocations: menus ?? Array.Empty<RpyMenuLocation>(),
+            SayStatements: Array.Empty<RpySayStatement>());
 
     [Fact]
     public void Emits_rpy_file_with_screen_and_keymap()

@@ -287,6 +287,65 @@ public sealed class RenpyModAnalyzerTests : IDisposable
         result.Choices[0].MenuHeaderLine.Should().Be(3);
     }
 
+    // ---- v0.12.0: Say-Statement-Erfassung fuer E4b-Body-Rewrite ---------
+
+    [Fact]
+    public void Collects_say_statements_with_character_and_narrator_text()
+    {
+        Write("story.rpy", """
+            label start:
+                sophia "Hallo Welt"
+                "Ein Beobachter spricht."
+                sam "Wie geht's?"
+            """);
+        var result = _analyzer.Analyze(_tmp);
+        result.SayStatements.Should().HaveCount(3);
+        result.SayStatements.Should().Contain(s =>
+            s.CharacterVar == "sophia" && s.RawTextInFile == "Hallo Welt");
+        result.SayStatements.Should().Contain(s =>
+            s.CharacterVar == "" && s.RawTextInFile == "Ein Beobachter spricht.");
+        result.SayStatements.Should().Contain(s =>
+            s.CharacterVar == "sam" && s.RawTextInFile == "Wie geht's?");
+    }
+
+    [Fact]
+    public void Say_extraction_skips_lines_inside_menu_choices()
+    {
+        // Choice-Header "text": ist KEIN Say-Statement — wenn wir das faelsch-
+        // licherweise als Say erfassen, wuerde der Rewriter Choice-Text als
+        // Dialog-Text umschreiben und den Walkthrough zerreissen.
+        Write("story.rpy", """
+            label start:
+                sam "Vor dem Menu"
+                menu:
+                    "Choice A":
+                        sam "In choice a"
+                    "Choice B":
+                        pass
+                sam "Nach dem Menu"
+            """);
+        var result = _analyzer.Analyze(_tmp);
+        // Nur die Says AUSSERHALB des Menu-Scopes werden erfasst — das ist ok
+        // fuer den Rewrite-Use-Case (Choice-Body-Says werden nicht umgeschrieben).
+        result.SayStatements.Should().Contain(s => s.RawTextInFile == "Vor dem Menu");
+        result.SayStatements.Should().Contain(s => s.RawTextInFile == "Nach dem Menu");
+        result.SayStatements.Should().NotContain(s => s.RawTextInFile.StartsWith("Choice "));
+    }
+
+    [Fact]
+    public void Say_extraction_preserves_escape_sequences()
+    {
+        // Der Text bleibt WIE ER IN DER RPY STEHT — inkl. \"-Escapes.
+        // Sonst wuerde der Patcher spaeter nicht die exakte Zeile finden.
+        Write("story.rpy", """
+            label start:
+                sam "Er sagt \"Hallo\""
+            """);
+        var result = _analyzer.Analyze(_tmp);
+        result.SayStatements.Should().ContainSingle();
+        result.SayStatements[0].RawTextInFile.Should().Be("Er sagt \\\"Hallo\\\"");
+    }
+
     [Fact]
     public void Menus_without_var_changing_choices_are_excluded_from_locations()
     {

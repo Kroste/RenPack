@@ -26,7 +26,8 @@ public sealed class KrosteCheatGeneratorTests : IDisposable
             Characters: Array.Empty<RpyCharacter>(),
             AnalyzedFiles: Array.Empty<string>(),
             VariableConsumers: consumers ?? new Dictionary<string, IReadOnlyList<VarConsumer>>(),
-            MenuLocations: Array.Empty<RpyMenuLocation>());
+            MenuLocations: Array.Empty<RpyMenuLocation>(),
+            SayStatements: Array.Empty<RpySayStatement>());
 
     // ---- Candidate-Auswahl -----------------------------------------------
 

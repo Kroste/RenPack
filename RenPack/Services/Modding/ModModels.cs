@@ -25,7 +25,25 @@ public sealed record ModAnalysis(
     IReadOnlyList<RpyCharacter> Characters,
     IReadOnlyList<string> AnalyzedFiles,
     IReadOnlyDictionary<string, IReadOnlyList<VarConsumer>> VariableConsumers,
-    IReadOnlyList<RpyMenuLocation> MenuLocations);
+    IReadOnlyList<RpyMenuLocation> MenuLocations,
+    IReadOnlyList<RpySayStatement> SayStatements);
+
+/// <summary>Ein <c>character "text"</c>-Statement (Say). Fuer den
+/// KrosteMod-E4b-Rewriter: wenn User einen Character umbenennt und die
+/// KI soll den Body-Text konsistent umschreiben, brauchen wir alle
+/// Say-Stellen mit ihrer Position um sie in der .rpy zu patchen.
+///
+/// <see cref="CharacterVar"/> ist der Python-Identifier links vom Text
+/// (z.B. <c>sophia</c> in <c>sophia "Hallo"</c>) oder leer bei Narrator-
+/// Text. <see cref="RawTextInFile"/> ist der Text OHNE die umschliessen-
+/// den Anfuehrungszeichen aber MIT Escape-Sequenzen (\", \n) — so wie
+/// er in der .rpy steht. Wird gebraucht damit der Patcher die richtige
+/// Zeile exact ersetzen kann.</summary>
+public sealed record RpySayStatement(
+    string SourceFile,
+    int SourceLine,
+    string CharacterVar,
+    string RawTextInFile);
 
 /// <summary>Eine <c>menu:</c>-Stelle im Skript. <see cref="MenuHeaderLine"/>
 /// ist die 1-basierte Zeilennummer des <c>menu:</c> (bzw. <c>menu name:</c>)

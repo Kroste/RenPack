@@ -78,6 +78,15 @@ public sealed class RenpyModAnalyzer
         @"\b([a-zA-Z_][a-zA-Z_0-9]*)\b",
         RegexOptions.Compiled);
 
+    /// <summary>Say-Statement: <c>character "text"</c> oder nur <c>"text"</c>
+    /// (Narrator). Der Text kann Escape-Sequenzen enthalten. Wir extrahieren
+    /// den optionalen Character-Identifier und den Raw-Text (mit Escapes).
+    /// Modifiers wie <c>nointeract</c> oder <c>(what_prefix="X")</c> ignorieren
+    /// wir fuer den E4b-Body-Rewrite (KI kriegt nur den reinen Text).</summary>
+    private static readonly Regex SayPattern = new(
+        @"^\s*(?:([A-Za-z_][A-Za-z0-9_]*)\s+)?""((?:[^""\\]|\\.)*)""\s*(?:\s+\w+)?\s*$",
+        RegexOptions.Compiled);
+
     /// <summary>Python-Keywords + haeufige Builtins/Ren'Py-Funcs, die wir aus
     /// Consumer-Kandidaten ausfiltern (kein Store-Var, sondern Sprach-Element).</summary>
     private static readonly HashSet<string> NonVariableTokens = new(StringComparer.Ordinal)
@@ -103,6 +112,7 @@ public sealed class RenpyModAnalyzer
         var files = new List<string>();
         var consumers = new Dictionary<string, List<VarConsumer>>(StringComparer.Ordinal);
         var menuLocations = new List<(string file, int line)>();
+        var says = new List<RpySayStatement>();
 
         var root = Path.GetFullPath(rootDir);
         foreach (var file in Directory.EnumerateFiles(root, "*.rpy", SearchOption.AllDirectories)
@@ -114,7 +124,7 @@ public sealed class RenpyModAnalyzer
             if (rel.Split('/').Any(s => s.Equals("tl", StringComparison.OrdinalIgnoreCase)))
                 continue;
             files.Add(rel);
-            AnalyzeFile(file, rel, choices, vars, chars, consumers, menuLocations);
+            AnalyzeFile(file, rel, choices, vars, chars, consumers, menuLocations, says);
         }
 
         // Nachtraeglich: Choice-Conditions als MenuChoiceGate-Consumer erfassen.
@@ -156,9 +166,9 @@ public sealed class RenpyModAnalyzer
 
         Log.Info("Mod-Analyse: {files} .rpy-Dateien, {choices} Choices, "
             + "{vars} Store-Variablen, {chars} Characters, {consumers} Variables mit Consumers, "
-            + "{menus} Menu-Locations mit Impact",
-            files.Count, choices.Count, vars.Count, chars.Count, frozen.Count, menuList.Count);
-        return new ModAnalysis(choices, vars, chars, files, frozen, menuList);
+            + "{menus} Menu-Locations mit Impact, {says} Say-Statements",
+            files.Count, choices.Count, vars.Count, chars.Count, frozen.Count, menuList.Count, says.Count);
+        return new ModAnalysis(choices, vars, chars, files, frozen, menuList, says);
     }
 
     private static void AddConsumer(Dictionary<string, List<VarConsumer>> dict,
@@ -187,7 +197,8 @@ public sealed class RenpyModAnalyzer
     private static void AnalyzeFile(string absPath, string relPath,
         List<RpyChoice> choices, List<RpyStoreVariable> vars, List<RpyCharacter> chars,
         Dictionary<string, List<VarConsumer>> consumers,
-        List<(string file, int line)> menuLocations)
+        List<(string file, int line)> menuLocations,
+        List<RpySayStatement> says)
     {
         var lines = File.ReadAllLines(absPath);
         string currentLabel = "";
@@ -309,7 +320,45 @@ public sealed class RenpyModAnalyzer
                         relPath, i + 1, currentLabel,
                         VarConsumerKind.Condition, expr));
             }
+
+            // Say-Statement: <character> "text" — nur wenn NICHT in einem
+            // menu-Scope (dort waeren wir Choice-Header oder Say im Choice-
+            // Body — Choice-Header ist schon oben behandelt, Say-in-Choice
+            // sollten wir NICHT als Say erfassen weil sonst duplication).
+            // Zusatz-Guard: Zeile beginnt nicht mit einem Ren'Py-Keyword
+            // (menu, label, if, elif, else, ...) — dann waere sie kein Say.
+            if (menuStack.Count == 0 && !LooksLikeKeywordLine(trimmed))
+            {
+                var mSay = SayPattern.Match(line);
+                if (mSay.Success)
+                {
+                    string charVar = mSay.Groups[1].Success ? mSay.Groups[1].Value : "";
+                    string rawText = mSay.Groups[2].Value;
+                    says.Add(new RpySayStatement(relPath, i + 1, charVar, rawText));
+                }
+            }
         }
+    }
+
+    private static readonly HashSet<string> SayExclusionKeywords = new(StringComparer.Ordinal)
+    {
+        "menu", "label", "if", "elif", "else", "while", "for", "with",
+        "return", "jump", "call", "scene", "show", "hide", "play", "stop",
+        "queue", "pause", "python", "init", "define", "default", "image",
+        "transform", "screen", "style", "translate", "$", "voice",
+        "window", "nvl", "camera",
+    };
+
+    /// <summary>Prueft ob die Zeile mit einem Ren'Py-Keyword beginnt — dann
+    /// ist sie kein Say-Statement, auch wenn danach ein String kommt.</summary>
+    private static bool LooksLikeKeywordLine(string trimmed)
+    {
+        int end = 0;
+        while (end < trimmed.Length && (char.IsLetterOrDigit(trimmed[end]) || trimmed[end] == '_'))
+            end++;
+        if (end == 0) return trimmed[0] == '$'; // $-Shortcut
+        var firstWord = trimmed[..end];
+        return SayExclusionKeywords.Contains(firstWord);
     }
 
     /// <summary>Sammelt <c>$ var op value</c>-Statements im Body eines
