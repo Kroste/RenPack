@@ -1080,6 +1080,22 @@ public sealed class RenpyRpycDecompiler
         // Meist steht der komplette Text im "line"-Feld.
         string line = AsString(node.GetValueOrDefault("line") ?? node.GetValueOrDefault("parsed"));
         AppendIndented(sb, indent, line);
+
+        // Block-fordernde User-Statements (`layeredimage X:`, evtl. andere)
+        // brauchen einen non-empty Body — den kann unser Decompiler aktuell
+        // nicht rekonstruieren (Layered-Image-Attribute/Groups sind ein
+        // eigenes Sub-AST). Damit Ren'Py's Parser nicht mit "expects a
+        // non-empty block" abbricht, haengen wir ein `pass` an. Der
+        // resultierende Layered-Image ist semantisch leer (kein Rendering)
+        // aber das Spiel parsed weiter. Verifiziert an Interview Desires
+        // 0.23 (v0.12.5-Bug: 17 layeredimage-Statements ohne Body).
+        var trimmed = line.TrimStart();
+        if (line.TrimEnd().EndsWith(":", StringComparison.Ordinal)
+            && (trimmed.StartsWith("layeredimage ", StringComparison.Ordinal)
+                || trimmed.StartsWith("layeredimage:", StringComparison.Ordinal)))
+        {
+            AppendIndented(sb, indent + 1, "pass");
+        }
     }
 
     // ---- Hilfen ------------------------------------------------------------
