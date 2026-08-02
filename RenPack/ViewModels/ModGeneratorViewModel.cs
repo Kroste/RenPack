@@ -140,7 +140,8 @@ public sealed partial class ModGeneratorViewModel : ObservableObject
         // Rename-Provider: der Builder ruft das im Background-Thread mitten
         // in der Pipeline auf. Wir dispatchen den Dialog synchron auf den
         // UI-Thread und blocken den Worker bis der User geantwortet hat.
-        RenameConfig? RenamePrompt(IReadOnlyList<RpyCharacter> characters)
+        RenameConfig? RenamePrompt(IReadOnlyList<RpyCharacter> characters,
+            IReadOnlyList<RpySayStatement> says)
         {
             if (Ui is null) return null;
             var tcs = new TaskCompletionSource<RenameConfig?>();
@@ -148,7 +149,7 @@ public sealed partial class ModGeneratorViewModel : ObservableObject
             {
                 try
                 {
-                    var cfg = await Ui.PromptRenameMappingsAsync(characters);
+                    var cfg = await Ui.PromptRenameMappingsAsync(characters, says);
                     tcs.TrySetResult(cfg);
                 }
                 catch (Exception ex) { tcs.TrySetException(ex); }
@@ -236,8 +237,16 @@ public interface IModGeneratorUi
     /// <summary>Zeigt einen Dialog zum Eingeben der Rename-Mappings.
     /// Der User sieht die vom Analyzer erkannten Character und kann pro
     /// Character einen neuen Anzeigenamen eintragen. Leere Zeilen =
-    /// unveraendert. Rueckgabe <c>null</c> = Cancel → Build abbrechen.</summary>
-    Task<RenameConfig?> PromptRenameMappingsAsync(IReadOnlyList<RpyCharacter> characters);
+    /// unveraendert. Rueckgabe <c>null</c> = Cancel → Build abbrechen.
+    ///
+    /// Optionaler <paramref name="sayStatements"/>-Parameter: wenn User im
+    /// Rename-Dialog die „auch Body-Text umschreiben (KI)"-Checkbox
+    /// aktiviert, holt sich die UI-Impl den KrosteAiRewriter und praesen-
+    /// tiert einen Preview-Dialog. Die akzeptierten Edits landen in
+    /// <see cref="RenameConfig.BodyTextEdits"/>.</summary>
+    Task<RenameConfig?> PromptRenameMappingsAsync(
+        IReadOnlyList<RpyCharacter> characters,
+        IReadOnlyList<RpySayStatement> sayStatements);
 }
 
 public sealed record ModType(ModTypeId Id, string DisplayName)

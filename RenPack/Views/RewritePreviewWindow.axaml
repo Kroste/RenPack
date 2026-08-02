@@ -1,0 +1,78 @@
+<views:ChromeWindow xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="using:RenPack.Views"
+        xmlns:controls="using:RenPack.Controls"
+        xmlns:loc="using:RenPack.Localization"
+        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="620"
+        x:Class="RenPack.Views.RewritePreviewWindow"
+        Width="900" Height="640" MinWidth="620" MinHeight="480"
+        WindowStartupLocation="CenterOwner"
+        Title="{loc:Tr RewritePreview_Title}"
+        Background="{DynamicResource KrosteBackgroundBrush}">
+
+    <DockPanel>
+        <controls:TitleBar DockPanel.Dock="Top" Title="{loc:Tr RewritePreview_Title}" />
+
+        <Border DockPanel.Dock="Bottom" Padding="18,12"
+                BorderBrush="{DynamicResource KrosteBorderBrush}" BorderThickness="0,1,0,0"
+                Background="{DynamicResource KrosteTitleBarBrush}">
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="10">
+                <Button Grid.Column="0" x:Name="AcceptAllButton"
+                        Content="{loc:Tr RewritePreview_AcceptAll}" />
+                <Button Grid.Column="1" x:Name="RejectAllButton"
+                        Content="{loc:Tr RewritePreview_RejectAll}" />
+                <TextBlock Grid.Column="2" x:Name="CountLabel" Classes="muted"
+                           VerticalAlignment="Center" Margin="20,0,0,0" />
+                <Button Grid.Column="3" x:Name="CancelButton"
+                        Content="{loc:Tr Rename_Cancel}" />
+                <Button Grid.Column="4" x:Name="OkButton" Classes="accent"
+                        Content="{loc:Tr RewritePreview_Apply}" />
+            </Grid>
+        </Border>
+
+        <StackPanel Margin="24" Spacing="10">
+            <StackPanel>
+                <TextBlock Text="{loc:Tr RewritePreview_Title}" Classes="h1" />
+                <TextBlock Text="{loc:Tr RewritePreview_Subtitle}" Classes="muted" FontSize="12"
+                           Margin="0,2,0,0" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <Border Classes="card">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="{loc:Tr RewritePreview_Instructions}" Classes="muted"
+                               FontSize="11" TextWrapping="Wrap" />
+                    <DataGrid x:Name="EditsGrid"
+                              AutoGenerateColumns="False"
+                              CanUserReorderColumns="False"
+                              CanUserSortColumns="True"
+                              HeadersVisibility="Column"
+                              IsReadOnly="False"
+                              MinHeight="360" MaxHeight="440"
+                              GridLinesVisibility="Horizontal"
+                              Margin="0,4,0,0">
+                        <DataGrid.Columns>
+                            <DataGridCheckBoxColumn x:DataType="views:RewriteRow"
+                                                    Header="{loc:Tr RewritePreview_Col_Accept}"
+                                                    Binding="{Binding Accepted, Mode=TwoWay}"
+                                                    Width="70" />
+                            <DataGridTextColumn x:DataType="views:RewriteRow"
+                                                Header="{loc:Tr RewritePreview_Col_File}"
+                                                Binding="{Binding Location}"
+                                                Width="180" IsReadOnly="True" />
+                            <DataGridTextColumn x:DataType="views:RewriteRow"
+                                                Header="{loc:Tr RewritePreview_Col_Original}"
+                                                Binding="{Binding OriginalText}"
+                                                Width="*" IsReadOnly="True" />
+                            <DataGridTextColumn x:DataType="views:RewriteRow"
+                                                Header="{loc:Tr RewritePreview_Col_New}"
+                                                Binding="{Binding NewText}"
+                                                Width="*" IsReadOnly="True" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </DockPanel>
+</views:ChromeWindow>

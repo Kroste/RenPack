@@ -230,6 +230,27 @@ Spiel starten — Hinweise erscheinen als [K love+3] etc. in den Menu-Optionen.<
   <data name="Rename_Apply" xml:space="preserve"><value>Uebernehmen &amp; Mod bauen</value></data>
   <data name="Rename_Cancel" xml:space="preserve"><value>Abbrechen</value></data>
   <data name="Rename_Footer_Hint" xml:space="preserve"><value>Abbrechen stoppt den Build. Uebernehmen erzeugt krostemod_rename.rpy und installiert sie.</value></data>
+  <data name="Rename_AiRewrite_Label" xml:space="preserve"><value>Dialog-Erwaehnungen zusaetzlich per KI umschreiben (E4b, langsam)</value></data>
+  <data name="Rename_AiRewrite_Hint" xml:space="preserve"><value>Nutzt den konfigurierten KI-Provider (Einstellungen → KI) um Say-Zeilen umzuschreiben, die den alten Namen erwaehnen — z.B. "Hi Sophia!" → "Hi Anna!". Du bekommst eine Vorschau bevor irgendwas installiert wird.</value></data>
+  <data name="RewritePreview_Title" xml:space="preserve"><value>KrosteMod — KI-Rewrite-Vorschau</value></data>
+  <data name="RewritePreview_Subtitle" xml:space="preserve"><value>Die KI hat diese Body-Text-Umschreibungen vorgeschlagen. Haekchen entfernen falls du eine nicht willst.</value></data>
+  <data name="RewritePreview_Instructions" xml:space="preserve"><value>Nur akzeptierte Zeilen werden in den Mod gepatcht. Lehne alles ab was Bedeutung, Tonfall oder Kontext ueber die reine Namens-Ersetzung hinaus veraendert.</value></data>
+  <data name="RewritePreview_Col_Accept" xml:space="preserve"><value>Uebernehmen</value></data>
+  <data name="RewritePreview_Col_File" xml:space="preserve"><value>Datei:Zeile</value></data>
+  <data name="RewritePreview_Col_Original" xml:space="preserve"><value>Original</value></data>
+  <data name="RewritePreview_Col_New" xml:space="preserve"><value>Umgeschrieben</value></data>
+  <data name="RewritePreview_AcceptAll" xml:space="preserve"><value>Alle akzeptieren</value></data>
+  <data name="RewritePreview_RejectAll" xml:space="preserve"><value>Alle ablehnen</value></data>
+  <data name="RewritePreview_Apply" xml:space="preserve"><value>Auswahl uebernehmen &amp; bauen</value></data>
+  <data name="RewritePreview_Count_Format" xml:space="preserve"><value>{0} von {1} akzeptiert</value></data>
+  <data name="RewritePreview_NoProvider_Title" xml:space="preserve"><value>Kein KI-Provider konfiguriert</value></data>
+  <data name="RewritePreview_NoProvider_Body" xml:space="preserve"><value>Konfiguriere zuerst einen Provider in Einstellungen → KI. Der Mod wird ohne Body-Text-Umschreibungen gebaut.</value></data>
+  <data name="RewritePreview_NoResults_Title" xml:space="preserve"><value>Nichts umzuschreiben</value></data>
+  <data name="RewritePreview_NoResults_Body" xml:space="preserve"><value>Die KI hat keine Dialog-Zeilen gefunden, die fuer die gewaehlten Renames umgeschrieben werden muessten.</value></data>
+  <data name="RewritePreview_Failed_Title" xml:space="preserve"><value>KI-Rewrite fehlgeschlagen</value></data>
+  <data name="RewritePreview_Failed_Body_Format" xml:space="preserve"><value>Der Rewrite-Schritt schlug fehl: {0}
+
+Der Mod wird ohne Body-Text-Umschreibungen gebaut.</value></data>
   <data name="Main_RecentFolders_Tip" xml:space="preserve"><value>Zuletzt dekompilierte Ordner</value></data>
   <data name="Save_Recent_Tip" xml:space="preserve"><value>Zuletzt geöffnete Save-Dateien</value></data>
   <data name="Main_CompareArchive" xml:space="preserve"><value>🔀 Vergleichen…</value></data>

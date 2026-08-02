@@ -44,6 +44,12 @@
                         <TextBlock Text="{loc:Tr Rename_Section_Characters}" Classes="section-label" />
                         <TextBlock Text="{loc:Tr Rename_Instructions}" Classes="muted"
                                    FontSize="11" TextWrapping="Wrap" />
+                        <CheckBox x:Name="AiRewriteCheckbox"
+                                  Content="{loc:Tr Rename_AiRewrite_Label}"
+                                  Margin="0,4,0,0" />
+                        <TextBlock Text="{loc:Tr Rename_AiRewrite_Hint}" Classes="muted"
+                                   FontSize="11" TextWrapping="Wrap" Margin="26,0,0,4" />
+
                         <DataGrid x:Name="MappingsGrid"
                                   AutoGenerateColumns="False"
                                   CanUserReorderColumns="False"

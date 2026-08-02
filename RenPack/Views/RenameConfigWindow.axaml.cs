@@ -15,6 +15,11 @@ public partial class RenameConfigWindow : ChromeWindow
     /// Cancel/Close. Aufrufer prueft nach <see cref="ShowDialogAsync"/>.</summary>
     public RenameConfig? Result { get; private set; }
 
+    /// <summary>True wenn User zusaetzlich zum Character-Rename auch die
+    /// KI-basierte Body-Text-Umschreibung will (E4b). Der Aufrufer muss dann
+    /// den Rewriter aufrufen und das Preview-Ergebnis zurueck-mergen.</summary>
+    public bool UseAiRewrite { get; private set; }
+
     public RenameConfigWindow()
     {
         InitializeComponent();
@@ -46,6 +51,7 @@ public partial class RenameConfigWindow : ChromeWindow
                         && r.NewName.Trim() != r.OriginalName)
             .ToDictionary(r => r.VarName, r => r.NewName.Trim(), StringComparer.Ordinal);
         Result = new RenameConfig(dict);
+        UseAiRewrite = AiRewriteCheckbox.IsChecked ?? false;
         Close();
     }
 }

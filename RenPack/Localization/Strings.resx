@@ -236,6 +236,27 @@ Start the game — hints appear as [K love+3] etc. in the menu options.</value><
   <data name="Rename_Apply" xml:space="preserve"><value>Apply &amp; build mod</value></data>
   <data name="Rename_Cancel" xml:space="preserve"><value>Cancel</value></data>
   <data name="Rename_Footer_Hint" xml:space="preserve"><value>Cancel aborts the build. Apply generates krostemod_rename.rpy and installs it.</value></data>
+  <data name="Rename_AiRewrite_Label" xml:space="preserve"><value>Also rewrite dialogue mentions with AI (E4b, slow)</value></data>
+  <data name="Rename_AiRewrite_Hint" xml:space="preserve"><value>Uses the configured AI provider (Settings → AI) to rewrite say-lines that mention old names — e.g. "Hi Sophia!" → "Hi Anna!". You get a preview before anything is deployed.</value></data>
+  <data name="RewritePreview_Title" xml:space="preserve"><value>KrosteMod — AI Rewrite Preview</value></data>
+  <data name="RewritePreview_Subtitle" xml:space="preserve"><value>The AI proposed these body-text rewrites. Uncheck any you don't want applied.</value></data>
+  <data name="RewritePreview_Instructions" xml:space="preserve"><value>Only accepted rows are patched into the mod. Reject anything that changes meaning, tone or context beyond the name replacement.</value></data>
+  <data name="RewritePreview_Col_Accept" xml:space="preserve"><value>Apply</value></data>
+  <data name="RewritePreview_Col_File" xml:space="preserve"><value>File:Line</value></data>
+  <data name="RewritePreview_Col_Original" xml:space="preserve"><value>Original</value></data>
+  <data name="RewritePreview_Col_New" xml:space="preserve"><value>Rewritten</value></data>
+  <data name="RewritePreview_AcceptAll" xml:space="preserve"><value>Accept all</value></data>
+  <data name="RewritePreview_RejectAll" xml:space="preserve"><value>Reject all</value></data>
+  <data name="RewritePreview_Apply" xml:space="preserve"><value>Apply selected &amp; build</value></data>
+  <data name="RewritePreview_Count_Format" xml:space="preserve"><value>{0} of {1} accepted</value></data>
+  <data name="RewritePreview_NoProvider_Title" xml:space="preserve"><value>No AI provider configured</value></data>
+  <data name="RewritePreview_NoProvider_Body" xml:space="preserve"><value>Configure a provider in Settings → AI first. The mod will be built without body-text rewrites.</value></data>
+  <data name="RewritePreview_NoResults_Title" xml:space="preserve"><value>Nothing to rewrite</value></data>
+  <data name="RewritePreview_NoResults_Body" xml:space="preserve"><value>The AI did not find any dialog lines that need rewriting for the chosen renames.</value></data>
+  <data name="RewritePreview_Failed_Title" xml:space="preserve"><value>AI rewrite failed</value></data>
+  <data name="RewritePreview_Failed_Body_Format" xml:space="preserve"><value>The rewrite step failed: {0}
+
+The mod will be built without body-text rewrites.</value></data>
   <data name="Main_RecentFolders_Tip" xml:space="preserve"><value>Recently decompiled folders</value></data>
   <data name="Save_Recent_Tip" xml:space="preserve"><value>Recently opened save files</value></data>
   <data name="Main_CompareArchive" xml:space="preserve"><value>🔀 Compare…</value></data>

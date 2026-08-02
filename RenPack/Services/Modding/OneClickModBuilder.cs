@@ -66,7 +66,7 @@ public sealed class OneClickModBuilder
     public OneClickResult Build(string userPickedFolder, ModTypeId modType,
         IProgress<OneClickProgress>? progress = null,
         CancellationToken ct = default,
-        Func<IReadOnlyList<RpyCharacter>, RenameConfig?>? renameConfigProvider = null)
+        Func<IReadOnlyList<RpyCharacter>, IReadOnlyList<RpySayStatement>, RenameConfig?>? renameConfigProvider = null)
     {
         if (!Directory.Exists(userPickedFolder))
             throw new DirectoryNotFoundException($"Ordner nicht gefunden: {userPickedFolder}");
@@ -141,7 +141,7 @@ public sealed class OneClickModBuilder
                     if (renameConfigProvider is null)
                         throw new InvalidOperationException(
                             "Rename-Mod-Typ erfordert einen renameConfigProvider.");
-                    var renameConfig = renameConfigProvider(analysis.Characters)
+                    var renameConfig = renameConfigProvider(analysis.Characters, analysis.SayStatements)
                         ?? throw new OperationCanceledException(
                             "Rename-Konfiguration vom User abgebrochen.");
                     Directory.CreateDirectory(modOut);
