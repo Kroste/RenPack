@@ -95,4 +95,77 @@ public sealed class KrosteRenameGeneratorTests : IDisposable
         // Anfuehrungszeichen im Namen muessen escaped werden
         content.Should().Contain("\\\"the Brave\\\"");
     }
+
+    // ---- v0.12.0 E4b: Body-Text-Patcher ----------------------------------
+
+    [Fact]
+    public void Applies_body_text_edits_to_source_rpy_files()
+    {
+        // Setup: dekompilierte .rpy im Source-Root, Config mit Body-Edits
+        // → gepatchte .rpy im Dest-Dir.
+        var srcRoot = Path.Combine(_tmp, "src");
+        var dstRoot = Path.Combine(_tmp, "dst");
+        Directory.CreateDirectory(srcRoot);
+        File.WriteAllText(Path.Combine(srcRoot, "story.rpy"), """
+            label start:
+                sophia "Hi Sophia!"
+                sam "How are you?"
+            """);
+
+        var analysis = MakeAnalysis(new RpyCharacter("Sophia", "Sophia", null));
+        var config = new RenameConfig(
+            Mappings: new Dictionary<string, string> { ["Sophia"] = "Anna" },
+            BodyTextEdits:
+            [
+                new BodyTextEdit("story.rpy", 2, "Hi Sophia!", "Hi Anna!", Accepted: true),
+            ]);
+        _gen.Generate(dstRoot, analysis, config, decompiledSourceRoot: srcRoot);
+
+        var patched = File.ReadAllText(Path.Combine(dstRoot, "story.rpy"));
+        patched.Should().Contain("sophia \"Hi Anna!\"");
+        patched.Should().NotContain("Hi Sophia!");
+        // Andere Zeilen unangetastet
+        patched.Should().Contain("sam \"How are you?\"");
+    }
+
+    [Fact]
+    public void Skips_unaccepted_body_text_edits()
+    {
+        var srcRoot = Path.Combine(_tmp, "src2");
+        var dstRoot = Path.Combine(_tmp, "dst2");
+        Directory.CreateDirectory(srcRoot);
+        File.WriteAllText(Path.Combine(srcRoot, "story.rpy"), """
+            sophia "Hi Sophia!"
+            """);
+
+        var analysis = MakeAnalysis(new RpyCharacter("Sophia", "Sophia", null));
+        var config = new RenameConfig(
+            Mappings: new Dictionary<string, string> { ["Sophia"] = "Anna" },
+            BodyTextEdits:
+            [
+                new BodyTextEdit("story.rpy", 1, "Hi Sophia!", "Hi Anna!", Accepted: false),
+            ]);
+        _gen.Generate(dstRoot, analysis, config, decompiledSourceRoot: srcRoot);
+
+        // Ohne akzeptierte Edits soll die Datei GAR NICHT im dst landen —
+        // sonst wuerde die unveraenderte Kopie via Deploy die Original-.rpyc
+        // ohne Grund ueberschreiben.
+        File.Exists(Path.Combine(dstRoot, "story.rpy")).Should().BeFalse();
+    }
+
+    [Fact]
+    public void ReplaceInLine_preserves_character_prefix_and_indentation()
+    {
+        var line = "    sophia \"Hi Sophia!\"";
+        var result = KrosteRenameGenerator.ReplaceInLine(line, "Hi Sophia!", "Hi Anna!");
+        result.Should().Be("    sophia \"Hi Anna!\"");
+    }
+
+    [Fact]
+    public void ReplaceInLine_returns_null_when_original_not_found()
+    {
+        var line = "sophia \"Different text\"";
+        var result = KrosteRenameGenerator.ReplaceInLine(line, "Hi Sophia!", "Hi Anna!");
+        result.Should().BeNull();
+    }
 }

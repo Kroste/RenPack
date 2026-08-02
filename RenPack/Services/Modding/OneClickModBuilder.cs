@@ -145,7 +145,10 @@ public sealed class OneClickModBuilder
                         ?? throw new OperationCanceledException(
                             "Rename-Konfiguration vom User abgebrochen.");
                     Directory.CreateDirectory(modOut);
-                    _rename.Generate(modOut, analysis, renameConfig);
+                    // decompiledSourceRoot = tempRoot damit der Generator die
+                    // dekompilierten .rpy fuer Body-Text-Patches (E4b) hat.
+                    _rename.Generate(modOut, analysis, renameConfig,
+                        decompiledSourceRoot: tempRoot);
                     break;
                 default:
                     throw new NotSupportedException($"Mod-Typ noch nicht implementiert: {modType}");

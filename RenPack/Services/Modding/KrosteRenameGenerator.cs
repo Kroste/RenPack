@@ -34,8 +34,17 @@ public sealed class KrosteRenameGenerator
 
     /// <summary>Schreibt die <c>krostemod_rename.rpy</c> nach
     /// <paramref name="destDir"/>. Nur Character die eine Mapping haben
-    /// (non-empty NewName) werden emittiert.</summary>
-    public string Generate(string destDir, ModAnalysis analysis, RenameConfig config)
+    /// (non-empty NewName) werden emittiert.
+    ///
+    /// Wenn <paramref name="decompiledSourceRoot"/> gesetzt UND
+    /// <c>config.BodyTextEdits</c> non-empty ist, patcht der Generator
+    /// zusaetzlich die betroffenen .rpy-Dateien: er kopiert die decompi-
+    /// lierten Originale aus <paramref name="decompiledSourceRoot"/> in
+    /// den <paramref name="destDir"/> mit der gleichen relativen Ordner-
+    /// struktur, wendet die Edits an, und der normale Deploy-Loop
+    /// (OneClickModBuilder) kopiert sie ins game/.</summary>
+    public string Generate(string destDir, ModAnalysis analysis, RenameConfig config,
+        string? decompiledSourceRoot = null)
     {
         Directory.CreateDirectory(destDir);
         var target = Path.Combine(destDir, "krostemod_rename.rpy");
@@ -59,7 +68,84 @@ public sealed class KrosteRenameGenerator
         File.WriteAllText(target, sb.ToString());
         Log.Info("KrosteMod-Rename erzeugt: {path} ({count} Character umbenannt)",
             target, effective.Count);
+
+        // Body-Text-Patches (E4b) — nur wenn Source-Root gegeben und
+        // Edits akzeptiert sind. Der Patcher schreibt jede angefasste .rpy
+        // mit den Ersetzungen in den destDir; der Deploy-Loop im
+        // OneClickModBuilder nimmt sie mit ins game/.
+        var acceptedEdits = config.BodyTextEdits?
+            .Where(e => e.Accepted).ToList() ?? [];
+        if (decompiledSourceRoot is not null && acceptedEdits.Count > 0)
+        {
+            int patched = ApplyBodyTextEdits(decompiledSourceRoot, destDir, acceptedEdits);
+            Log.Info("KrosteMod-Rename Body-Text: {patched} .rpy-Datei(en) gepatcht", patched);
+        }
+
         return target;
+    }
+
+    /// <summary>Wendet die Body-Text-Edits an: pro betroffener Datei die
+    /// dekompilierte Original-Version kopieren, die Zeilen ersetzen,
+    /// und die Kopie in <paramref name="destDir"/> ablegen. Rueckgabe ist
+    /// die Anzahl geaenderter Dateien.</summary>
+    private static int ApplyBodyTextEdits(string sourceRoot, string destDir,
+        IReadOnlyList<BodyTextEdit> edits)
+    {
+        var byFile = edits
+            .GroupBy(e => e.SourceFile, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
+
+        int patchedCount = 0;
+        foreach (var (relPath, fileEdits) in byFile)
+        {
+            var srcAbs = Path.Combine(sourceRoot, relPath);
+            var dstAbs = Path.Combine(destDir, relPath);
+            if (!File.Exists(srcAbs))
+            {
+                Log.Warn("Body-Text-Patch skip {file}: Source nicht gefunden", relPath);
+                continue;
+            }
+
+            var lines = File.ReadAllLines(srcAbs);
+            var editsByLine = fileEdits
+                .GroupBy(e => e.SourceLine)
+                .ToDictionary(g => g.Key, g => g.First());
+
+            bool anyChange = false;
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (!editsByLine.TryGetValue(i + 1, out var edit)) continue;
+                var patched = ReplaceInLine(lines[i], edit.OriginalText, edit.NewText);
+                if (patched is null)
+                {
+                    Log.Warn("Body-Text-Patch skip {file}:{line}: OriginalText nicht gefunden ({orig})",
+                        relPath, i + 1, edit.OriginalText);
+                    continue;
+                }
+                lines[i] = patched;
+                anyChange = true;
+            }
+            if (!anyChange) continue;
+
+            Directory.CreateDirectory(Path.GetDirectoryName(dstAbs)!);
+            File.WriteAllText(dstAbs, string.Join('\n', lines));
+            patchedCount++;
+        }
+        return patchedCount;
+    }
+
+    /// <summary>Ersetzt in <paramref name="line"/> das erste Vorkommen von
+    /// <paramref name="original"/> (in Anfuehrungszeichen) durch
+    /// <paramref name="replacement"/>. Rueckgabe <c>null</c> wenn nicht
+    /// gefunden — dann bleibt die Zeile unveraendert und der Aufrufer
+    /// loggt eine Warnung. Wir suchen den Text zwischen <c>"..."</c> weil
+    /// nur DAS der Body-Text ist (Character-Var davor bleibt unangetastet).</summary>
+    public static string? ReplaceInLine(string line, string original, string replacement)
+    {
+        var quoted = "\"" + original + "\"";
+        int idx = line.IndexOf(quoted, StringComparison.Ordinal);
+        if (idx < 0) return null;
+        return line[..idx] + "\"" + replacement + "\"" + line[(idx + quoted.Length)..];
     }
 
     private static void WriteHeader(StringBuilder sb, int count)
@@ -126,5 +212,12 @@ public sealed class KrosteRenameGenerator
 /// <summary>Config-Objekt fuer den Rename-Mod-Build. <see cref="Mappings"/>
 /// mapped Character-VarName (aus <see cref="RpyCharacter.VarName"/>) auf
 /// den neuen Display-Namen. Leere Werte werden vom Generator ignoriert
-/// (kein Rename fuer diesen Character).</summary>
-public sealed record RenameConfig(IReadOnlyDictionary<string, string> Mappings);
+/// (kein Rename fuer diesen Character).
+///
+/// <see cref="BodyTextEdits"/> (E4b, optional): die vom KI-Rewriter
+/// vorgeschlagenen und vom User akzeptierten Body-Text-Ersetzungen. Wenn
+/// null oder leer, bleibt der Original-Dialog-Text unangetastet — es
+/// wird nur der Anzeige-Name des Character-Objekts umbenannt.</summary>
+public sealed record RenameConfig(
+    IReadOnlyDictionary<string, string> Mappings,
+    IReadOnlyList<BodyTextEdit>? BodyTextEdits = null);
