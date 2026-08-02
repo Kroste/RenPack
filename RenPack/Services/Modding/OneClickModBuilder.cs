@@ -234,6 +234,14 @@ public sealed class OneClickModBuilder
     private List<DeployedFile> Deploy(string gameDir, string modOutRoot, ModTypeId modType,
         bool packedMode, IProgress<OneClickProgress>? progress, CancellationToken ct)
     {
+        // Im packedMode zuerst die .rpa-Dateien wegsichern die Story-.rpyc
+        // enthalten. Ohne diesen Schritt laed Ren'Py sowohl die .rpa als
+        // auch unsere .rpy → Duplicate-Label-Errors (verifiziert an
+        // Interview Desires 0.23 → errors.txt vor v0.12.3).
+        var movedArchives = new List<string>();
+        if (packedMode)
+            movedArchives = MoveConflictingArchives(gameDir);
+
         var rpyFiles = Directory.Exists(modOutRoot)
             ? Directory.EnumerateFiles(modOutRoot, "*.rpy", SearchOption.AllDirectories).ToList()
             : [];
@@ -293,14 +301,50 @@ public sealed class OneClickModBuilder
         }
 
         // Manifest schreiben — die Basis fuer Uninstall.
-        var manifest = new ModManifest(modType.ToString(), DateTime.UtcNow, deployed);
+        var manifest = new ModManifest(modType.ToString(), DateTime.UtcNow, deployed,
+            movedArchives.Count > 0 ? movedArchives : null);
         var manifestPath = Path.Combine(gameDir, ManifestFileName);
         File.WriteAllText(manifestPath, JsonSerializer.Serialize(manifest,
             new JsonSerializerOptions { WriteIndented = true }));
 
-        Log.Info("Deploy fertig: {count} .rpy nach {dir}, Manifest={manifest}",
-            deployed.Count, gameDir, manifestPath);
+        Log.Info("Deploy fertig: {count} .rpy nach {dir} (moved {archives} .rpa), Manifest={manifest}",
+            deployed.Count, gameDir, movedArchives.Count, manifestPath);
         return deployed;
+    }
+
+    /// <summary>Sichert jede <c>.rpa</c> im gameDir die Story-<c>.rpyc</c>
+    /// enthaelt nach <c>.rpa.krostemod-bak</c>. Non-Story-Archives (nur
+    /// Bilder/Audio/Fonts) bleiben unangetastet — die Assets werden
+    /// weiterhin gebraucht. Rueckgabe: Liste der verschobenen Dateinamen
+    /// (relative Pfade unter gameDir) — landet im Manifest fuer Uninstall.</summary>
+    private List<string> MoveConflictingArchives(string gameDir)
+    {
+        var moved = new List<string>();
+        foreach (var rpa in Directory.EnumerateFiles(gameDir, "*.rpa", SearchOption.TopDirectoryOnly))
+        {
+            try
+            {
+                var info = _archive.ReadIndex(rpa);
+                bool hasRpyc = info.Entries.Any(e =>
+                    e.Path.EndsWith(".rpyc", StringComparison.OrdinalIgnoreCase));
+                if (!hasRpyc) continue;
+                var backup = rpa + BackupSuffix;
+                if (File.Exists(backup))
+                {
+                    // Zweiter Build → altes Backup bleibt, .rpa ist schon weg.
+                    Log.Debug("Skip archive move {rpa}: backup existiert bereits", rpa);
+                    continue;
+                }
+                File.Move(rpa, backup);
+                moved.Add(Path.GetFileName(rpa));
+                Log.Info("Moved story-archive {rpa} → {backup}", rpa, backup);
+            }
+            catch (Exception ex)
+            {
+                Log.Warn(ex, "Konnte {rpa} nicht analysieren/verschieben — laesst Ren'Py evtl. Duplicate-Labels werfen", rpa);
+            }
+        }
+        return moved;
     }
 
     /// <summary>Liest ein Manifest, macht das Deploy rueckgaengig: modifi-
@@ -343,13 +387,35 @@ public sealed class OneClickModBuilder
             }
         }
 
+        // v0.12.3: verschobene .rpa-Archives zurueckschieben (packedMode).
+        int archivesRestored = 0;
+        if (manifest.MovedArchives is { Count: > 0 })
+        {
+            foreach (var archiveName in manifest.MovedArchives)
+            {
+                var target = Path.Combine(gameDir, archiveName);
+                var backup = target + BackupSuffix;
+                if (File.Exists(backup))
+                {
+                    if (File.Exists(target)) File.Delete(target); // sollte nicht sein, safety
+                    File.Move(backup, target);
+                    archivesRestored++;
+                }
+                else
+                {
+                    Log.Warn("Backup-Archive fehlt beim Uninstall: {file} — Spiel bleibt evtl. kaputt",
+                        backup);
+                }
+            }
+        }
+
         File.Delete(manifestPath);
         var readme = Path.Combine(gameDir, "KROSTEMOD_README.md");
         if (File.Exists(readme)) File.Delete(readme);
 
-        Log.Info("Uninstall: {removed} .rpy geloescht, {restored} .rpyc wiederhergestellt in {dir}",
-            removed, restored, gameDir);
-        return new UninstallResult(removed, restored);
+        Log.Info("Uninstall: {removed} .rpy geloescht, {restored} .rpyc + {archives} .rpa wiederhergestellt in {dir}",
+            removed, restored, archivesRestored, gameDir);
+        return new UninstallResult(removed, restored + archivesRestored);
     }
 
     /// <summary>Prueft, ob im angegebenen Ordner (oder seinem <c>game/</c>-
@@ -391,9 +457,15 @@ public sealed class OneClickModBuilder
     private static bool HasRenpyContent(string dir)
     {
         // .rpyc rekursiv (Filesystem-Content) ODER .rpa im Top-Level
-        // (gepackte Distribution).
+        // (gepackte Distribution) ODER .rpa.krostemod-bak (bereits
+        // gemoddet — wir sichern die .rpa dann weg) ODER .rpy (User hat
+        // schon selber decompiliert, oder unser Mod-Deploy war die einzige
+        // .rpy-Quelle). Alle vier Signale reichen um "das ist ein Ren'Py-
+        // Spiel"-Verdacht zu bestaetigen.
         return Directory.EnumerateFiles(dir, "*.rpyc", SearchOption.AllDirectories).Any()
-            || Directory.EnumerateFiles(dir, "*.rpa", SearchOption.TopDirectoryOnly).Any();
+            || Directory.EnumerateFiles(dir, "*.rpa", SearchOption.TopDirectoryOnly).Any()
+            || Directory.EnumerateFiles(dir, "*.rpa" + BackupSuffix, SearchOption.TopDirectoryOnly).Any()
+            || Directory.EnumerateFiles(dir, "*.rpy", SearchOption.AllDirectories).Any();
     }
 
     private static void SafeDeleteTemp(string dir)
@@ -417,6 +489,14 @@ public sealed record UninstallResult(int RemovedFiles, int RestoredBackups);
 
 /// <summary>Persistiertes Manifest im <c>game/</c>-Ordner, damit
 /// <see cref="OneClickModBuilder.Uninstall"/> genau die selben Dateien
-/// wieder anfassen kann.</summary>
+/// wieder anfassen kann.
+///
+/// <see cref="MovedArchives"/> (v0.12.3+): bei gepackten Distributionen
+/// verschieben wir die <c>.rpa</c>-Dateien die konkurrierende
+/// <c>.rpyc</c>-Story-Files enthalten nach <c>.rpa.krostemod-bak</c>,
+/// weil sonst Ren'Py sowohl die <c>.rpa</c>-<c>.rpyc</c> als auch
+/// unsere Filesystem-<c>.rpy</c> laedt → Duplicate-Label-Errors
+/// (verifiziert an Interview Desires 0.23).</summary>
 public sealed record ModManifest(
-    string ModType, DateTime CreatedUtc, IReadOnlyList<DeployedFile> Files);
+    string ModType, DateTime CreatedUtc, IReadOnlyList<DeployedFile> Files,
+    IReadOnlyList<string>? MovedArchives = null);
