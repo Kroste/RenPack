@@ -364,10 +364,16 @@ public sealed class OneClickModBuilder
             try
             {
                 var info = _archive.ReadIndex(rpa);
-                var rpycEntries = info.Entries
-                    .Where(e => e.Path.EndsWith(".rpyc", StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-                if (rpycEntries.Count == 0) continue;
+                // .rpy UND .rpyc filtern — beide wuerden mit unseren
+                // deployten Filesystem-.rpy in Konflikt gehen. Nur echter
+                // Non-Ren'Py-Content (Bilder, Audio, JSON, etc.) bleibt
+                // in der repacked .rpa.
+                static bool IsRenpyScript(string path) =>
+                    path.EndsWith(".rpyc", StringComparison.OrdinalIgnoreCase)
+                    || path.EndsWith(".rpy", StringComparison.OrdinalIgnoreCase);
+
+                var scriptEntries = info.Entries.Where(e => IsRenpyScript(e.Path)).ToList();
+                if (scriptEntries.Count == 0) continue;
 
                 var backup = rpa + BackupSuffix;
                 if (File.Exists(backup))
@@ -376,35 +382,33 @@ public sealed class OneClickModBuilder
                     continue;
                 }
 
-                var nonRpycEntries = info.Entries
-                    .Where(e => !e.Path.EndsWith(".rpyc", StringComparison.OrdinalIgnoreCase))
-                    .ToList();
+                var assetEntries = info.Entries.Where(e => !IsRenpyScript(e.Path)).ToList();
 
-                if (nonRpycEntries.Count == 0)
+                if (assetEntries.Count == 0)
                 {
-                    // Reines .rpyc-Archive (klassisches scripts.rpa) —
+                    // Reines Skript-Archive (klassisches scripts.rpa) —
                     // einfach weg-moven, keine Assets zum Erhalten.
                     File.Move(rpa, backup);
                     moved.Add(Path.GetFileName(rpa));
-                    Log.Info("Moved story-only-archive {rpa} → {backup}", rpa, backup);
+                    Log.Info("Moved script-only-archive {rpa} → {backup}", rpa, backup);
                     continue;
                 }
 
-                // Mixed archive: repack. Assets extrahieren, ohne .rpyc
-                // neu packen. Extract-Tempordner unter gameDir/.krostemod-
-                // repack-<guid>/ (im gleichen Filesystem wie das Original
-                // → File.Move ist atomar, kein Cross-Device-Copy noetig).
+                // Mixed archive: repack. Nur Assets extrahieren, ohne
+                // .rpy/.rpyc neu packen. Extract-Tempordner unter gameDir/
+                // .krostemod-repack-<guid>/ (im gleichen Filesystem wie
+                // das Original → File.Move ist atomar).
                 var repackDir = Path.Combine(gameDir,
                     ".krostemod-repack-" + Guid.NewGuid().ToString("N"));
                 try
                 {
                     Directory.CreateDirectory(repackDir);
-                    _archive.Extract(info, nonRpycEntries, repackDir);
+                    _archive.Extract(info, assetEntries, repackDir);
                     File.Move(rpa, backup);
                     _archive.Create(rpa, repackDir);
                     moved.Add(Path.GetFileName(rpa));
-                    Log.Info("Repacked mixed-archive {rpa}: kept {n} non-.rpyc entries, dropped {m} .rpyc",
-                        rpa, nonRpycEntries.Count, rpycEntries.Count);
+                    Log.Info("Repacked mixed-archive {rpa}: kept {n} assets, dropped {m} scripts",
+                        rpa, assetEntries.Count, scriptEntries.Count);
                 }
                 finally
                 {
