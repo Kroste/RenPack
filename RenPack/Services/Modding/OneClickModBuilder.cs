@@ -83,10 +83,22 @@ public sealed class OneClickModBuilder
         Log.Info("OneClickMod: gameDir={dir}, type={type}", gameDir, modType);
         progress?.Report(new OneClickProgress(OneClickPhase.Scanning, 0, 0, ""));
 
-        // Temp-Ordner: OS-Standard-Temp + eindeutige Session-ID.
+        // Temp-Ordner-Struktur:
+        //   tempRoot/                 — Session-Root
+        //     extracted/              — nur wenn packedMode (.rpa-Extract)
+        //     decompiled/             — unsere .rpy-Outputs (immer nur hier)
+        //     mod/                    — Mod-Generator-Output
+        // WICHTIG: extracted UND decompiled sind strikt getrennt, sonst
+        // findet der Analyzer die Extract-.rpy (manche .rpa enthalten
+        // sogar .rpy!) UND unsere Decompile-.rpy als Duplikate — der
+        // Walkthrough patcht dann beide und der Deploy schleppt den
+        // `extracted/`-Prefix ins gameDir → Ren'Py meldet Duplicate-
+        // Labels an `game/script.rpy` UND `game/extracted/script.rpy`.
+        // Verifiziert an Interview Desires 0.23 (v0.12.1-Bug).
         var tempRoot = Path.Combine(Path.GetTempPath(),
             $"RenPack-Mod-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempRoot);
+        var decompiledDir = Path.Combine(tempRoot, "decompiled");
+        Directory.CreateDirectory(decompiledDir);
 
         // Source-Ordner fuer .rpyc: default gameDir. Wenn dort keine .rpyc
         // liegen, aber .rpa-Archive vorhanden sind (z.B. Interview Desires
@@ -127,13 +139,14 @@ public sealed class OneClickModBuilder
 
         try
         {
-            // 1. Decompile: Struktur relativ zu rpycSource in Temp spiegeln.
+            // 1. Decompile: alle .rpy ausschliesslich nach decompiledDir/
+            //    (nicht in tempRoot direkt — sonst kollidiert mit extracted/).
             for (int i = 0; i < rpycFiles.Count; i++)
             {
                 ct.ThrowIfCancellationRequested();
                 var rpyc = rpycFiles[i];
                 var rel = Path.GetRelativePath(rpycSource, rpyc);
-                var tempRpy = Path.Combine(tempRoot, Path.ChangeExtension(rel, ".rpy"));
+                var tempRpy = Path.Combine(decompiledDir, Path.ChangeExtension(rel, ".rpy"));
                 Directory.CreateDirectory(Path.GetDirectoryName(tempRpy)!);
                 progress?.Report(new OneClickProgress(
                     OneClickPhase.Decompiling, i + 1, rpycFiles.Count, rel));
@@ -149,10 +162,10 @@ public sealed class OneClickModBuilder
                 }
             }
 
-            // 2. Analyze
+            // 2. Analyze — nur der decompiledDir, NICHT tempRoot!
             ct.ThrowIfCancellationRequested();
             progress?.Report(new OneClickProgress(OneClickPhase.Analyzing, 0, 0, ""));
-            var analysis = _analyzer.Analyze(tempRoot);
+            var analysis = _analyzer.Analyze(decompiledDir);
 
             // 3. Mod bauen — in Temp-Sub-Ordner „mod/", damit generierter
             //    Output klar vom Decompile-Output getrennt liegt.
@@ -162,7 +175,7 @@ public sealed class OneClickModBuilder
             switch (modType)
             {
                 case ModTypeId.Walkthrough:
-                    _walkthrough.Generate(tempRoot, modOut, analysis);
+                    _walkthrough.Generate(decompiledDir, modOut, analysis);
                     break;
                 case ModTypeId.Cheat:
                     // Cheat-Mod hat kein .rpy-Patching noetig, nur die
@@ -183,10 +196,10 @@ public sealed class OneClickModBuilder
                         ?? throw new OperationCanceledException(
                             "Rename-Konfiguration vom User abgebrochen.");
                     Directory.CreateDirectory(modOut);
-                    // decompiledSourceRoot = tempRoot damit der Generator die
-                    // dekompilierten .rpy fuer Body-Text-Patches (E4b) hat.
+                    // decompiledSourceRoot = decompiledDir damit der Generator
+                    // die dekompilierten .rpy fuer Body-Text-Patches (E4b) hat.
                     _rename.Generate(modOut, analysis, renameConfig,
-                        decompiledSourceRoot: tempRoot);
+                        decompiledSourceRoot: decompiledDir);
                     break;
                 default:
                     throw new NotSupportedException($"Mod-Typ noch nicht implementiert: {modType}");
