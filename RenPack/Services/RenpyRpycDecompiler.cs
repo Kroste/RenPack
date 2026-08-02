@@ -1079,23 +1079,190 @@ public sealed class RenpyRpycDecompiler
         // Beliebiges Custom-Statement (z. B. "play music", "stop music", "pause").
         // Meist steht der komplette Text im "line"-Feld.
         string line = AsString(node.GetValueOrDefault("line") ?? node.GetValueOrDefault("parsed"));
+
+        // Spezial-Handling fuer layeredimage: der Parsed-Tupel enthaelt eine
+        // echte RawLayeredImage-Instanz mit children (Attributes/Groups/
+        // Always). Wir emittieren einen richtigen Body statt nur `pass`.
+        var trimmed = line.TrimStart();
+        bool isLayeredImage = line.TrimEnd().EndsWith(":", StringComparison.Ordinal)
+            && (trimmed.StartsWith("layeredimage ", StringComparison.Ordinal)
+                || trimmed.StartsWith("layeredimage:", StringComparison.Ordinal));
+
+        if (isLayeredImage && TryGetLayeredImageParsed(node, out var raw))
+        {
+            AppendIndented(sb, indent, line);
+            EmitLayeredImageBody(sb, raw, indent + 1);
+            return;
+        }
+
         AppendIndented(sb, indent, line);
 
-        // Block-fordernde User-Statements (`layeredimage X:`, evtl. andere)
-        // brauchen einen non-empty Body — den kann unser Decompiler aktuell
-        // nicht rekonstruieren (Layered-Image-Attribute/Groups sind ein
-        // eigenes Sub-AST). Damit Ren'Py's Parser nicht mit "expects a
-        // non-empty block" abbricht, haengen wir ein `pass` an. Der
-        // resultierende Layered-Image ist semantisch leer (kein Rendering)
-        // aber das Spiel parsed weiter. Verifiziert an Interview Desires
-        // 0.23 (v0.12.5-Bug: 17 layeredimage-Statements ohne Body).
-        var trimmed = line.TrimStart();
-        if (line.TrimEnd().EndsWith(":", StringComparison.Ordinal)
-            && (trimmed.StartsWith("layeredimage ", StringComparison.Ordinal)
-                || trimmed.StartsWith("layeredimage:", StringComparison.Ordinal)))
+        // Fallback wenn Parsed-Instanz nicht extrahierbar: `pass` damit
+        // Ren'Py's Parser nicht mit "expects a non-empty block" abbricht.
+        if (isLayeredImage) AppendIndented(sb, indent + 1, "pass");
+    }
+
+    /// <summary>Extrahiert die RawLayeredImage-Instanz aus dem UserStatement-
+    /// `parsed`-Feld. Struktur: <c>parsed = ("layeredimage", RawLayeredImage)</c>.</summary>
+    private static bool TryGetLayeredImageParsed(ClassDict node, out ClassDict raw)
+    {
+        raw = null!;
+        if (node.GetValueOrDefault("parsed") is not object[] parsed || parsed.Length < 2)
+            return false;
+        if (parsed[1] is not ClassDict rli) return false;
+        if (!rli.ClassName.EndsWith("RawLayeredImage", StringComparison.Ordinal))
+            return false;
+        raw = rli;
+        return true;
+    }
+
+    /// <summary>Emittiert den Body eines RawLayeredImage: erst inline die
+    /// LayeredImage-Level-Properties (image, at, etc.), dann alle Children
+    /// (RawAttribute, RawAttributeGroup, RawAlways, RawCondition...) mit
+    /// passendem Sub-Emitter. Wenn nichts extrahierbar, fallback auf `pass`.</summary>
+    private static void EmitLayeredImageBody(StringBuilder sb, ClassDict raw, int indent)
+    {
+        int emitted = 0;
+        // LayeredImage-Level-Properties als eigene Zeilen (nicht inline im
+        // Header — das waere die kompakte `layeredimage X image=...:`-Syntax,
+        // Ren'Py akzeptiert aber auch beides als Body-Statement).
+        foreach (var propLine in ExpandProperties(raw))
         {
-            AppendIndented(sb, indent + 1, "pass");
+            AppendIndented(sb, indent, propLine);
+            emitted++;
         }
+        if (raw.GetValueOrDefault("children") is IEnumerable children)
+        {
+            foreach (var child in children)
+            {
+                if (child is not ClassDict cd) continue;
+                if (EmitLayeredImageChild(sb, cd, indent)) emitted++;
+            }
+        }
+        if (emitted == 0) AppendIndented(sb, indent, "pass");
+    }
+
+    private static IEnumerable<string> ExpandProperties(ClassDict cd)
+    {
+        var parts = new List<string>();
+        AppendProps(cd.GetValueOrDefault("final_properties") as System.Collections.IDictionary, parts, quoted: true);
+        AppendProps(cd.GetValueOrDefault("expr_properties") as System.Collections.IDictionary, parts, quoted: false);
+        return parts;
+    }
+
+    private static bool EmitLayeredImageChild(StringBuilder sb, ClassDict cd, int indent)
+    {
+        // Klassennamen kommen als "renpy.common.00layeredimage_ren.RawAttribute"
+        // rein — Endung matcht reicht.
+        var cn = cd.ClassName;
+        if (cn.EndsWith("RawAttribute", StringComparison.Ordinal))
+        {
+            EmitRawAttribute(sb, cd, indent);
+            return true;
+        }
+        if (cn.EndsWith("RawAttributeGroup", StringComparison.Ordinal))
+        {
+            EmitRawAttributeGroup(sb, cd, indent);
+            return true;
+        }
+        if (cn.EndsWith("RawAlways", StringComparison.Ordinal))
+        {
+            EmitRawAlways(sb, cd, indent);
+            return true;
+        }
+        // Unbekanntes Sub-Node (RawCondition, RawConditionGroup): als
+        // Kommentar durchreichen. Zumindest bricht Ren'Py nicht mehr ab.
+        AppendIndented(sb, indent, $"# <unsupported layeredimage-child: {cn}>");
+        return false;
+    }
+
+    private static void EmitRawAttribute(StringBuilder sb, ClassDict cd, int indent)
+    {
+        string name = AsString(cd.GetValueOrDefault("name"));
+        // Manche RawAttribute haben ein `group`-Feld, das im "attribute"-
+        // Kontext irrelevant ist (nur bei Gruppen). Wir ignorieren es hier.
+        var image = cd.GetValueOrDefault("image");
+        string imageText = image is null ? "" : AsString(image);
+        if (string.IsNullOrEmpty(imageText))
+        {
+            AppendIndented(sb, indent, $"attribute {name}");
+            return;
+        }
+        AppendIndented(sb, indent, $"attribute {name}:");
+        AppendIndented(sb, indent + 1, imageText);
+    }
+
+    private static void EmitRawAttributeGroup(StringBuilder sb, ClassDict cd, int indent)
+    {
+        string groupName = AsString(cd.GetValueOrDefault("group_name"));
+        // Properties inline nach dem group-Header emittieren, z.B.
+        // `group cr auto:` fuer auto-loading aus dem Image-Verzeichnis.
+        // Ohne die Properties werden die dynamisch geladenen Attribute
+        // nicht registriert → `show ada rczlzm009` scheitert an
+        // "unknown attributes".
+        string props = FormatLayeredImageProperties(cd);
+        var header = string.IsNullOrEmpty(groupName)
+            ? $"group{props}:"
+            : $"group {groupName}{props}:";
+        AppendIndented(sb, indent, header);
+        int emitted = 0;
+        if (cd.GetValueOrDefault("children") is IEnumerable subs)
+        {
+            foreach (var sub in subs)
+            {
+                if (sub is not ClassDict scd) continue;
+                if (EmitLayeredImageChild(sb, scd, indent + 1)) emitted++;
+            }
+        }
+        if (emitted == 0) AppendIndented(sb, indent + 1, "pass");
+    }
+
+    /// <summary>Emittiert die `final_properties` und `expr_properties` eines
+    /// RawLayeredImage/RawAttributeGroup/RawAttribute als Inline-Properties
+    /// (Space-separiert vorm `:`). Beispiel: `auto True variant "small"`.
+    /// Beide Dicts werden nacheinander abgearbeitet — final zuerst.</summary>
+    private static string FormatLayeredImageProperties(ClassDict cd)
+    {
+        var parts = new List<string>();
+        AppendProps(cd.GetValueOrDefault("final_properties") as System.Collections.IDictionary, parts, quoted: true);
+        AppendProps(cd.GetValueOrDefault("expr_properties") as System.Collections.IDictionary, parts, quoted: false);
+        return parts.Count == 0 ? "" : " " + string.Join(" ", parts);
+    }
+
+    private static void AppendProps(System.Collections.IDictionary? dict,
+        List<string> parts, bool quoted)
+    {
+        if (dict is null) return;
+        foreach (System.Collections.DictionaryEntry entry in dict)
+        {
+            string key = AsString(entry.Key);
+            if (string.IsNullOrEmpty(key)) continue;
+            var val = entry.Value;
+            // Bool-only Properties (auto/multiple/default) mit True: nur den Key.
+            if (val is bool b)
+            {
+                if (b) parts.Add(key);
+                continue;
+            }
+            var text = AsString(val);
+            if (string.IsNullOrEmpty(text)) { parts.Add(key); continue; }
+            // final_properties: Werte sind schon Python-Literal-Strings
+            // (bereits geeignet). expr_properties: rohe Python-Expressions.
+            // Fuer beide reicht der raw-String.
+            parts.Add($"{key} {text}");
+        }
+    }
+
+    private static void EmitRawAlways(StringBuilder sb, ClassDict cd, int indent)
+    {
+        var image = cd.GetValueOrDefault("image");
+        string imageText = image is null ? "" : AsString(image);
+        if (string.IsNullOrEmpty(imageText))
+        {
+            AppendIndented(sb, indent, "always");
+            return;
+        }
+        AppendIndented(sb, indent, $"always {imageText}");
     }
 
     // ---- Hilfen ------------------------------------------------------------
