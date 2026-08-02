@@ -1,5 +1,6 @@
 using System.Text.Json;
 using NLog;
+using RenPack.Services;
 
 namespace RenPack.Services.Modding;
 
@@ -34,17 +35,20 @@ public sealed class OneClickModBuilder
     private readonly KrosteInfoScreenGenerator _infoScreen;
     private readonly KrosteCheatGenerator _cheat;
     private readonly KrosteRenameGenerator _rename;
+    private readonly IRenpyArchiveService _archive;
 
     public const string ManifestFileName = "KROSTEMOD_MANIFEST.json";
     public const string BackupSuffix = ".krostemod-bak";
 
     public OneClickModBuilder() : this(new RpycBatchService(), new RenpyModAnalyzer(),
         new KrosteWalkthroughGenerator(), new KrosteInfoScreenGenerator(),
-        new KrosteCheatGenerator(), new KrosteRenameGenerator()) { }
+        new KrosteCheatGenerator(), new KrosteRenameGenerator(),
+        new RenpyArchiveService()) { }
 
     public OneClickModBuilder(RpycBatchService batch, RenpyModAnalyzer analyzer,
         KrosteWalkthroughGenerator walkthrough, KrosteInfoScreenGenerator infoScreen,
-        KrosteCheatGenerator cheat, KrosteRenameGenerator rename)
+        KrosteCheatGenerator cheat, KrosteRenameGenerator rename,
+        IRenpyArchiveService archive)
     {
         _batch = batch;
         _analyzer = analyzer;
@@ -52,6 +56,7 @@ public sealed class OneClickModBuilder
         _infoScreen = infoScreen;
         _cheat = cheat;
         _rename = rename;
+        _archive = archive;
     }
 
     /// <summary>Baut und deployt den Mod. <paramref name="userPickedFolder"/>
@@ -78,23 +83,56 @@ public sealed class OneClickModBuilder
         Log.Info("OneClickMod: gameDir={dir}, type={type}", gameDir, modType);
         progress?.Report(new OneClickProgress(OneClickPhase.Scanning, 0, 0, ""));
 
-        var rpycFiles = RenpyRpycService.FindRpycFiles(gameDir).ToList();
-        if (rpycFiles.Count == 0)
-            throw new InvalidOperationException($"Keine .rpyc-Dateien in '{gameDir}' gefunden.");
-
         // Temp-Ordner: OS-Standard-Temp + eindeutige Session-ID.
         var tempRoot = Path.Combine(Path.GetTempPath(),
             $"RenPack-Mod-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempRoot);
 
+        // Source-Ordner fuer .rpyc: default gameDir. Wenn dort keine .rpyc
+        // liegen, aber .rpa-Archive vorhanden sind (z.B. Interview Desires
+        // oder viele Steam-Distributionen), extrahieren wir sie ins Temp
+        // und arbeiten mit dem Extract als virtuellem game/. Original-.rpa
+        // bleibt unangetastet. packedMode signalisiert dem Deploy dass die
+        // Original-.rpyc NICHT im Filesystem liegen → kein Backup noetig.
+        string rpycSource = gameDir;
+        bool packedMode = false;
+        var rpycFiles = RenpyRpycService.FindRpycFiles(gameDir).ToList();
+        if (rpycFiles.Count == 0)
+        {
+            var rpas = Directory.EnumerateFiles(gameDir, "*.rpa", SearchOption.TopDirectoryOnly)
+                .ToList();
+            if (rpas.Count == 0)
+                throw new InvalidOperationException(
+                    $"Weder .rpyc-Dateien noch .rpa-Archive in '{gameDir}' gefunden.");
+
+            var extractedDir = Path.Combine(tempRoot, "extracted");
+            Directory.CreateDirectory(extractedDir);
+            Log.Info("Kein .rpyc im gameDir — extrahiere {n} .rpa → {temp}",
+                rpas.Count, extractedDir);
+            foreach (var rpa in rpas)
+            {
+                ct.ThrowIfCancellationRequested();
+                progress?.Report(new OneClickProgress(
+                    OneClickPhase.Scanning, 0, 0, $"extract {Path.GetFileName(rpa)}"));
+                var info = _archive.ReadIndex(rpa);
+                _archive.ExtractAll(info, extractedDir, cancellationToken: ct);
+            }
+            rpycFiles = RenpyRpycService.FindRpycFiles(extractedDir).ToList();
+            if (rpycFiles.Count == 0)
+                throw new InvalidOperationException(
+                    $"Auch nach Extrakt keine .rpyc gefunden in '{gameDir}'.");
+            rpycSource = extractedDir;
+            packedMode = true;
+        }
+
         try
         {
-            // 1. Decompile: Struktur relativ zu gameDir in Temp spiegeln.
+            // 1. Decompile: Struktur relativ zu rpycSource in Temp spiegeln.
             for (int i = 0; i < rpycFiles.Count; i++)
             {
                 ct.ThrowIfCancellationRequested();
                 var rpyc = rpycFiles[i];
-                var rel = Path.GetRelativePath(gameDir, rpyc);
+                var rel = Path.GetRelativePath(rpycSource, rpyc);
                 var tempRpy = Path.Combine(tempRoot, Path.ChangeExtension(rel, ".rpy"));
                 Directory.CreateDirectory(Path.GetDirectoryName(tempRpy)!);
                 progress?.Report(new OneClickProgress(
@@ -159,9 +197,11 @@ public sealed class OneClickModBuilder
             // „warum-Kontext" fuer den Spieler.
             _infoScreen.Generate(modOut, analysis);
 
-            // 4. Deploy: modifizierte .rpy nach gameDir, .rpyc backuppen.
+            // 4. Deploy: modifizierte .rpy nach gameDir, .rpyc backuppen
+            //    (nur wenn nicht packedMode — bei packed liegen Originale
+            //    in der .rpa, da gibt's nichts zu backuppen).
             ct.ThrowIfCancellationRequested();
-            var deployed = Deploy(gameDir, modOut, modType, progress, ct);
+            var deployed = Deploy(gameDir, modOut, modType, packedMode, progress, ct);
 
             return new OneClickResult(gameDir, deployed.Count, analysis, deployed);
         }
@@ -179,7 +219,7 @@ public sealed class OneClickModBuilder
     /// der User den Mod ein zweites Mal, bleibt das erste Backup erhalten).
     /// Schreibt am Ende das Manifest fuer die Uninstall-Funktion.</summary>
     private List<DeployedFile> Deploy(string gameDir, string modOutRoot, ModTypeId modType,
-        IProgress<OneClickProgress>? progress, CancellationToken ct)
+        bool packedMode, IProgress<OneClickProgress>? progress, CancellationToken ct)
     {
         var rpyFiles = Directory.Exists(modOutRoot)
             ? Directory.EnumerateFiles(modOutRoot, "*.rpy", SearchOption.AllDirectories).ToList()
@@ -200,9 +240,12 @@ public sealed class OneClickModBuilder
 
             Directory.CreateDirectory(Path.GetDirectoryName(dstRpy)!);
 
-            // Backup: nur beim ersten Mal, damit das Original erhalten bleibt.
+            // Backup: nur beim ersten Mal UND nur wenn wir im Filesystem-
+            // Modus sind. Im packedMode (.rpa vorhanden, .rpyc gepackt)
+            // liegt das Original in der .rpa — es gibt nichts im Filesystem
+            // zu backuppen, und die .rpa selbst fassen wir nie an.
             bool backupCreated = false;
-            if (File.Exists(dstRpyc) && !File.Exists(backup))
+            if (!packedMode && File.Exists(dstRpyc) && !File.Exists(backup))
             {
                 File.Move(dstRpyc, backup);
                 backupCreated = true;
@@ -310,22 +353,34 @@ public sealed class OneClickModBuilder
     /// <c>game/</c>-Unterordner (Standard-Ren'Py-Release-Layout), sonst
     /// wird der Pick selbst genommen wenn er .rpyc enthaelt. Reihenfolge
     /// ist wichtig — hat der Root ein game/ UND rekursiv .rpyc, ist game/
-    /// die richtige Wurzel (sonst wuerden Deploys ins Root landen).</summary>
+    /// die richtige Wurzel (sonst wuerden Deploys ins Root landen).
+    ///
+    /// Akzeptiert auch Ordner mit NUR .rpa (gepackte Distributionen — Steam,
+    /// Interview Desires, viele andere). Der Build-Loop entpackt die dann
+    /// automatisch ins Temp und arbeitet mit dem Extract.</summary>
     public static string? ResolveGameDir(string pickedFolder)
     {
         if (!Directory.Exists(pickedFolder)) return null;
 
-        // Fall A: Standard-Ren'Py-Layout — es gibt einen 'game/'-Unterordner.
+        // Fall A: Standard-Ren'Py-Layout — es gibt einen 'game/'-Unterordner
+        // mit entweder .rpyc oder .rpa (bei gepackten Spielen).
         var gameSub = Path.Combine(pickedFolder, "game");
-        if (Directory.Exists(gameSub) &&
-            Directory.EnumerateFiles(gameSub, "*.rpyc", SearchOption.AllDirectories).Any())
+        if (Directory.Exists(gameSub) && HasRenpyContent(gameSub))
             return gameSub;
 
-        // Fall B: der Pick ist schon das game/-Verzeichnis (enthaelt .rpyc).
-        if (Directory.EnumerateFiles(pickedFolder, "*.rpyc", SearchOption.AllDirectories).Any())
+        // Fall B: der Pick ist schon das game/-Verzeichnis.
+        if (HasRenpyContent(pickedFolder))
             return pickedFolder;
 
         return null;
+    }
+
+    private static bool HasRenpyContent(string dir)
+    {
+        // .rpyc rekursiv (Filesystem-Content) ODER .rpa im Top-Level
+        // (gepackte Distribution).
+        return Directory.EnumerateFiles(dir, "*.rpyc", SearchOption.AllDirectories).Any()
+            || Directory.EnumerateFiles(dir, "*.rpa", SearchOption.TopDirectoryOnly).Any();
     }
 
     private static void SafeDeleteTemp(string dir)

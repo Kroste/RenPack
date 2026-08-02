@@ -60,6 +60,22 @@ public sealed class OneClickModBuilderTests : IDisposable
         resolved.Should().Be(_tmp);
     }
 
+    // ---- v0.12.1: Auto-Extract .rpa fuer gepackte Distributionen ---------
+
+    [Fact]
+    public void ResolveGameDir_accepts_folder_with_only_rpa_files()
+    {
+        // Gepackte Distribution (Interview Desires, viele Steam-Releases):
+        // im game/-Ordner liegen NUR .rpa, keine .rpyc. Wir muessen den
+        // Ordner trotzdem akzeptieren — der Build-Loop entpackt dann.
+        var gameDir = Path.Combine(_tmp, "game");
+        Directory.CreateDirectory(gameDir);
+        File.WriteAllBytes(Path.Combine(gameDir, "scripts.rpa"), [0x52, 0x50, 0x41]);
+        var resolved = OneClickModBuilder.ResolveGameDir(_tmp);
+        resolved.Should().Be(gameDir);
+    }
+
+
     // ---- Uninstall via Manifest ------------------------------------------
 
     [Fact]
