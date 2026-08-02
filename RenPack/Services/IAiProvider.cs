@@ -23,4 +23,14 @@ public interface IAiProvider
         IReadOnlyList<string> variableNames,
         string targetLanguage,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Generischer Chat-Completion-Endpoint fuer Freiform-Prompts.
+    /// System-Prompt setzt die Rolle, User-Prompt enthaelt die eigentliche
+    /// Anfrage. Rueckgabe ist der raw content-String der KI-Antwort — der
+    /// Aufrufer parst selbst (z.B. JSON extrahieren fuer strukturierte
+    /// Antworten). Wird von KrosteAiRewriter (v0.12.0) genutzt.</summary>
+    Task<string> CompleteAsync(
+        string systemPrompt,
+        string userPrompt,
+        CancellationToken cancellationToken = default);
 }

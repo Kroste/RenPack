@@ -74,14 +74,25 @@ public sealed class OpenAiCompatibleProvider : IAiProvider
         CancellationToken cancellationToken = default)
     {
         if (variableNames.Count == 0) return new Dictionary<string, string>();
+        var content = await ChatAsync(
+            PromptBuilder.System(targetLanguage),
+            PromptBuilder.User(variableNames),
+            jsonObject: true,
+            cancellationToken);
+        return PromptBuilder.ParseTranslations(content);
+    }
 
-        var systemPrompt = PromptBuilder.System(targetLanguage);
-        var userPrompt = PromptBuilder.User(variableNames);
+    public Task<string> CompleteAsync(string systemPrompt, string userPrompt,
+        CancellationToken cancellationToken = default) =>
+        ChatAsync(systemPrompt, userPrompt, jsonObject: false, cancellationToken);
 
+    private async Task<string> ChatAsync(string systemPrompt, string userPrompt,
+        bool jsonObject, CancellationToken cancellationToken)
+    {
         var req = new ChatRequest(
             Model: _model,
             Messages: [new ChatMessage("system", systemPrompt), new ChatMessage("user", userPrompt)],
-            ResponseFormat: new ResponseFormat("json_object"),
+            ResponseFormat: jsonObject ? new ResponseFormat("json_object") : null,
             Temperature: 0.2);
 
         using var httpReq = new HttpRequestMessage(HttpMethod.Post, $"{_endpoint}/chat/completions")
@@ -95,11 +106,9 @@ public sealed class OpenAiCompatibleProvider : IAiProvider
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadFromJsonAsync<ChatResponse>(cancellationToken)
             ?? throw new InvalidOperationException($"{_displayName}-Antwort war leer.");
-        Log.Debug("{provider} {model}: {n} Namen in {ms} ms",
-            _displayName, _model, variableNames.Count, sw.ElapsedMilliseconds);
-
-        var content = body.Choices?.FirstOrDefault()?.Message?.Content ?? "";
-        return PromptBuilder.ParseTranslations(content);
+        Log.Debug("{provider} {model}: chat in {ms} ms (json={json})",
+            _displayName, _model, sw.ElapsedMilliseconds, jsonObject);
+        return body.Choices?.FirstOrDefault()?.Message?.Content ?? "";
     }
 
     private void AddAuth(HttpRequestMessage req)
@@ -113,7 +122,7 @@ public sealed class OpenAiCompatibleProvider : IAiProvider
     private sealed record ChatRequest(
         [property: JsonPropertyName("model")] string Model,
         [property: JsonPropertyName("messages")] IReadOnlyList<ChatMessage> Messages,
-        [property: JsonPropertyName("response_format")] ResponseFormat ResponseFormat,
+        [property: JsonPropertyName("response_format"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ResponseFormat? ResponseFormat,
         [property: JsonPropertyName("temperature")] double Temperature);
 
     private sealed record ResponseFormat(

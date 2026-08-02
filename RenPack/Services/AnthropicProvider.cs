@@ -51,10 +51,16 @@ public sealed class AnthropicProvider : IAiProvider
         CancellationToken cancellationToken = default)
     {
         if (variableNames.Count == 0) return new Dictionary<string, string>();
+        var text = await CompleteAsync(
+            PromptBuilder.System(targetLanguage),
+            PromptBuilder.User(variableNames),
+            cancellationToken);
+        return PromptBuilder.ParseTranslations(text);
+    }
 
-        var systemPrompt = PromptBuilder.System(targetLanguage);
-        var userPrompt = PromptBuilder.User(variableNames);
-
+    public async Task<string> CompleteAsync(string systemPrompt, string userPrompt,
+        CancellationToken cancellationToken = default)
+    {
         var req = new MessagesRequest(
             Model: _model,
             MaxTokens: 4096,
@@ -77,11 +83,8 @@ public sealed class AnthropicProvider : IAiProvider
         }
         var body = await response.Content.ReadFromJsonAsync<MessagesResponse>(cancellationToken)
             ?? throw new InvalidOperationException("Anthropic-Antwort war leer.");
-        Log.Debug("Anthropic {model}: {n} Namen in {ms} ms",
-            _model, variableNames.Count, sw.ElapsedMilliseconds);
-
-        var text = body.Content?.FirstOrDefault(b => b.Type == "text")?.Text ?? "";
-        return PromptBuilder.ParseTranslations(text);
+        Log.Debug("Anthropic {model}: chat in {ms} ms", _model, sw.ElapsedMilliseconds);
+        return body.Content?.FirstOrDefault(b => b.Type == "text")?.Text ?? "";
     }
 
     // ---- DTOs ---------------------------------------------------------------

@@ -76,24 +76,41 @@ public sealed class OllamaProvider : IAiProvider
     {
         if (variableNames.Count == 0) return new Dictionary<string, string>();
 
+        var content = await ChatAsync(
+            PromptBuilder.System(targetLanguage),
+            PromptBuilder.User(variableNames),
+            jsonMode: true,
+            cancellationToken);
+        return PromptBuilder.ParseTranslations(content);
+    }
+
+    public Task<string> CompleteAsync(string systemPrompt, string userPrompt,
+        CancellationToken cancellationToken = default) =>
+        // jsonMode weglassen — Rewriter setzt System-Prompt so dass die
+        // Antwort trotzdem JSON ist, aber Ollama zwingt sonst zu einem
+        // Objekt-Layer der bei Freeform-Prompts stoert.
+        ChatAsync(systemPrompt, userPrompt, jsonMode: false, cancellationToken);
+
+    private async Task<string> ChatAsync(string systemPrompt, string userPrompt,
+        bool jsonMode, CancellationToken cancellationToken)
+    {
         var req = new ChatRequest(
             Model: _model,
             Messages: [
-                new ChatMessage("system", PromptBuilder.System(targetLanguage)),
-                new ChatMessage("user", PromptBuilder.User(variableNames)),
+                new ChatMessage("system", systemPrompt),
+                new ChatMessage("user", userPrompt),
             ],
             Stream: false,
-            Format: "json");
+            Format: jsonMode ? "json" : null);
 
         var sw = System.Diagnostics.Stopwatch.StartNew();
         using var response = await _http.PostAsJsonAsync($"{_endpoint}/api/chat", req, cancellationToken);
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadFromJsonAsync<ChatResponse>(cancellationToken)
             ?? throw new InvalidOperationException("Ollama-Antwort war leer.");
-        Log.Debug("Ollama {model}: {n} Namen in {ms} ms",
-            _model, variableNames.Count, sw.ElapsedMilliseconds);
-
-        return PromptBuilder.ParseTranslations(body.Message?.Content ?? "");
+        Log.Debug("Ollama {model}: chat in {ms} ms (json={json})",
+            _model, sw.ElapsedMilliseconds, jsonMode);
+        return body.Message?.Content ?? "";
     }
 
     /// <summary>Streamt die NDJSON-Events von <c>POST /api/pull</c>. Ein Event
@@ -136,7 +153,7 @@ public sealed class OllamaProvider : IAiProvider
         [property: JsonPropertyName("model")] string Model,
         [property: JsonPropertyName("messages")] IReadOnlyList<ChatMessage> Messages,
         [property: JsonPropertyName("stream")] bool Stream,
-        [property: JsonPropertyName("format")] string Format);
+        [property: JsonPropertyName("format"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Format);
 
     private sealed record ChatMessage(
         [property: JsonPropertyName("role")] string Role,

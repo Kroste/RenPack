@@ -115,6 +115,8 @@ public sealed class TranslationServiceTests
             return Task.FromResult<IReadOnlyDictionary<string, string>>(
                 names.ToDictionary(n => n, n => n + "-übersetzt"));
         }
+        public Task<string> CompleteAsync(string systemPrompt, string userPrompt,
+            CancellationToken ct = default) => Task.FromResult("");
     }
 }
 

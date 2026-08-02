@@ -46,14 +46,25 @@ public sealed class GeminiProvider : IAiProvider
         CancellationToken cancellationToken = default)
     {
         if (variableNames.Count == 0) return new Dictionary<string, string>();
+        var text = await ChatAsync(
+            PromptBuilder.System(targetLanguage),
+            PromptBuilder.User(variableNames),
+            responseMimeType: "application/json",
+            cancellationToken);
+        return PromptBuilder.ParseTranslations(text);
+    }
 
-        var systemPrompt = PromptBuilder.System(targetLanguage);
-        var userPrompt = PromptBuilder.User(variableNames);
+    public Task<string> CompleteAsync(string systemPrompt, string userPrompt,
+        CancellationToken cancellationToken = default) =>
+        ChatAsync(systemPrompt, userPrompt, responseMimeType: null, cancellationToken);
 
+    private async Task<string> ChatAsync(string systemPrompt, string userPrompt,
+        string? responseMimeType, CancellationToken cancellationToken)
+    {
         var payload = new GeminiRequest(
             SystemInstruction: new SystemInstruction([new Part(systemPrompt)]),
             Contents: [new Content("user", [new Part(userPrompt)])],
-            GenerationConfig: new GenerationConfig(ResponseMimeType: "application/json", Temperature: 0.2));
+            GenerationConfig: new GenerationConfig(ResponseMimeType: responseMimeType, Temperature: 0.2));
 
         var url = $"{_endpoint}/models/{_model}:generateContent?key={_apiKey}";
         using var httpReq = new HttpRequestMessage(HttpMethod.Post, url)
@@ -70,12 +81,10 @@ public sealed class GeminiProvider : IAiProvider
         }
         var body = await response.Content.ReadFromJsonAsync<GeminiResponse>(cancellationToken)
             ?? throw new InvalidOperationException("Gemini-Antwort war leer.");
-        Log.Debug("Gemini {model}: {n} Namen in {ms} ms",
-            _model, variableNames.Count, sw.ElapsedMilliseconds);
-
-        var text = body.Candidates?.FirstOrDefault()?.Content?.Parts?
+        Log.Debug("Gemini {model}: chat in {ms} ms (mime={mime})",
+            _model, sw.ElapsedMilliseconds, responseMimeType);
+        return body.Candidates?.FirstOrDefault()?.Content?.Parts?
             .Select(p => p.Text).FirstOrDefault(t => !string.IsNullOrEmpty(t)) ?? "";
-        return PromptBuilder.ParseTranslations(text);
     }
 
     // ---- DTOs ---------------------------------------------------------------
@@ -96,7 +105,7 @@ public sealed class GeminiProvider : IAiProvider
         [property: JsonPropertyName("text")] string Text);
 
     private sealed record GenerationConfig(
-        [property: JsonPropertyName("response_mime_type")] string ResponseMimeType,
+        [property: JsonPropertyName("response_mime_type"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ResponseMimeType,
         [property: JsonPropertyName("temperature")] double Temperature);
 
     private sealed record GeminiResponse(
