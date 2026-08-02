@@ -246,6 +246,37 @@ public sealed class OneClickModBuilder
             ? Directory.EnumerateFiles(modOutRoot, "*.rpy", SearchOption.AllDirectories).ToList()
             : [];
 
+        // KRITISCH im packedMode: die weg-gemovte .rpa enthaelt oft nicht
+        // nur Story-.rpyc sondern auch images.rpyc, characters.rpyc,
+        // options.rpyc, screens.rpyc, gui.rpyc, audio.rpyc. Ohne die
+        // fehlen im Spiel alle image-Definitionen, Character-Defs,
+        // Screens etc. — der User sieht keine Bilder mehr. Wir muessen
+        // ALLE dekompilierten .rpy deployen als komplett-Ersatz. Die
+        // vom Walkthrough gepatchten aus modOut haben Prio (ueberschreiben
+        // nicht-gepatchte aus decompiled/).
+        // Verifiziert an Interview Desires 0.23 → v0.12.3-Bug "keine bilder mehr".
+        if (packedMode)
+        {
+            var decompiledDir = Path.Combine(Path.GetDirectoryName(modOutRoot)!, "decompiled");
+            if (Directory.Exists(decompiledDir))
+            {
+                foreach (var srcRpy in Directory.EnumerateFiles(decompiledDir, "*.rpy",
+                    SearchOption.AllDirectories))
+                {
+                    var rel = Path.GetRelativePath(decompiledDir, srcRpy);
+                    var modOutPath = Path.Combine(modOutRoot, rel);
+                    if (File.Exists(modOutPath)) continue; // vom Walkthrough schon gepatched
+                    Directory.CreateDirectory(Path.GetDirectoryName(modOutPath)!);
+                    File.Copy(srcRpy, modOutPath);
+                }
+                // rpyFiles neu einlesen — jetzt inklusive der Baseline
+                rpyFiles = Directory.EnumerateFiles(modOutRoot, "*.rpy",
+                    SearchOption.AllDirectories).ToList();
+                Log.Info("packedMode: Baseline aus decompiled/ in mod/ gespiegelt " +
+                    "→ {n} .rpy insgesamt zum Deploy", rpyFiles.Count);
+            }
+        }
+
         var deployed = new List<DeployedFile>();
         for (int i = 0; i < rpyFiles.Count; i++)
         {
@@ -312,11 +343,19 @@ public sealed class OneClickModBuilder
         return deployed;
     }
 
-    /// <summary>Sichert jede <c>.rpa</c> im gameDir die Story-<c>.rpyc</c>
-    /// enthaelt nach <c>.rpa.krostemod-bak</c>. Non-Story-Archives (nur
-    /// Bilder/Audio/Fonts) bleiben unangetastet — die Assets werden
-    /// weiterhin gebraucht. Rueckgabe: Liste der verschobenen Dateinamen
-    /// (relative Pfade unter gameDir) — landet im Manifest fuer Uninstall.</summary>
+    /// <summary>Fuer jede <c>.rpa</c> im gameDir die <c>.rpyc</c> enthaelt:
+    /// Original als <c>.rpa.krostemod-bak</c> sichern. Wenn die <c>.rpa</c>
+    /// AUCH non-<c>.rpyc</c>-Content (Bilder, Audio, Fonts) enthaelt, wird
+    /// eine neue <c>.rpa</c> an gleicher Stelle geschrieben — mit
+    /// ausschliesslich den non-<c>.rpyc</c>-Files. Damit bleiben die Assets
+    /// erhalten, aber Ren'Py laedt keine konkurrierenden Story-<c>.rpyc</c>
+    /// mehr aus dem Archive (was gegen unsere Filesystem-<c>.rpy</c>
+    /// Duplicate-Label-Errors werfen wuerde — v0.12.3-Bug an Interview
+    /// Desires 0.23 verifiziert).
+    ///
+    /// Rueckgabe: Liste der Archive-Filenames — landet im Manifest.
+    /// Uninstall entfernt die "gesaeuberte" <c>.rpa</c> und schiebt das
+    /// Backup zurueck.</summary>
     private List<string> MoveConflictingArchives(string gameDir)
     {
         var moved = new List<string>();
@@ -325,23 +364,63 @@ public sealed class OneClickModBuilder
             try
             {
                 var info = _archive.ReadIndex(rpa);
-                bool hasRpyc = info.Entries.Any(e =>
-                    e.Path.EndsWith(".rpyc", StringComparison.OrdinalIgnoreCase));
-                if (!hasRpyc) continue;
+                var rpycEntries = info.Entries
+                    .Where(e => e.Path.EndsWith(".rpyc", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                if (rpycEntries.Count == 0) continue;
+
                 var backup = rpa + BackupSuffix;
                 if (File.Exists(backup))
                 {
-                    // Zweiter Build → altes Backup bleibt, .rpa ist schon weg.
-                    Log.Debug("Skip archive move {rpa}: backup existiert bereits", rpa);
+                    Log.Debug("Skip archive processing {rpa}: backup existiert bereits", rpa);
                     continue;
                 }
-                File.Move(rpa, backup);
-                moved.Add(Path.GetFileName(rpa));
-                Log.Info("Moved story-archive {rpa} → {backup}", rpa, backup);
+
+                var nonRpycEntries = info.Entries
+                    .Where(e => !e.Path.EndsWith(".rpyc", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                if (nonRpycEntries.Count == 0)
+                {
+                    // Reines .rpyc-Archive (klassisches scripts.rpa) —
+                    // einfach weg-moven, keine Assets zum Erhalten.
+                    File.Move(rpa, backup);
+                    moved.Add(Path.GetFileName(rpa));
+                    Log.Info("Moved story-only-archive {rpa} → {backup}", rpa, backup);
+                    continue;
+                }
+
+                // Mixed archive: repack. Assets extrahieren, ohne .rpyc
+                // neu packen. Extract-Tempordner unter gameDir/.krostemod-
+                // repack-<guid>/ (im gleichen Filesystem wie das Original
+                // → File.Move ist atomar, kein Cross-Device-Copy noetig).
+                var repackDir = Path.Combine(gameDir,
+                    ".krostemod-repack-" + Guid.NewGuid().ToString("N"));
+                try
+                {
+                    Directory.CreateDirectory(repackDir);
+                    _archive.Extract(info, nonRpycEntries, repackDir);
+                    File.Move(rpa, backup);
+                    _archive.Create(rpa, repackDir);
+                    moved.Add(Path.GetFileName(rpa));
+                    Log.Info("Repacked mixed-archive {rpa}: kept {n} non-.rpyc entries, dropped {m} .rpyc",
+                        rpa, nonRpycEntries.Count, rpycEntries.Count);
+                }
+                finally
+                {
+                    if (Directory.Exists(repackDir))
+                    {
+                        try { Directory.Delete(repackDir, recursive: true); }
+                        catch (Exception cleanEx)
+                        {
+                            Log.Warn(cleanEx, "Repack-Cleanup fehlgeschlagen: {dir}", repackDir);
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
-                Log.Warn(ex, "Konnte {rpa} nicht analysieren/verschieben — laesst Ren'Py evtl. Duplicate-Labels werfen", rpa);
+                Log.Warn(ex, "Konnte {rpa} nicht verarbeiten — laesst Ren'Py evtl. Duplicate-Labels werfen", rpa);
             }
         }
         return moved;
