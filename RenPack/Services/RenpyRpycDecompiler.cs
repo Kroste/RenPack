@@ -8,15 +8,17 @@ namespace RenPack.Services;
 
 /// <summary>
 /// Wandelt die AST-Statement-Liste aus <see cref="RenpyRpycService"/> zurück in
-/// Ren'Py-Skript-Quelltext. **Basic-Decompiler** — deckt die häufigsten
-/// Node-Typen ab (Label/Say/Menu/Jump/Call/Return/If/Show/Scene/Hide/With/
-/// Python/Init/Pass/Define/Default/UserStatement), unbekannte Nodes werden als
-/// Kommentar (<c># &lt;unknown: mod.Class&gt;</c>) mit ausgegeben, damit der
+/// Ren'Py-Skript-Quelltext. Deckt Label/Say/Menu/Jump/Call/Return/If/Show/
+/// Scene/Hide/With/Python/Init/Pass/Define/Default/UserStatement/Screen/Style/
+/// Transform/ATL/LayeredImage ab; unbekannte Nodes werden als Kommentar
+/// (<c># &lt;unknown: mod.Class&gt;</c>) mit ausgegeben, damit der
 /// Zeilenversatz erhalten bleibt.
 ///
-/// Für vollen Feature-Parity (Screens, ATL, Transforms, Style-Definitions) ist
-/// weiterhin unrpyc das Tool der Wahl — die App liefert hier eine cross-
-/// platform-Basisvariante ohne Python-Dependency.
+/// Delegiert an <see cref="RenpySlWriter"/> fuer Screens und
+/// <see cref="RenpyAtlWriter"/> fuer ATL-Bloecke. Signature-Params und
+/// Style-Properties werden vor dem Emit via <see cref="SignatureOrderPatcher"/>
+/// in korrekte Insertion-Order gebracht (Razorvine.Pickle-Hashtable-Order-Fix).
+/// Cross-platform, keine Python-Dependency.
 /// </summary>
 public sealed class RenpyRpycDecompiler
 {
@@ -29,8 +31,7 @@ public sealed class RenpyRpycDecompiler
         // Immer LF, nie CRLF — Ren'Py-Quelldateien sind LF-normalisiert und
         // Tests vergleichen gegen "\n". sb.AppendLine() wuerde auf Windows
         // "\r\n" produzieren und den Windows-CI-Build brechen.
-        sb.Append("# Decompiled by RenPack — Basic-Decompiler ohne vollständige Ren'Py-Sprachdeckung.\n");
-        sb.Append("# Für Screens, ATL und komplexe Init-Blöcke bitte weiterhin unrpyc verwenden.\n");
+        sb.Append("# Decompiled by RenPack\n");
         sb.Append('\n');
 
         // Vor dem Emit: Transform-Aufrufe mit Argumenten sammeln. Ren'Py
