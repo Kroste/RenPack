@@ -120,13 +120,17 @@ public sealed class KrosteWalkthroughGenerator
             written++;
         }
 
-        // Translation-Runtime-Patcher schreiben (EINE Datei fuer alle Sprachen).
-        if (translationAware && hintsForTranslation.Count > 0)
-        {
-            WriteTranslationHintPatcher(destRoot, tlLanguages, hintsForTranslation);
-            Log.Info("Translation-Aware: {count} Hints via Runtime-Patcher fuer {langs} Sprache(n)",
-                hintsForTranslation.Count, tlLanguages.Count);
-        }
+        // Translation-Runtime-Patcher haben wir bewusst NICHT mehr. Der
+        // Ansatz "translations[old] = old + hint" ueberschreibt zwar Ren'Py's
+        // string-basierte Uebersetzungen, aber:
+        //   1. Menu-Choices bei Boundaries-artigen Games gehen via hash-basierte
+        //      Translation — unser strings-Patch greift dort gar nicht.
+        //   2. Der Patch verhindert dass unser Info-Popup die echte deutsche
+        //      Uebersetzung anzeigt (translate_string() liefert dann unsere
+        //      "Original + Hint"-Version statt der deutschen).
+        // Statt Runtime-Patcher: die Hint-Info wird via Info-Popup (F10 / !)
+        // gezeigt — der Popup nutzt translate_string() um die Choice-Texte in
+        // der aktuellen Spielsprache darzustellen.
 
         // README als Hinweis fuer den Nutzer.
         WriteReadme(destRoot, written, analysis, translationAware, tlLanguages);
