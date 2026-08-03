@@ -364,6 +364,46 @@ public sealed class KrosteCheatGeneratorTests : IDisposable
     }
 
     [Fact]
+    public void Vars_within_container_group_are_sorted_by_score_not_alphabetical()
+    {
+        // Score-Sortierung ist schon im SelectCheatCandidates verdrahtet
+        // (ThenByDescending(score)), aber wir wollen sicherstellen dass
+        // sie durch die Gruppierung nicht kaputt geht. Bei alphabetischer
+        // Sortierung waere „fcs.desire" vor „fcs.morality" — wir wollen
+        // aber die haeufiger-modifizierte Var (morality mit 3 Deltas)
+        // vor der selten-modifizierten (desire mit 1 Delta).
+        var choices = new List<RpyChoice>
+        {
+            new("f.rpy", 1, "l", 0, 1, 0, "c0", null,
+                new[] { new VarDelta("fcs.morality", "+=", "1") }),
+            new("f.rpy", 2, "l", 0, 1, 1, "c1", null,
+                new[] { new VarDelta("fcs.morality", "+=", "1") }),
+            new("f.rpy", 3, "l", 0, 1, 2, "c2", null,
+                new[] { new VarDelta("fcs.morality", "+=", "1") }),
+            new("f.rpy", 4, "l", 0, 1, 3, "c3", null,
+                new[] { new VarDelta("fcs.desire", "+=", "1") }),
+            // Zweite Gruppe damit BuildGroups tatsaechlich gruppiert
+            new("f.rpy", 5, "l", 0, 1, 4, "c4", null,
+                new[] { new VarDelta("samantha.love", "+=", "1") }),
+            new("f.rpy", 6, "l", 0, 1, 5, "c5", null,
+                new[] { new VarDelta("samantha.lust", "+=", "1") }),
+        };
+        var profile = new GameProfile(
+            MenuScreenCandidates: new[] { "choice" },
+            HasCharacterContainers: true,
+            DominantChoiceStyle: ChoiceStyle.Mixed,
+            TranslationLanguages: Array.Empty<string>(),
+            DetectedTitle: null);
+        var candidates = KrosteCheatGenerator.SelectCheatCandidates(MakeAnalysis(choices: choices));
+        var groups = KrosteCheatGenerator.BuildGroups(candidates, profile);
+
+        var fcsGroup = groups.Single(g => g.Label == "fcs");
+        // morality (3 Deltas, score=6) muss vor desire (1 Delta, score=2) stehen
+        fcsGroup.Vars[0].Name.Should().Be("fcs.morality");
+        fcsGroup.Vars[1].Name.Should().Be("fcs.desire");
+    }
+
+    [Fact]
     public void Sorts_numeric_vars_before_bool_flags()
     {
         // User-Praeferenz: die meisten benoetigten Cheats sind Zahlen —
