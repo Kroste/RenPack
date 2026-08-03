@@ -130,6 +130,40 @@ public sealed class RenpyModAnalyzerTests : IDisposable
     }
 
     [Fact]
+    public void Extracts_dollar_init_as_implicit_store_variable()
+    {
+        // Interview Desires 0.23: `$ keys = 0` innerhalb eines Labels statt
+        // `default keys = 0` — trotzdem eine echte Story-Variable, die im
+        // Cheat-Menue auftauchen muss.
+        Write("game/story.rpy", """
+            label start:
+                $ keys = 0
+                $ score = 0
+                if keys > 0:
+                    "You have keys."
+            """);
+        var result = _analyzer.Analyze(_tmp);
+        result.StoreVariables.Should().Contain(v => v.Name == "keys" && v.TypeInferred == "int");
+        result.StoreVariables.Should().Contain(v => v.Name == "score" && v.TypeInferred == "int");
+    }
+
+    [Fact]
+    public void Dollar_compound_assign_is_not_treated_as_store_variable_init()
+    {
+        // `$ keys -= 1` ist eine Modifikation, kein Init. Es darf keine neue
+        // StoreVariable erzeugen — hoechstens einen Delta-Eintrag beim
+        // Choice-Body-Scan.
+        Write("game/story.rpy", """
+            default keys = 5
+            label start:
+                $ keys -= 1
+            """);
+        var result = _analyzer.Analyze(_tmp);
+        result.StoreVariables.Should().ContainSingle(v => v.Name == "keys");
+        result.StoreVariables.Single(v => v.Name == "keys").DefaultValue.Should().Be("5");
+    }
+
+    [Fact]
     public void Extracts_characters_with_color()
     {
         Write("game/chars.rpy", """

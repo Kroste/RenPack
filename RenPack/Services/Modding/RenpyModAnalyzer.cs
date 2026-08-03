@@ -59,6 +59,13 @@ public sealed class RenpyModAnalyzer
         @"^\s*default\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+?)\s*$",
         RegexOptions.Compiled);
 
+    /// <summary><c>$ varname = value</c> — reine Zuweisung (nicht <c>+=</c>).
+    /// Wird als implizite Store-Variable erfasst, damit Cheat-Menue-Kandidaten
+    /// wie Interview-Desires' <c>$ keys = 0</c> nicht durchrutschen.</summary>
+    private static readonly Regex DollarInitPattern = new(
+        @"^\s*\$\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+?)\s*$",
+        RegexOptions.Compiled);
+
     /// <summary><c>define X = Character("Name"[, color="#ff0000"[, …]])</c>.
     /// Wir extrahieren nur Name und Color — den Rest liest der Rename-Patcher
     /// spaeter direkt aus der Original-Zeile.</summary>
@@ -108,6 +115,7 @@ public sealed class RenpyModAnalyzer
 
         var choices = new List<RpyChoice>();
         var vars = new List<RpyStoreVariable>();
+        var varNamesSeen = new HashSet<string>(StringComparer.Ordinal);
         var chars = new List<RpyCharacter>();
         var files = new List<string>();
         var consumers = new Dictionary<string, List<VarConsumer>>(StringComparer.Ordinal);
@@ -124,7 +132,8 @@ public sealed class RenpyModAnalyzer
             if (rel.Split('/').Any(s => s.Equals("tl", StringComparison.OrdinalIgnoreCase)))
                 continue;
             files.Add(rel);
-            AnalyzeFile(file, rel, choices, vars, chars, consumers, menuLocations, says);
+            AnalyzeFile(file, rel, choices, vars, varNamesSeen, chars,
+                consumers, menuLocations, says);
         }
 
         // Nachtraeglich: Choice-Conditions als MenuChoiceGate-Consumer erfassen.
@@ -195,7 +204,8 @@ public sealed class RenpyModAnalyzer
     }
 
     private static void AnalyzeFile(string absPath, string relPath,
-        List<RpyChoice> choices, List<RpyStoreVariable> vars, List<RpyCharacter> chars,
+        List<RpyChoice> choices, List<RpyStoreVariable> vars,
+        HashSet<string> varNamesSeen, List<RpyCharacter> chars,
         Dictionary<string, List<VarConsumer>> consumers,
         List<(string file, int line)> menuLocations,
         List<RpySayStatement> says)
@@ -291,11 +301,30 @@ public sealed class RenpyModAnalyzer
             var mDefault = DefaultPattern.Match(line);
             if (mDefault.Success)
             {
-                var val = StripLineComment(mDefault.Groups[2].Value).Trim();
-                vars.Add(new RpyStoreVariable(
-                    Name: mDefault.Groups[1].Value,
-                    DefaultValue: val,
-                    TypeInferred: InferType(val)));
+                var name = mDefault.Groups[1].Value;
+                if (varNamesSeen.Add(name))
+                {
+                    var val = StripLineComment(mDefault.Groups[2].Value).Trim();
+                    vars.Add(new RpyStoreVariable(name, val, InferType(val)));
+                }
+            }
+            // $ varname = value → implizite Store-Variable (typisch fuer
+            // Story-Vars, die erst beim Betreten eines Labels initialisiert
+            // werden statt per `default` im Init-Block). Erstes Vorkommen
+            // pro Name gewinnt — sonst wuerde `$ keys = 0` in 5 Labels 5x
+            // im Cheat-Menue auftauchen (Interview Desires 0.23).
+            else
+            {
+                var mDollar = DollarInitPattern.Match(line);
+                if (mDollar.Success)
+                {
+                    var name = mDollar.Groups[1].Value;
+                    if (varNamesSeen.Add(name))
+                    {
+                        var val = StripLineComment(mDollar.Groups[2].Value).Trim();
+                        vars.Add(new RpyStoreVariable(name, val, InferType(val)));
+                    }
+                }
             }
 
             // define X = Character(...)

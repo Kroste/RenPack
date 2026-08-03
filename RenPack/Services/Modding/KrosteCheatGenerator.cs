@@ -87,7 +87,11 @@ public sealed class KrosteCheatGenerator
             .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
 
         var scored = new List<(string name, string kind, string defaultValue, int score)>();
-        foreach (var v in analysis.StoreVariables)
+        // WICHTIG: ueber storeByName.Values iterieren, nicht ueber
+        // analysis.StoreVariables — sonst tauchen Variablen die per
+        // `$ X = ...` in mehreren Labels initialisiert werden mehrfach im
+        // Menue auf. Verifiziert an Interview Desires 0.23 (5x `keys`, 4x `score`).
+        foreach (var v in storeByName.Values)
         {
             var kind = v.TypeInferred switch
             {
