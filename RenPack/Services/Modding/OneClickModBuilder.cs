@@ -112,7 +112,12 @@ public sealed class OneClickModBuilder
         // Original-.rpyc NICHT im Filesystem liegen → kein Backup noetig.
         string rpycSource = gameDir;
         bool packedMode = false;
-        var rpycFiles = RenpyRpycService.FindRpycFiles(gameDir).ToList();
+        // Rueckgabe: (sourcePath, effectiveRelPath). Beim zweiten Install
+        // (User haengt Cheat hinter Walkthrough) liegen viele Originale
+        // schon als .rpyc.krostemod-bak — die muessen wir mitanalysieren,
+        // sonst sieht der zweite Analyzer-Lauf nur einen Bruchteil der
+        // Story und der Info-Screen verliert Menu-Impact-Kontext.
+        var rpycFiles = CollectSourceRpycs(gameDir).ToList();
         if (rpycFiles.Count == 0)
         {
             var rpas = Directory.EnumerateFiles(gameDir, "*.rpa", SearchOption.TopDirectoryOnly)
@@ -133,7 +138,7 @@ public sealed class OneClickModBuilder
                 var info = _archive.ReadIndex(rpa);
                 _archive.ExtractAll(info, extractedDir, cancellationToken: ct);
             }
-            rpycFiles = RenpyRpycService.FindRpycFiles(extractedDir).ToList();
+            rpycFiles = CollectSourceRpycs(extractedDir).ToList();
             if (rpycFiles.Count == 0)
                 throw new InvalidOperationException(
                     $"Auch nach Extrakt keine .rpyc gefunden in '{gameDir}'.");
@@ -150,6 +155,11 @@ public sealed class OneClickModBuilder
                 ct.ThrowIfCancellationRequested();
                 var rpyc = rpycFiles[i];
                 var rel = Path.GetRelativePath(rpycSource, rpyc);
+                // .rpyc.krostemod-bak → .rpyc fuer korrekten Ziel-Pfad,
+                // damit der zweite Install den gleichen decompiledDir-Layout
+                // sieht wie ein Erst-Install.
+                if (rel.EndsWith(BackupSuffix, StringComparison.Ordinal))
+                    rel = rel[..^BackupSuffix.Length];
                 var tempRpy = Path.Combine(decompiledDir, Path.ChangeExtension(rel, ".rpy"));
                 Directory.CreateDirectory(Path.GetDirectoryName(tempRpy)!);
                 progress?.Report(new OneClickProgress(
@@ -245,6 +255,29 @@ public sealed class OneClickModBuilder
             progress?.Report(new OneClickProgress(OneClickPhase.Cleaning, 0, 0, ""));
             SafeDeleteTemp(tempRoot);
         }
+    }
+
+    /// <summary>Sammelt alle .rpyc-Source-Files fuer den Decompile-Schritt.
+    /// Beim zweiten Install (User hat schon einen anderen Mod-Typ drin)
+    /// liegen viele Originale als <c>.rpyc.krostemod-bak</c> statt
+    /// <c>.rpyc</c>. Beide werden eingesammelt und pro logischer .rpyc
+    /// wird die BAK-Version bevorzugt (weil Original, waehrend die neue
+    /// <c>.rpyc</c> — falls ueberhaupt vorhanden — von Ren'Py aus unserer
+    /// gepatchten .rpy neu kompiliert waere).</summary>
+    private static IEnumerable<string> CollectSourceRpycs(string root)
+    {
+        // Key: logischer .rpyc-Pfad ohne BAK-Suffix.
+        // Value: tatsaechlicher Pfad (BAK-Version bevorzugt).
+        var byLogical = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var file in Directory.EnumerateFiles(root, "*.rpyc", SearchOption.AllDirectories))
+            byLogical.TryAdd(file, file);
+        foreach (var bak in Directory.EnumerateFiles(root, "*" + BackupSuffix, SearchOption.AllDirectories))
+        {
+            if (!bak.EndsWith(".rpyc" + BackupSuffix, StringComparison.Ordinal)) continue;
+            var logical = bak[..^BackupSuffix.Length];
+            byLogical[logical] = bak; // BAK gewinnt gegen ggf. vorhandene neue .rpyc
+        }
+        return byLogical.Values;
     }
 
     /// <summary>Deployt die generierten .rpy aus <paramref name="modOutRoot"/>
