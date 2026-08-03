@@ -44,5 +44,10 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <PackageVersion Include="FluentAssertions" Version="[7.2.2,8.0.0)" />
+
+    <!-- Headless-UI-Tests: manuelles Avalonia.Headless-Setup, KEIN
+         Avalonia.Headless.XUnit-Wrapper (der ist an xunit v2 gebunden;
+         xunit.v3 hat andere Test-Framework-Signaturen). -->
+    <PackageVersion Include="Avalonia.Headless" Version="12.1.0" />
   </ItemGroup>
 </Project>
