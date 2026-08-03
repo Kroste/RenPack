@@ -378,6 +378,24 @@ public sealed class KrosteCheatGenerator
         sb.AppendLine("            except Exception: pass");
         sb.AppendLine("        renpy.restart_interaction()");
         sb.AppendLine();
+        // Set-Prompt-Helpers (Pack B v0.9): der User tippt in ein Input-
+        // Feld einen absoluten Ziel-Wert. Type-Coercion je nach ce_kind,
+        // damit int/float/bool aus dem freien String korrekt parsen.
+        sb.AppendLine("    def krostemod_cheat_prompt_changed(new_text):");
+        sb.AppendLine("        store.krostemod_cheat_prompt_value = new_text or ''");
+        sb.AppendLine();
+        sb.AppendLine("    def krostemod_cheat_apply_prompt(name, kind):");
+        sb.AppendLine("        raw = (store.krostemod_cheat_prompt_value or '').strip()");
+        sb.AppendLine("        try:");
+        sb.AppendLine("            if kind == 'int': val = int(raw)");
+        sb.AppendLine("            elif kind == 'float': val = float(raw)");
+        sb.AppendLine("            elif kind == 'bool': val = raw.lower() in ('true', '1', 'yes', 'y')");
+        sb.AppendLine("            else: val = raw");
+        sb.AppendLine("            krostemod_cheat_set(name, val)");
+        sb.AppendLine("            renpy.restart_interaction()");
+        sb.AppendLine("        except Exception as ex:");
+        sb.AppendLine("            renpy.notify('krostemod set failed: ' + str(ex))");
+        sb.AppendLine();
     }
 
     private static void WriteScreen(StringBuilder sb, bool showGroupHeaders)
@@ -463,10 +481,40 @@ public sealed class KrosteCheatGenerator
         sb.AppendLine("                                        textbutton \"-1\"  action Function(krostemod_cheat_adjust, ce_name, -1) text_size 12");
         sb.AppendLine("                                        textbutton \"+1\"  action Function(krostemod_cheat_adjust, ce_name, 1) text_size 12");
         sb.AppendLine("                                        textbutton \"+10\" action Function(krostemod_cheat_adjust, ce_name, 10) text_size 12");
+        sb.AppendLine("                                        textbutton \"Set…\" action [SetVariable(\"krostemod_cheat_prompt_value\", krostemod_cheat_display(ce_name)), Show(\"krostemod_cheat_set_prompt\", name=ce_name, kind=ce_kind)] text_size 12");
         sb.AppendLine("                                    textbutton \"reset\" action Function(krostemod_cheat_reset, ce_name) text_size 12");
         sb.AppendLine();
         sb.AppendLine("            null height 6");
         sb.AppendLine("            textbutton \"Close (F11 / ESC)\" action Hide(\"krostemod_cheat\") xalign 1.0 text_size 14");
+        sb.AppendLine();
+        // Set-Prompt-Modal (Pack B v0.9). z-order 230 (ueber Cheat-Menu
+        // bei 220), damit er ueberlagert. K_RETURN = OK-Shortcut,
+        // K_ESCAPE = Cancel.
+        sb.AppendLine("default krostemod_cheat_prompt_value = \"\"");
+        sb.AppendLine();
+        sb.AppendLine("screen krostemod_cheat_set_prompt(name, kind):");
+        sb.AppendLine("    modal True");
+        sb.AppendLine("    zorder 230");
+        sb.AppendLine("    key \"K_ESCAPE\" action Hide(\"krostemod_cheat_set_prompt\")");
+        sb.AppendLine("    key \"K_RETURN\" action [Function(krostemod_cheat_apply_prompt, name, kind), Hide(\"krostemod_cheat_set_prompt\")]");
+        sb.AppendLine("    frame:");
+        sb.AppendLine("        xalign 0.5");
+        sb.AppendLine("        yalign 0.5");
+        sb.AppendLine("        xsize 480");
+        sb.AppendLine("        background \"#000000e0\"");
+        sb.AppendLine("        padding (20, 16)");
+        sb.AppendLine("        vbox:");
+        sb.AppendLine("            spacing 10");
+        sb.AppendLine($"            text \"Set [name]\" size 16 color \"{GoldHex}\" bold True");
+        sb.AppendLine("            text \"Type: [kind]\" size 11 color \"#999999\"");
+        sb.AppendLine("            null height 4");
+        sb.AppendLine("            input default krostemod_cheat_prompt_value length 40 pixel_width 420 size 14 color \"#ffffff\" changed krostemod_cheat_prompt_changed");
+        sb.AppendLine("            null height 6");
+        sb.AppendLine("            hbox:");
+        sb.AppendLine("                spacing 8");
+        sb.AppendLine("                xalign 1.0");
+        sb.AppendLine("                textbutton \"Cancel (ESC)\" action Hide(\"krostemod_cheat_set_prompt\") text_size 12");
+        sb.AppendLine("                textbutton \"OK (Enter)\" action [Function(krostemod_cheat_apply_prompt, name, kind), Hide(\"krostemod_cheat_set_prompt\")] text_size 12");
         sb.AppendLine();
     }
 

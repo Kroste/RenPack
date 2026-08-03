@@ -221,6 +221,33 @@ public sealed class KrosteCheatGeneratorTests : IDisposable
         candidates.Single(c => c.Name == "fcs.morality").DefaultValue.Should().Be("0");
     }
 
+    // ---- v0.9 Pack B: Custom-Value-Input Prompt ---------------------------
+
+    [Fact]
+    public void Set_prompt_screen_and_helpers_are_emitted()
+    {
+        var choice = new RpyChoice("f.rpy", 1, "l", 0, 1, 0, "text", null,
+            new[] { new VarDelta("love", "+=", "1") });
+        var analysis = MakeAnalysis(
+            vars: new[] { new RpyStoreVariable("love", "0", "int") },
+            choices: new[] { choice });
+        var path = _gen.Generate(_tmp, analysis);
+        var content = File.ReadAllText(path);
+
+        // Per-Row Set…-Button (nur bei nicht-bool)
+        content.Should().Contain("\"Set…\""); // "Set…"
+
+        // Modal-Screen
+        content.Should().Contain("screen krostemod_cheat_set_prompt(name, kind):");
+        content.Should().Contain("zorder 230");
+        content.Should().Contain("K_RETURN");
+
+        // Type-Coercion in apply_prompt
+        content.Should().Contain("krostemod_cheat_apply_prompt");
+        content.Should().Contain("if kind == 'int': val = int(raw)");
+        content.Should().Contain("elif kind == 'float': val = float(raw)");
+    }
+
     // ---- Container-Gruppierung (v0.9-Groups) ------------------------------
 
     [Fact]
