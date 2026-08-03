@@ -201,6 +201,8 @@
   <data name="Mod_Result_Files" xml:space="preserve"><value>.rpy-Dateien installiert</value></data>
   <data name="Mod_Result_Choices" xml:space="preserve"><value>Choices annotiert</value></data>
   <data name="Mod_Result_DeployedTo" xml:space="preserve"><value>Installiert nach: </value></data>
+  <data name="Mod_LaunchGame" xml:space="preserve"><value>▶ Spiel starten</value></data>
+  <data name="Mod_LaunchGame_Tip" xml:space="preserve"><value>Startet die Spiel-Executable (.sh/.exe) im Root-Ordner des Spiels via System-Default-Handler.</value></data>
   <data name="Mod_Building" xml:space="preserve"><value>Baue Mod …</value></data>
   <data name="Mod_Uninstalling" xml:space="preserve"><value>Entferne Mod …</value></data>
   <data name="Mod_Phase_Scanning" xml:space="preserve"><value>Suche .rpyc …</value></data>

@@ -121,6 +121,16 @@
                                  FontFamily="Cascadia Mono,Consolas,monospace"
                                  Foreground="{DynamicResource KrosteGoldBrush}" />
                         </TextBlock>
+                        <!-- Pack D v0.9: Spiel-Launcher-Button. Findet .sh/.exe/.py
+                             im Spiel-Root und startet via UseShellExecute. Nur
+                             sichtbar wenn Launcher gefunden — sonst waere der
+                             Button ins Leere klickend. -->
+                        <Button Classes="accent"
+                                Content="{loc:Tr Mod_LaunchGame}"
+                                Command="{Binding LaunchGameCommand}"
+                                IsVisible="{Binding CanLaunchGame}"
+                                HorizontalAlignment="Center"
+                                ToolTip.Tip="{loc:Tr Mod_LaunchGame_Tip}" />
                     </StackPanel>
                 </Border>
 

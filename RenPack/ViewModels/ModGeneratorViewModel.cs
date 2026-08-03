@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NLog;
@@ -35,6 +36,7 @@ public sealed partial class ModGeneratorViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(UninstallCommand))]
     [NotifyPropertyChangedFor(nameof(HasInstalledMod))]
     [NotifyPropertyChangedFor(nameof(ResolvedGameDir))]
+    [NotifyPropertyChangedFor(nameof(CanLaunchGame))]
     private string _gameFolder = "";
 
     /// <summary>Der aufgeloeste <c>game/</c>-Pfad (falls User nur den Root
@@ -78,6 +80,7 @@ public sealed partial class ModGeneratorViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(ResultFilesText))]
     [NotifyPropertyChangedFor(nameof(ResultChoicesText))]
     [NotifyPropertyChangedFor(nameof(ResultDirText))]
+    [NotifyPropertyChangedFor(nameof(CanLaunchGame))]
     private OneClickResult? _lastResult;
 
     public bool HasResult => LastResult is not null;
@@ -247,6 +250,63 @@ public sealed partial class ModGeneratorViewModel : ObservableObject
     private bool CanInteract() => !IsBusy;
     private bool CanBuild() => !IsBusy && !string.IsNullOrWhiteSpace(GameFolder);
     private bool CanUninstall() => !IsBusy && HasInstalledMod;
+
+    /// <summary>„▶ Spiel starten" — sucht das ausfuehrbare im Spiel-Root
+    /// (nicht <c>game/</c>!) und oeffnet es via <c>Process.Start</c> mit
+    /// <c>UseShellExecute</c>. Ren'Py-Games liefern typischerweise:
+    /// <list type="bullet">
+    ///   <item>Linux: <c>&lt;GameName&gt;.sh</c> (Shell-Launcher)</item>
+    ///   <item>Windows: <c>&lt;GameName&gt;.exe</c></item>
+    ///   <item>macOS: <c>&lt;GameName&gt;.app/</c> — als Ordner oeffnet
+    ///     Finder das Bundle</item>
+    /// </list>
+    /// Nur sichtbar wenn HasResult (also gerade erfolgreich installiert)
+    /// ODER HasInstalledMod (Manifest liegt bereits im Ordner). </summary>
+    public bool CanLaunchGame => (HasResult || HasInstalledMod)
+        && !string.IsNullOrWhiteSpace(GameFolder)
+        && FindGameLauncher() is not null;
+
+    [RelayCommand]
+    private void LaunchGame()
+    {
+        var launcher = FindGameLauncher();
+        if (launcher is null) return;
+        try
+        {
+            Process.Start(new ProcessStartInfo(launcher) { UseShellExecute = true });
+            Log.Info("Spiel gestartet: {path}", launcher);
+        }
+        catch (Exception ex)
+        {
+            Log.Warn(ex, "Spiel-Start fehlgeschlagen: {path}", launcher);
+        }
+    }
+
+    private string? FindGameLauncher()
+    {
+        var gameDir = OneClickModBuilder.ResolveGameDir(GameFolder);
+        if (gameDir is null) return null;
+        // gameDir zeigt auf .../game/, wir wollen den PARENT (Spiel-Root).
+        var root = Path.GetDirectoryName(gameDir);
+        if (root is null || !Directory.Exists(root)) return null;
+
+        // Priorisierung: aktuelle Plattform zuerst, dann Fallbacks.
+        string[] preferredExts = OperatingSystem.IsWindows()
+            ? [".exe", ".sh", ".py"]
+            : OperatingSystem.IsMacOS()
+                ? [".app", ".sh", ".py"]
+                : [".sh", ".py", ".exe"];
+
+        foreach (var ext in preferredExts)
+        {
+            var match = Directory.EnumerateFileSystemEntries(root, "*" + ext)
+                .Where(p => !Path.GetFileName(p).StartsWith('_')) // _venv/_python skippen
+                .OrderBy(p => Path.GetFileName(p), StringComparer.Ordinal)
+                .FirstOrDefault();
+            if (match is not null) return match;
+        }
+        return null;
+    }
 }
 
 public interface IModGeneratorUi

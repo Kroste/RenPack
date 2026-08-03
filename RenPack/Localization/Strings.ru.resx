@@ -201,6 +201,8 @@
   <data name="Mod_Result_Files" xml:space="preserve"><value>файлов .rpy установлено</value></data>
   <data name="Mod_Result_Choices" xml:space="preserve"><value>выборов аннотировано</value></data>
   <data name="Mod_Result_DeployedTo" xml:space="preserve"><value>Установлено в: </value></data>
+  <data name="Mod_LaunchGame" xml:space="preserve"><value>▶ Запустить игру</value></data>
+  <data name="Mod_LaunchGame_Tip" xml:space="preserve"><value>Запускает исполняемый файл игры (.sh/.exe) из корневой папки через системный обработчик по умолчанию.</value></data>
   <data name="Mod_Building" xml:space="preserve"><value>Создание мода …</value></data>
   <data name="Mod_Uninstalling" xml:space="preserve"><value>Удаление мода …</value></data>
   <data name="Mod_Phase_Scanning" xml:space="preserve"><value>Поиск .rpyc …</value></data>
