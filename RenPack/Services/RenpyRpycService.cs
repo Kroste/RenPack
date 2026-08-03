@@ -53,9 +53,29 @@ public sealed class RenpyRpycService
         byte[] compressed = ExtractSlotPayload(rpycBytes, RpycVersion);
         byte[] pickle = ZlibDecompress(compressed);
 
+        // Ordered-Dict-Reihenfolge fuer Signature.parameters aus dem Pickle-
+        // Byte-Stream extrahieren (Razorvine.Pickle nutzt Hashtable und
+        // verliert dabei die Insertion-Order — kritisch fuer label/screen-
+        // Parameter, die per Position gebunden werden).
+        Queue<List<string>> sigOrder;
+        try
+        {
+            sigOrder = PickleSignatureOrderScanner.Scan(pickle);
+        }
+        catch (Exception ex)
+        {
+            Log.Warn(ex, "Signature-Order-Scanner fehlgeschlagen — Params koennten in falscher Reihenfolge stehen");
+            sigOrder = new Queue<List<string>>();
+        }
+
         using var u = new Unpickler();
         var root = u.loads(pickle);
-        return ExtractStatements(root);
+        var stmts = ExtractStatements(root);
+
+        // Signature.parameters in-place patchen mit korrekter Reihenfolge.
+        SignatureOrderPatcher.PatchInPlace(stmts, sigOrder);
+
+        return stmts;
     }
 
     /// <summary>Zieht die Bytes eines Slots aus einem RENPY-RPC2-Container. Bei
