@@ -387,6 +387,12 @@ public sealed class RenpySaveService : IRenpySaveService
         // mit "non-default parameter X follows a default parameter" ablehnt).
         // .NET Dictionary<K,V> behält seit .NET Core insertion order.
         Unpickler.registerConstructor("collections", "OrderedDict", new OrderedDictCtor());
+
+        // collections.defaultdict wird von Ren'Py 8.5+ fuer `deferred_parse_errors`
+        // im Screens-Pickle benutzt. Muss Hashtable sein, weil Razorvine's
+        // load_setitem/load_setitems einen expliziten (Hashtable)-Cast macht.
+        // Insertion-Order geht dabei verloren — fuer defaultdict irrelevant.
+        Unpickler.registerConstructor("collections", "defaultdict", new HashtableFallbackCtor());
     }
 
     /// <summary>Constructor für <c>collections.OrderedDict</c>. Python-Pickle
@@ -406,6 +412,15 @@ public sealed class RenpySaveService : IRenpySaveService
                     if (it is object[] { Length: 2 } pair) d[pair[0]!] = pair[1];
             return d;
         }
+    }
+
+    /// <summary>Erzeugt ein <see cref="OpaqueHashtable"/> — genutzt fuer
+    /// dict-Subklassen (defaultdict, Counter, ...), bei denen wir keine
+    /// spezielle Semantik brauchen, aber die Hashtable-Basis fuer Razorvine's
+    /// SETITEM/SETITEMS-Handler kritisch ist.</summary>
+    private sealed class HashtableFallbackCtor : IObjectConstructor
+    {
+        public object construct(object[] args) => new OpaqueHashtable();
     }
 
     /// <summary><see cref="Dictionary{TKey,TValue}"/>-basierter Container, der
