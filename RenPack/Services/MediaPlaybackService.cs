@@ -97,6 +97,13 @@ public sealed class MediaPlaybackService
             CreateNoWindow = true,
         };
         psi.ArgumentList.Add("-nostdin");
+        // -re: "read input at native frame rate". OHNE das pumpt ffmpeg
+        // die Frames so schnell wie die Pipe schluckt (hundert+ Frames/s
+        // in Wanduhr-Zeit), sodass der User das Video in Turbo-Speed
+        // sieht. Mit -re throttelt ffmpeg gegen die Wall-Clock — das ist
+        // die einzige Real-Time-Sync-Option ohne Sample-Clock/Audio.
+        // -re MUSS vor -i stehen, es ist eine Input-Option.
+        psi.ArgumentList.Add("-re");
         psi.ArgumentList.Add("-i"); psi.ArgumentList.Add(videoPath);
         // fps-Filter reduziert die Frame-Rate; vf muss vor dem Codec kommen.
         psi.ArgumentList.Add("-vf"); psi.ArgumentList.Add($"fps={fps}");
