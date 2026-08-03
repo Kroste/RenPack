@@ -197,11 +197,14 @@ public sealed class KrosteInfoScreenGenerator
         sb.AppendLine();
     }
 
-    /// <summary>Emittiert das Menu-Impact-Dict:
-    /// <c>krostemod_menu_impact[(file, line)] = [var1, var2, …]</c>.
-    /// Wird vom Overlay-Screen genutzt, um zur Laufzeit via
-    /// <c>renpy.get_filename_line()</c> festzustellen ob das aktuelle Menu
-    /// verfolgte Variablen aendert — und den „!"-Button nur dann anzeigen.</summary>
+    /// <summary>Emittiert Menu-Impact-Dicts:
+    /// <c>krostemod_menu_impact[(file, line)] = [var1, var2, …]</c>
+    /// (Union aller vom Menu betroffenen Variablen — genutzt vom Overlay
+    /// zum „!"-Sichtbarkeits-Check).
+    /// <c>krostemod_menu_choices[(file, line)] = [(text, [(var, op, val), …]), …]</c>
+    /// (pro Choice die Text-Vorschau + Delta-Liste — der Context-Info-Popup
+    /// zeigt diese aus damit der User pro Choice sieht was passiert, egal
+    /// welche Sprache der Choice-Text zur Runtime gerendert wird).</summary>
     private static void WriteMenuImpactData(StringBuilder sb, ModAnalysis analysis)
     {
         sb.AppendLine("init 991 python:");
@@ -219,6 +222,38 @@ public sealed class KrosteInfoScreenGenerator
         sb.AppendLine("    }");
         sb.AppendLine();
 
+        // Pro-Choice-Detail: fuer jedes Menu die Liste der Choice-Texte + Deltas.
+        // Wird vom Context-Info-Popup gezeigt — sprach-unabhaengig, weil wir
+        // den ORIGINAL-Text (aus dem dekompilierten .rpy) zeigen, nicht die
+        // Runtime-Uebersetzung.
+        sb.AppendLine("    krostemod_menu_choices = {");
+        var choicesByMenu = analysis.Choices
+            .GroupBy(c => (c.SourceFile, c.MenuHeaderLine))
+            .ToDictionary(g => g.Key, g => g.OrderBy(c => c.ChoiceIndex).ToList());
+        foreach (var m in analysis.MenuLocations)
+        {
+            if (!choicesByMenu.TryGetValue((m.SourceFile, m.MenuHeaderLine), out var choices))
+                continue;
+            sb.Append("        (");
+            sb.Append(PyStr(m.SourceFile));
+            sb.Append(", ");
+            sb.Append(m.MenuHeaderLine.ToString(CultureInfo.InvariantCulture));
+            sb.AppendLine("): [");
+            foreach (var c in choices)
+            {
+                // Text + Deltas als Python-Tupel. Deltas: [(var, op, value), ...]
+                sb.Append("            (");
+                sb.Append(PyStr(c.Text));
+                sb.Append(", [");
+                sb.Append(string.Join(", ", c.Deltas.Select(d =>
+                    $"({PyStr(d.Variable)}, {PyStr(d.Op)}, {PyStr(d.Value)})")));
+                sb.AppendLine("]),");
+            }
+            sb.AppendLine("        ],");
+        }
+        sb.AppendLine("    }");
+        sb.AppendLine();
+
         // Runtime-Match: renpy.get_filename_line() liefert "game/scripts/..."
         // (prefix), unsere Keys sind "scripts/..." (relativ zu game/).
         // Endswith-Match ist robuster als exakter Vergleich.
@@ -232,6 +267,35 @@ public sealed class KrosteInfoScreenGenerator
         sb.AppendLine("            if ln == mln and (fn == mf or fn.endswith('/' + mf) or fn.endswith('\\\\' + mf)):");
         sb.AppendLine("                return vs");
         sb.AppendLine("        return []");
+        sb.AppendLine();
+        sb.AppendLine("    def krostemod_current_menu_choices():");
+        sb.AppendLine("        # Wie krostemod_current_menu_vars, aber liefert die pro-Choice-");
+        sb.AppendLine("        # Detail-Liste [(text, [(var,op,val),...]), ...].");
+        sb.AppendLine("        try:");
+        sb.AppendLine("            fn, ln = renpy.get_filename_line()");
+        sb.AppendLine("        except Exception:");
+        sb.AppendLine("            return []");
+        sb.AppendLine("        if not fn: return []");
+        sb.AppendLine("        for (mf, mln), cs in krostemod_menu_choices.items():");
+        sb.AppendLine("            if ln == mln and (fn == mf or fn.endswith('/' + mf) or fn.endswith('\\\\' + mf)):");
+        sb.AppendLine("                return cs");
+        sb.AppendLine("        return []");
+        sb.AppendLine();
+        sb.AppendLine("    def krostemod_format_delta_hint(deltas):");
+        sb.AppendLine("        # Deltas als kompakter Hint-String, z.B. \"tyler.love -1, justin.love +1\"");
+        sb.AppendLine("        parts = []");
+        sb.AppendLine("        for var, op, val in deltas:");
+        sb.AppendLine("            try:");
+        sb.AppendLine("                n = int(val)");
+        sb.AppendLine("                if op == '+=': parts.append(var + (' +' + str(n) if n >= 0 else ' ' + str(n)))");
+        sb.AppendLine("                elif op == '-=': parts.append(var + ' -' + str(abs(n)))");
+        sb.AppendLine("                elif op == '=': parts.append(var + '=' + str(n))");
+        sb.AppendLine("                else: parts.append(var + ' ' + op + ' ' + val)");
+        sb.AppendLine("            except (ValueError, TypeError):");
+        sb.AppendLine("                if val == 'True': parts.append(var + ' set')");
+        sb.AppendLine("                elif val == 'False': parts.append(var + ' clear')");
+        sb.AppendLine("                else: parts.append(var + ' ' + op + ' ' + str(val))");
+        sb.AppendLine("        return ', '.join(parts) if parts else '(kein numerischer Impact)'");
         sb.AppendLine();
         sb.AppendLine("    def krostemod_menu_hint_visible():");
         sb.AppendLine("        # \"!\"-Button NUR sichtbar wenn ein Choice-Menu laueft UND");
@@ -374,6 +438,7 @@ public sealed class KrosteInfoScreenGenerator
         sb.AppendLine("            text \"Diese Variablen werden von den aktuellen Choices veraendert:\" size 12 color \"#bbbbbb\"");
         sb.AppendLine("            null height 6");
         sb.AppendLine();
+        sb.AppendLine("            $ ctxchoices = krostemod_current_menu_choices()");
         sb.AppendLine("            $ ctxvars = krostemod_current_menu_vars()");
         sb.AppendLine("            viewport:");
         sb.AppendLine("                mousewheel True");
@@ -383,8 +448,30 @@ public sealed class KrosteInfoScreenGenerator
         sb.AppendLine("                ysize 470");
         sb.AppendLine("                vbox:");
         sb.AppendLine("                    spacing 8");
-        sb.AppendLine("                    if not ctxvars:");
-        sb.AppendLine("                        text \"(keine erkennbaren Variablen-Effekte fuer dieses Menu)\" size 12 color \"#888888\" italic True");
+        sb.AppendLine();
+        sb.AppendLine("                    # Choice-fuer-Choice-Anzeige mit Original-Text +");
+        sb.AppendLine("                    # Delta-Hints. Sprach-unabhaengig (funktioniert auch");
+        sb.AppendLine("                    # wenn das Spiel Menu-Texte via hash-based tl uebersetzt).");
+        sb.AppendLine("                    if not ctxchoices:");
+        sb.AppendLine("                        text \"(keine Choice-Impact-Daten fuer dieses Menu)\" size 12 color \"#888888\" italic True");
+        sb.AppendLine("                    for idx, (ctext, cdeltas) in enumerate(ctxchoices):");
+        sb.AppendLine("                        vbox:");
+        sb.AppendLine("                            spacing 2");
+        sb.AppendLine("                            hbox:");
+        sb.AppendLine("                                spacing 6");
+        sb.AppendLine($"                                text \"[[[str(idx+1)]]\" size 15 color \"{GoldHex}\" bold True");
+        sb.AppendLine("                                text \"[krostemod_escape(ctext)]\" size 14 color \"#ffffff\"");
+        sb.AppendLine("                            if cdeltas:");
+        sb.AppendLine($"                                text \"    -> [krostemod_escape(krostemod_format_delta_hint(cdeltas))]\" size 12 color \"{GoldHex}\"");
+        sb.AppendLine("                            else:");
+        sb.AppendLine("                                text \"    -> (kein direkter Impact im Choice-Body)\" size 11 color \"#666666\" italic True");
+        sb.AppendLine("                            null height 4");
+        sb.AppendLine();
+        sb.AppendLine("                    # Danach die betroffenen Vars mit Live-Werten + Consumern.");
+        sb.AppendLine("                    if ctxvars:");
+        sb.AppendLine("                        null height 8");
+        sb.AppendLine($"                        text \"— Live-Werte der betroffenen Variablen —\" size 12 color \"{GoldHex}\" italic True");
+        sb.AppendLine("                        null height 4");
         sb.AppendLine("                    for var_name in ctxvars:");
         sb.AppendLine("                        vbox:");
         sb.AppendLine("                            spacing 2");
