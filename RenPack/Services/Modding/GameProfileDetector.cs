@@ -24,9 +24,11 @@ public sealed class GameProfileDetector
         RegexOptions.Compiled);
 
     /// <summary><c>screen X(items):</c> — Ren'Py-Konvention fuer Menu-
-    /// Screens (der Parameter heisst per Konvention <c>items</c>).</summary>
+    /// Screens (der Parameter heisst per Konvention <c>items</c>).
+    /// Optional mit <c>init N</c>-Praefix (Boundaries of Morality:
+    /// <c>init -500 screen choice(items):</c>).</summary>
     private static readonly Regex MenuScreenDefPattern = new(
-        @"^\s*screen\s+([A-Za-z_][A-Za-z0-9_]*)\s*\([^)]*\bitems\b",
+        @"^\s*(?:init\s+-?\d+\s+)?screen\s+([A-Za-z_][A-Za-z0-9_]*)\s*\([^)]*\bitems\b",
         RegexOptions.Compiled);
 
     /// <summary><c>define config.name = _("Title")</c> oder ohne

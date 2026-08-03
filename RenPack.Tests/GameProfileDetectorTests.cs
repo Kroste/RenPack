@@ -55,6 +55,24 @@ public sealed class GameProfileDetectorTests : IDisposable
     }
 
     [Fact]
+    public void Detects_menu_screen_with_init_prefix()
+    {
+        // Boundaries of Morality overrides den Ren'Py-Default-Screen mit
+        // `init -500 screen choice(items):` — der Detector-Regex muss den
+        // init-N-Praefix optional erlauben.
+        Write("game/screens.rpy", """
+            init -500 screen choice(items):
+                pass
+
+            init -500 screen universal_shop(title, items):
+                pass
+            """);
+        var p = _detector.Detect(_tmp);
+        p.MenuScreenCandidates.Should().Contain("choice");
+        p.MenuScreenCandidates.Should().Contain("universal_shop");
+    }
+
+    [Fact]
     public void Detects_menu_screen_override_via_config()
     {
         Write("game/options.rpy", """
