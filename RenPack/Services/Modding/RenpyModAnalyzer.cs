@@ -54,6 +54,16 @@ public sealed class RenpyModAnalyzer
         @"^\s*\$\s*([A-Za-z_][A-Za-z0-9_.]*)\s*(=|\+=|-=|\*=|/=)\s*(.+?)\s*$",
         RegexOptions.Compiled);
 
+    /// <summary><c>$ obj.update("attr", value)</c> — Character-Method-Pattern
+    /// haeufig in Ren'Py-Spielen wo Stats ueber Character/Container-Klassen
+    /// gehalten werden statt als direkte Store-Vars (z.B.
+    /// <c>$ fcs.update('morality', 1)</c> in Boundaries of Morality).
+    /// Wir behandeln das als additive Delta wenn der Value numeric ist,
+    /// sonst als Assign.</summary>
+    private static readonly Regex DollarUpdateCallPattern = new(
+        @"^\s*\$\s*([A-Za-z_][A-Za-z0-9_.]*)\s*\.\s*update\s*\(\s*['""]([A-Za-z_][A-Za-z0-9_]*)['""]\s*,\s*(.+?)\s*\)\s*$",
+        RegexOptions.Compiled);
+
     /// <summary><c>default varname = value</c>.</summary>
     private static readonly Regex DefaultPattern = new(
         @"^\s*default\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+?)\s*$",
@@ -434,9 +444,36 @@ public sealed class RenpyModAnalyzer
                     Variable: m.Groups[1].Value,
                     Op: m.Groups[2].Value,
                     Value: StripLineComment(m.Groups[3].Value).Trim()));
+                continue;
+            }
+            // Character-Method-Delta: `$ obj.update("attr", value)`. Wir
+            // synthetisieren einen Delta mit Variable "obj.attr". Ob "="
+            // oder "+=" ist Konvention der jeweiligen Spiel-Klasse — die
+            // Mehrheit implementiert `update()` additiv (verifiziert an
+            // Boundaries of Morality's `fcs.update('morality', 1)`). Wir
+            // gehen bei numerischen Werten von "+=" aus.
+            var mUpd = DollarUpdateCallPattern.Match(line);
+            if (mUpd.Success)
+            {
+                string obj = mUpd.Groups[1].Value;
+                string attr = mUpd.Groups[2].Value;
+                string val = StripLineComment(mUpd.Groups[3].Value).Trim();
+                string op = LooksLikeNumericLiteral(val) ? "+=" : "=";
+                deltas.Add(new VarDelta(
+                    Variable: $"{obj}.{attr}",
+                    Op: op,
+                    Value: val));
             }
         }
         return deltas;
+    }
+
+    private static bool LooksLikeNumericLiteral(string s)
+    {
+        s = s.Trim();
+        if (s.Length == 0) return false;
+        if (s[0] == '-' || s[0] == '+') s = s[1..];
+        return s.Length > 0 && s.All(c => char.IsDigit(c) || c == '.');
     }
 
     /// <summary>Entfernt einen trailing <c>#</c>-Kommentar aus einer

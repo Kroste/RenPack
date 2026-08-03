@@ -350,16 +350,82 @@ public sealed class OneClickModBuilder
             deployed.Add(new DeployedFile(rel, BackupCreated: false, PreexistingRpy: preexisting));
         }
 
-        // Manifest schreiben — die Basis fuer Uninstall.
-        var manifest = new ModManifest(modType.ToString(), DateTime.UtcNow, deployed,
-            movedArchives.Count > 0 ? movedArchives : null);
+        // Manifest schreiben — die Basis fuer Uninstall. Bei bestehendem
+        // Manifest (User hat schon einen anderen Mod-Typ installiert)
+        // MERGEN wir statt zu ueberschreiben:
+        //   - ModType wird kombiniert: "Walkthrough" + install "Cheat"
+        //     → "Walkthrough+Cheat". Uninstall entfernt beide zusammen
+        //     (der User will nicht selektiv per Mod-Typ deinstallieren —
+        //     zu tricky mit Backup-State).
+        //   - Files-Liste wird gemergt, dedupliziert per RelativePath.
+        //     Wenn eine Datei in beiden Manifests ist (z.B. krostemod_info.rpy),
+        //     bleiben BackupCreated/PreexistingRpy des ERSTEN Installs
+        //     erhalten — sonst wuerde der Uninstall das Backup falsch
+        //     zuordnen.
+        //   - MovedArchives: Vereinigung (dedupliziert).
         var manifestPath = Path.Combine(gameDir, ManifestFileName);
+        var manifest = MergeWithExistingManifest(manifestPath, modType, deployed, movedArchives);
         File.WriteAllText(manifestPath, JsonSerializer.Serialize(manifest,
             new JsonSerializerOptions { WriteIndented = true }));
 
         Log.Info("Deploy fertig: {count} .rpy nach {dir} (moved {archives} .rpa), Manifest={manifest}",
             deployed.Count, gameDir, movedArchives.Count, manifestPath);
         return deployed;
+    }
+
+    /// <summary>Merged neue Deploy-Info mit bestehendem Manifest. Sichert
+    /// dass ein zweiter Install (z.B. Walkthrough nach Cheat) den ersten
+    /// nicht "vergisst" — sonst wuerde Uninstall die Files des ersten
+    /// Mods als Waisen im game/ zurueck lassen.</summary>
+    private static ModManifest MergeWithExistingManifest(string manifestPath,
+        ModTypeId newModType, IReadOnlyList<DeployedFile> newFiles,
+        IReadOnlyList<string> newMovedArchives)
+    {
+        if (!File.Exists(manifestPath))
+        {
+            return new ModManifest(newModType.ToString(), DateTime.UtcNow, newFiles,
+                newMovedArchives.Count > 0 ? newMovedArchives : null);
+        }
+
+        ModManifest? existing = null;
+        try
+        {
+            existing = JsonSerializer.Deserialize<ModManifest>(File.ReadAllText(manifestPath));
+        }
+        catch (Exception ex)
+        {
+            Log.Warn(ex, "Bestehendes Manifest nicht parsebar — wird ueberschrieben");
+        }
+
+        if (existing is null)
+        {
+            return new ModManifest(newModType.ToString(), DateTime.UtcNow, newFiles,
+                newMovedArchives.Count > 0 ? newMovedArchives : null);
+        }
+
+        // Files mergen (dedup by RelativePath, bestehende Entries gewinnen
+        // damit BackupCreated/PreexistingRpy des ERSTEN Installs erhalten
+        // bleibt — sonst zeigt Uninstall auf das falsche Backup).
+        var byPath = existing.Files.ToDictionary(f => f.RelativePath, f => f, StringComparer.Ordinal);
+        foreach (var nf in newFiles)
+            byPath.TryAdd(nf.RelativePath, nf);
+
+        // ModType kombinieren wenn wirklich neu (Deduplizieren).
+        var types = existing.ModType.Split('+', StringSplitOptions.RemoveEmptyEntries).ToList();
+        string newTypeStr = newModType.ToString();
+        if (!types.Contains(newTypeStr)) types.Add(newTypeStr);
+        var combinedType = string.Join("+", types);
+
+        // MovedArchives Union.
+        var archives = new HashSet<string>(existing.MovedArchives ?? Array.Empty<string>(),
+            StringComparer.Ordinal);
+        foreach (var a in newMovedArchives) archives.Add(a);
+
+        return new ModManifest(
+            ModType: combinedType,
+            CreatedUtc: DateTime.UtcNow,
+            Files: byPath.Values.ToList(),
+            MovedArchives: archives.Count > 0 ? archives.ToList() : null);
     }
 
     /// <summary>Fuer jede <c>.rpa</c> im gameDir die <c>.rpyc</c> enthaelt:

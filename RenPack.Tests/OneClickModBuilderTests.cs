@@ -161,4 +161,42 @@ public sealed class OneClickModBuilderTests : IDisposable
         File.WriteAllText(Path.Combine(dir, OneClickModBuilder.ManifestFileName),
             JsonSerializer.Serialize(manifest));
     }
+
+    // ---- Manifest-Merge -------------------------------------------------
+
+    [Fact]
+    public void Uninstall_removes_files_from_both_walkthrough_and_cheat_when_installed_together()
+    {
+        // Simuliert: erst Cheat installiert (Manifest #1), dann Walkthrough
+        // per Merge dazu (Manifest #2 mit kombinierten Files). Uninstall
+        // muss BEIDE Sets loeschen — vorher (v0.13-Bug) hat der zweite
+        // Install den Cheat-Manifest ueberschrieben, sodass Cheat-Files
+        // beim Uninstall verwaisten.
+        var gameDir = Path.Combine(_tmp, "game");
+        Directory.CreateDirectory(gameDir);
+        File.WriteAllBytes(Path.Combine(gameDir, "original.rpyc"), [1]);
+
+        // Deploy-Simulation Manifest #1 (Cheat)
+        File.WriteAllText(Path.Combine(gameDir, "krostemod_cheat.rpy"), "# cheat");
+        // Deploy-Simulation Manifest #2 (Walkthrough) — mit Merge auch
+        // Cheat-Files im selben Manifest.
+        File.WriteAllText(Path.Combine(gameDir, "script.rpy"), "# walkthrough-patched");
+        var combined = new ModManifest("Cheat+Walkthrough", DateTime.UtcNow, new[]
+        {
+            new DeployedFile("krostemod_cheat.rpy", BackupCreated: false, PreexistingRpy: false),
+            new DeployedFile("script.rpy", BackupCreated: false, PreexistingRpy: false),
+        });
+        File.WriteAllText(Path.Combine(gameDir, OneClickModBuilder.ManifestFileName),
+            JsonSerializer.Serialize(combined));
+
+        var builder = new OneClickModBuilder();
+        var result = builder.Uninstall(gameDir);
+
+        // Beide Mod-Files sind weg
+        File.Exists(Path.Combine(gameDir, "krostemod_cheat.rpy")).Should().BeFalse();
+        File.Exists(Path.Combine(gameDir, "script.rpy")).Should().BeFalse();
+        // Manifest weg
+        File.Exists(Path.Combine(gameDir, OneClickModBuilder.ManifestFileName)).Should().BeFalse();
+        result.RemovedFiles.Should().Be(2);
+    }
 }

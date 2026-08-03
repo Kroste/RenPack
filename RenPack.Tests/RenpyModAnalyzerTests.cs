@@ -130,6 +130,53 @@ public sealed class RenpyModAnalyzerTests : IDisposable
     }
 
     [Fact]
+    public void Recognises_character_update_method_as_delta()
+    {
+        // Boundaries of Morality: viele Spiele nutzen Character-Container
+        // wie `fcs.update("morality", 1)` statt direktem `$ var += 1`.
+        // Unser Analyzer muss das als Delta erkennen sonst hat der
+        // Walkthrough-Mod kaum sichtbare Hints.
+        Write("game/story.rpy", """
+            label start:
+                menu:
+                    "Help her (+1 morality)":
+                        $ fcs.update("morality", 1)
+                        jump next
+                    "Ignore her":
+                        $ fcs.update("intrigue", -1)
+                        jump next
+            label next:
+                pass
+            """);
+        var result = _analyzer.Analyze(_tmp);
+        result.Choices.Should().HaveCount(2);
+        var help = result.Choices.Single(c => c.Text.StartsWith("Help her"));
+        help.Deltas.Should().ContainSingle();
+        help.Deltas[0].Variable.Should().Be("fcs.morality");
+        help.Deltas[0].Op.Should().Be("+=");
+        help.Deltas[0].Value.Should().Be("1");
+        var ignore = result.Choices.Single(c => c.Text.StartsWith("Ignore"));
+        ignore.Deltas[0].Variable.Should().Be("fcs.intrigue");
+        ignore.Deltas[0].Value.Should().Be("-1");
+    }
+
+    [Fact]
+    public void Recognises_single_quoted_attr_in_update_call()
+    {
+        // Sowohl "attr" als auch 'attr' muessen matchen.
+        Write("game/story.rpy", """
+            label start:
+                menu:
+                    "Choice":
+                        $ character.update('love', 2)
+                        pass
+            """);
+        var result = _analyzer.Analyze(_tmp);
+        result.Choices[0].Deltas.Should().ContainSingle();
+        result.Choices[0].Deltas[0].Variable.Should().Be("character.love");
+    }
+
+    [Fact]
     public void Extracts_dollar_init_as_implicit_store_variable()
     {
         // Interview Desires 0.23: `$ keys = 0` innerhalb eines Labels statt
