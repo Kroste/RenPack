@@ -63,7 +63,6 @@
 
 ## Roadmap
 
-- **App-Icon im Ren'Py-Vibe** — aktuell haben wir das geometrische Kroste-Gold-Paket aus v0.7.0. User will was charakterhaftes im Stil des Ren'Py-Eileen-Icons (Chibi/Anime, kleine Figur mit Python-Referenz). PIL kriegt sowas nicht sauber hin → extern generieren (Midjourney/DALL-E/SDXL), 512×512 transparent als `Assets/RenPack.png` einlegen, dann `scripts/build_icon.py` so anpassen dass es die manuelle Basis akzeptiert und daraus die Multi-Res-ICO baut.
 - **KrosteMod E3 — Cheat-Mod-Generator** — analog Walkthrough, aber generiert ein Cheat-Menu (Screen `krostemod_cheat`) mit Slidern/Buttons für alle Top-Stat-Variablen. Der Analyzer sammelt schon Delta-Häufigkeiten (Top-Stats), fehlt nur der Generator + Screen-Template.
 - **KrosteMod E4 — KI-basierter Rename-Patch** — Character-Namen umbenennen via `AiProviderFactory` (Kontext-Prompt: „ersetze Namen X durch Y konsistent in allen Dialogen"). Braucht Character-List (schon vorhanden) + Provider-Call + Patch-Writer für Say-Statements.
 - **Decompiler v0.6:** kein konkreter Bedarf offen. v0.5-Coverage (Screens via `RenpySlWriter`, ATL via `RenpyAtlWriter`, `EmitStyle`, `EmitTransform`) ist umgesetzt — Boundaries of Morality dekompiliert `screens.rpyc`/`gui.rpyc`/`options.rpyc`/`locals.rpyc`/`var.rpyc` mit 0 `# <unsupported>`-Markierungen (3021+327+105+5609+2155 Zeilen). Nächste Ausbaustufe erst wenn ein Real-World-Game im Modding-Workflow einen konkreten Statement/Widget-Typ als unsupported meldet.
