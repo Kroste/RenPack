@@ -438,6 +438,15 @@ public sealed class RenpySaveService : IRenpySaveService
         // load_setitem/load_setitems einen expliziten (Hashtable)-Cast macht.
         // Insertion-Order geht dabei verloren — fuer defaultdict irrelevant.
         Unpickler.registerConstructor("collections", "defaultdict", new HashtableFallbackCtor());
+        // collections.Counter: str → int Zaehler. Auch dict-Subklasse — bei
+        // SETITEM waere sonst der Cast-Fehler drin. Ren'Py nutzt Counter u.a.
+        // in Diagnostics-Structs (proaktiv).
+        Unpickler.registerConstructor("collections", "Counter", new HashtableFallbackCtor());
+        // collections.OrderedDict Alternative-Alias in aelteren Python-Versionen:
+        // Ren'Py 8.6 hat ein neues _collections-C-Modul-Alias. Bei Aufruf
+        // durch Fremdklassen-Pickle registrieren wir denselben Ctor.
+        Unpickler.registerConstructor("_collections", "OrderedDict", new OrderedDictCtor());
+        Unpickler.registerConstructor("_collections", "defaultdict", new HashtableFallbackCtor());
     }
 
     /// <summary>Constructor für <c>collections.OrderedDict</c>. Python-Pickle
@@ -468,15 +477,15 @@ public sealed class RenpySaveService : IRenpySaveService
         public object construct(object[] args) => new OpaqueHashtable();
     }
 
-    /// <summary><see cref="Dictionary{TKey,TValue}"/>-basierter Container, der
-    /// Insertion-Order beibehält und <see cref="IDictionary"/> (non-generic,
-    /// für Razorvine's SETITEMS-Handler) sowie <see cref="Hashtable"/>-
-    /// kompatible <c>__setstate__</c>-Signaturen implementiert.</summary>
-    private sealed class OrderedDictContainer : Dictionary<object, object?>, IDictionary
+    /// <summary><see cref="Hashtable"/>-basierter Container fuer
+    /// <c>collections.OrderedDict</c>. War frueher <see cref="Dictionary{TKey,TValue}"/>
+    /// (Insertion-Order-preservation), aber das crasht bei SETITEM
+    /// (Razorvine macht expliziten Cast auf Hashtable — siehe
+    /// tutorial-8.2/options.rpyc). Fuer Ren'Py-Zwecke ist Insertion-Order
+    /// bei OrderedDict nicht kritisch — die Signature-Order laeuft
+    /// separat ueber <see cref="PickleSignatureOrderScanner"/>.</summary>
+    private sealed class OrderedDictContainer : Hashtable
     {
-        // Dictionary<object,object?> implementiert IDictionary bereits über
-        // explicit interface, aber wir brauchen die __setstate__-Handler,
-        // damit BUILD nicht in die Standard-Hashtable-Route fällt.
         public void __setstate__(Hashtable state)
         {
             foreach (DictionaryEntry de in state) this[de.Key] = de.Value;
@@ -529,8 +538,20 @@ public sealed class RenpySaveService : IRenpySaveService
             int dot = qualifiedKey.LastIndexOf('.');
             var mod = dot > 0 ? qualifiedKey[..dot] : "";
             var cls = dot > 0 ? qualifiedKey[(dot + 1)..] : qualifiedKey;
+            // Robustness-Heuristik: unbekannte Klasse mit dict-artigem Namen
+            // (endet auf "Dict"/"dict" oder heisst "Counter") → Hashtable-basiert.
+            // Sonst crasht Razorvine's load_setitem beim expliziten (Hashtable)-
+            // Cast. Beispiele die dadurch abgefangen werden: neue Ren'Py-8.6+-
+            // Klassen die wir noch nicht kennen aber dict-Semantik haben.
+            if (LooksLikeDictSubclass(cls))
+                return new HashtableFallbackCtor();
             return new OpaqueCtor(mod, cls);
         }
+
+        private static bool LooksLikeDictSubclass(string className) =>
+            className.EndsWith("Dict", StringComparison.Ordinal)
+            || className.EndsWith("dict", StringComparison.Ordinal)
+            || className == "Counter";
     }
 
     /// <summary>Constructor für unbekannte Klassen: erzeugt ein
