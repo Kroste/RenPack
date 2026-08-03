@@ -63,8 +63,6 @@
 
 ## Roadmap
 
-- **KrosteMod E3 — Cheat-Mod-Generator** — analog Walkthrough, aber generiert ein Cheat-Menu (Screen `krostemod_cheat`) mit Slidern/Buttons für alle Top-Stat-Variablen. Der Analyzer sammelt schon Delta-Häufigkeiten (Top-Stats), fehlt nur der Generator + Screen-Template.
-- **KrosteMod E4 — KI-basierter Rename-Patch** — Character-Namen umbenennen via `AiProviderFactory` (Kontext-Prompt: „ersetze Namen X durch Y konsistent in allen Dialogen"). Braucht Character-List (schon vorhanden) + Provider-Call + Patch-Writer für Say-Statements.
 - **Decompiler v0.6:** kein konkreter Bedarf offen. v0.5-Coverage (Screens via `RenpySlWriter`, ATL via `RenpyAtlWriter`, `EmitStyle`, `EmitTransform`) ist umgesetzt — Boundaries of Morality dekompiliert `screens.rpyc`/`gui.rpyc`/`options.rpyc`/`locals.rpyc`/`var.rpyc` mit 0 `# <unsupported>`-Markierungen (3021+327+105+5609+2155 Zeilen). Nächste Ausbaustufe erst wenn ein Real-World-Game im Modding-Workflow einen konkreten Statement/Widget-Typ als unsupported meldet.
 - **Save-Editor v0.5:** Neue Store-Variablen anlegen (nicht nur bestehende ändern), Typ-Wechsel (int → str), Listen/Dict-Editing. Braucht echten Pickle-Roundtrip mit Custom-Picklers für die Opaque-Klassen — deutlich riskanter als Value-Splice.
 - **Media-Preview inline** (v0.6.3-Trade-off): aktuell öffnet der Video-Preview den System-Default-Player. Für echtes Inline-Playback zwei Wege: (a) libvlc + Plugins IM AppImage bundlen (Deployment-Aufwand hoch), (b) eigener Video-Widget via ffmpeg-Frame-Stream in Bitmap-Reihe.
