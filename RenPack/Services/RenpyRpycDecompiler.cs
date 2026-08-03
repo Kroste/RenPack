@@ -48,6 +48,18 @@ public sealed class RenpyRpycDecompiler
         // ihn zur Laufzeit als NameError aufmachen.
         _transformParamNames = CollectTransformParamNames(statements);
 
+        // `init offset = N`-Optimierung: wenn eine bestimmte non-zero-Priority
+        // dominiert (>= 50% aller Init-Statements), emittieren wir einmal am
+        // Top einen Offset-Header. Nachfolgende Init-Wrapper mit dieser Prio
+        // koennen dann OHNE `init N`-Prefix stehen — der Compiler wickelt sie
+        // beim Rekompilieren automatisch wieder in Init(priority=N).
+        _defaultInitOffset = DetermineDefaultInitOffset(statements);
+        if (_defaultInitOffset != 0)
+        {
+            sb.Append($"init offset = {_defaultInitOffset}\n");
+            sb.Append('\n');
+        }
+
         // Compiler-Artefakt: Ren'Py haengt implizit ein `return` als letzten
         // Top-Level-Statement an jede .rpy an (repraesentiert das File-Ende).
         // User schreibt das nicht — bei uns wuerde es als leeres `return` am
@@ -64,6 +76,30 @@ public sealed class RenpyRpycDecompiler
         EmitBlock(sb, effective, indent: 0);
         return sb.ToString();
     }
+
+    /// <summary>Scannt die Top-Level-Statements nach der dominanten
+    /// Init-Priority. Gibt die Priority zurueck, wenn sie mind. 50% der
+    /// Init-Statements ausmacht und != 0 ist — sonst 0 (kein Offset-Header).</summary>
+    private static int DetermineDefaultInitOffset(IReadOnlyList<object?> statements)
+    {
+        var counts = new Dictionary<int, int>();
+        int total = 0;
+        foreach (var s in statements)
+        {
+            if (s is not ClassDict cd || cd.ClassName != "renpy.ast.Init") continue;
+            int p = cd.GetValueOrDefault("priority") is int v ? v : 0;
+            counts[p] = counts.GetValueOrDefault(p) + 1;
+            total++;
+        }
+        if (total < 2) return 0; // 1 Init lohnt keinen Header-Aufwand
+        var best = counts.OrderByDescending(kv => kv.Value).First();
+        if (best.Key == 0) return 0;
+        if (best.Value < 2) return 0; // die dominante Prio muss selbst >= 2 sein
+        if (best.Value * 2 < total) return 0; // weniger als 50%
+        return best.Key;
+    }
+
+    private int _defaultInitOffset;
 
     private Dictionary<string, int> _transformCallArgCount = new(StringComparer.Ordinal);
     private Dictionary<string, List<string>> _transformParamNames = new(StringComparer.Ordinal);
@@ -876,6 +912,14 @@ public sealed class RenpyRpycDecompiler
         int priority = node.GetValueOrDefault("priority") is int p ? p : 0;
         var block = node.GetValueOrDefault("block") as IEnumerable ?? Array.Empty<object>();
 
+        // `init N`-Prefix nur wenn priority != _defaultInitOffset.
+        // Bei match haben wir schon `init offset = N` am Top emittiert —
+        // der Init-Wrapper waere redundant.
+        int effectivePriority = priority - _defaultInitOffset;
+        // Aber: `init 0` schreibt niemand — die default-Priority (0) laesst
+        // Ren'Py sowieso weg. Wir also EBENSO wenn effectivePriority == 0.
+        string prioText = effectivePriority == 0 ? "" : $"{effectivePriority} ";
+
         // Modern-Kompakt-Form: `init N python:` statt `init N:\n  python:`.
         // Voraussetzung: Block enthaelt genau EIN Python-Statement ohne
         // hide/store-Modifier (die brauchen den Block-Header sowieso).
@@ -889,18 +933,24 @@ public sealed class RenpyRpycDecompiler
             if (!early && !hide && store == "store")
             {
                 string code = AsString(py.GetValueOrDefault("code"));
-                AppendIndented(sb, indent, $"init {priority} python:");
+                AppendIndented(sb, indent, $"init {prioText}python:".Replace("  ", " "));
                 foreach (var line in code.Split('\n'))
                     AppendIndented(sb, indent + 1, line);
                 return;
             }
         }
 
-        // Modern-Kompakt-Form auch fuer Screen/Style/Transform/Image bei
-        // non-default Prio: `init -500 screen X:` statt `init -500:\n  screen X:`.
-        // Bei Default-Prio wird der Init-Wrap sowieso in TryUnwrapSingletonInit
-        // komplett entfernt — hier decken wir also nur die verbliebenen
-        // non-default Faelle ab (z.B. `init -500 screen`).
+        // Bei effektiv-0 UND single-child Screen/Style/Transform: einfach
+        // den child emittieren (Init-Wrapper ganz weg).
+        if (effectivePriority == 0 && kids.Count == 1 && kids[0] is ClassDict directChild
+            && directChild.ClassName is "renpy.ast.Screen" or "renpy.ast.Style" or "renpy.ast.Transform")
+        {
+            EmitNode(sb, directChild, indent);
+            return;
+        }
+
+        // Modern-Kompakt-Form auch fuer Screen/Style/Transform bei non-default
+        // Prio: `init -500 screen X:` statt `init -500:\n  screen X:`.
         if (kids.Count == 1 && kids[0] is ClassDict single)
         {
             string? keyword = single.ClassName switch
@@ -912,31 +962,22 @@ public sealed class RenpyRpycDecompiler
             };
             if (keyword is not null)
             {
-                // Wir emittieren den Init-Prefix und rufen dann den normalen
-                // EmitNode auf — der Node-Emitter fuegt "screen X:" etc. hinzu.
-                // Kompakter Weg: an den Prefix „init N " ranhaengen und dann
-                // den Body des Statements normal emittieren.
-                // Da unsere Screen/Style/Transform-Emitter ihre eigenen
-                // `screen X:` etc. Zeilen produzieren, koennen wir den init-
-                // Prefix nicht in-line einfuegen — wir schreiben stattdessen
-                // die vollstaendige `init N <keyword> …:` Zeile selbst.
                 var childOut = new StringBuilder();
                 EmitNode(childOut, single, indent);
                 var childText = childOut.ToString();
-                // Erste Zeile bekommt den init-Prefix davor
                 int nl = childText.IndexOf('\n');
                 if (nl > 0)
                 {
                     string first = childText[..nl].TrimStart();
                     string rest = childText[nl..];
                     for (int i = 0; i < indent; i++) sb.Append(Indent);
-                    sb.Append($"init {priority} ").Append(first).Append(rest);
+                    sb.Append($"init {prioText}").Append(first).Append(rest);
                     return;
                 }
             }
         }
 
-        AppendIndented(sb, indent, $"init {priority}:");
+        AppendIndented(sb, indent, $"init {prioText}:".Replace(" :", ":"));
         EmitBlockNonEmpty(sb, block, indent + 1);
     }
 
@@ -1321,6 +1362,9 @@ public sealed class RenpyRpycDecompiler
 
     private static void AppendIndented(StringBuilder sb, int indent, string content)
     {
+        // Leere Zeilen ohne Indent — kein trailing whitespace. unrpyc macht's
+        // genauso; erlaubt sauberen Diff mit Original-.rpy.
+        if (string.IsNullOrEmpty(content)) { sb.Append('\n'); return; }
         for (int i = 0; i < indent; i++) sb.Append(Indent);
         sb.Append(content).Append('\n');
     }

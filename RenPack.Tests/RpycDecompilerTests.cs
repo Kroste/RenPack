@@ -941,7 +941,8 @@ public sealed class RpycDecompilerTests
                 Node("renpy.ast.Define", ("varname", "b"), ("code", "2")),
             }));
         var text = _dec.Decompile(new object[] { init });
-        text.Should().Contain("init 0:");
+        // Prio 0 wird weggelassen — `init 0:` schreibt niemand in .rpy.
+        text.Should().Contain("init:");
         text.Should().Contain("    define a = 1");
         text.Should().Contain("    define b = 2");
     }
