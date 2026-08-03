@@ -46,16 +46,17 @@ public sealed class KrosteWalkthroughGenerator
     /// den Original-Text auf Original+Hint mappen.</summary>
     /// <returns>Anzahl geschriebener .rpy-Dateien.</returns>
     public int Generate(string sourceRoot, string destRoot, ModAnalysis analysis,
-        string? gameRootWithTl = null)
+        string? gameRootWithTl = null, GameProfile? profile = null)
     {
         if (!Directory.Exists(sourceRoot))
             throw new DirectoryNotFoundException($"Source-Root nicht gefunden: {sourceRoot}");
         Directory.CreateDirectory(destRoot);
 
-        // Translation-Aware Mode: erkennen wenn das Spiel tl/-Ordner hat.
-        // Wir nutzen gameRootWithTl (das echte gameDir des Spiels) — der
-        // sourceRoot ist meist ein Decompile-Temp-Ordner ohne tl/.
-        var tlLanguages = DetectTranslationLanguages(gameRootWithTl ?? sourceRoot);
+        // Translation-Aware Mode: bevorzugt aus dem GameProfile (via
+        // OneClickModBuilder detektiert), Fallback auf lokale Detektion.
+        var tlLanguages = profile?.TranslationLanguages is { Count: > 0 } fromProfile
+            ? fromProfile
+            : DetectTranslationLanguages(gameRootWithTl ?? sourceRoot);
         bool translationAware = tlLanguages.Count > 0;
         if (translationAware)
             Log.Info("Translation-Aware Mode: {count} tl-Language(s) gefunden ({langs}) — " +

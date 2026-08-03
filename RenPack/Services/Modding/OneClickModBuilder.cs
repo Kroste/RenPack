@@ -31,6 +31,7 @@ public sealed class OneClickModBuilder
 
     private readonly RpycBatchService _batch;
     private readonly RenpyModAnalyzer _analyzer;
+    private readonly GameProfileDetector _profileDetector;
     private readonly KrosteWalkthroughGenerator _walkthrough;
     private readonly KrosteInfoScreenGenerator _infoScreen;
     private readonly KrosteCheatGenerator _cheat;
@@ -42,11 +43,13 @@ public sealed class OneClickModBuilder
     public const string BackupSuffix = ".krostemod-bak";
 
     public OneClickModBuilder() : this(new RpycBatchService(), new RenpyModAnalyzer(),
+        new GameProfileDetector(),
         new KrosteWalkthroughGenerator(), new KrosteInfoScreenGenerator(),
         new KrosteCheatGenerator(), new KrosteRenameGenerator(),
         new KrosteTranslationGenerator(), new RenpyArchiveService()) { }
 
     public OneClickModBuilder(RpycBatchService batch, RenpyModAnalyzer analyzer,
+        GameProfileDetector profileDetector,
         KrosteWalkthroughGenerator walkthrough, KrosteInfoScreenGenerator infoScreen,
         KrosteCheatGenerator cheat, KrosteRenameGenerator rename,
         KrosteTranslationGenerator translation,
@@ -54,6 +57,7 @@ public sealed class OneClickModBuilder
     {
         _batch = batch;
         _analyzer = analyzer;
+        _profileDetector = profileDetector;
         _walkthrough = walkthrough;
         _infoScreen = infoScreen;
         _cheat = cheat;
@@ -176,9 +180,14 @@ public sealed class OneClickModBuilder
                 }
             }
 
-            // 2. Analyze — nur der decompiledDir, NICHT tempRoot!
+            // 2. Detect + Analyze — nur der decompiledDir, NICHT tempRoot!
+            //    Profile-Detector laeuft zuerst und liefert spielspezifische
+            //    Merkmale (Custom-Menu-Screens, Container-Stats, tl-Sprachen)
+            //    an die Generatoren, damit sie ihre Heuristiken anpassen
+            //    koennen statt jeder Baustelle eigene Detektions-Logik.
             ct.ThrowIfCancellationRequested();
             progress?.Report(new OneClickProgress(OneClickPhase.Analyzing, 0, 0, ""));
+            var profile = _profileDetector.Detect(decompiledDir);
             var analysis = _analyzer.Analyze(decompiledDir);
 
             // 3. Mod bauen — in Temp-Sub-Ordner „mod/", damit generierter
@@ -192,7 +201,8 @@ public sealed class OneClickModBuilder
                     // gameRootWithTl = gameDir damit Walkthrough-Generator
                     // erkennt ob das Spiel tl/-Uebersetzungen hat und in den
                     // Translation-Aware Mode wechselt.
-                    _walkthrough.Generate(decompiledDir, modOut, analysis, gameRootWithTl: gameDir);
+                    _walkthrough.Generate(decompiledDir, modOut, analysis,
+                        gameRootWithTl: gameDir, profile: profile);
                     break;
                 case ModTypeId.Cheat:
                     // Cheat-Mod hat kein .rpy-Patching noetig, nur die
