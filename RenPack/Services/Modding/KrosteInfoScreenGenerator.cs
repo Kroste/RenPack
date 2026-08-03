@@ -281,6 +281,18 @@ public sealed class KrosteInfoScreenGenerator
         sb.AppendLine("                return cs");
         sb.AppendLine("        return []");
         sb.AppendLine();
+        sb.AppendLine("    def krostemod_translate_choice(text):");
+        sb.AppendLine("        # Nutzt Ren'Py's string-based translation um den Choice-");
+        sb.AppendLine("        # Original-Text in die aktuelle Sprache zu uebersetzen. Wenn");
+        sb.AppendLine("        # eine Uebersetzung im tl/-Ordner existiert (typisch fuer die");
+        sb.AppendLine("        # Boundaries-of-Morality-artigen Games mit `translate <lang>");
+        sb.AppendLine("        # strings:`-Bloecken fuer Menu-Choices), wird der uebersetzte");
+        sb.AppendLine("        # Text zurueckgegeben. Sonst der Original-Text.");
+        sb.AppendLine("        try:");
+        sb.AppendLine("            return renpy.translation.translate_string(text)");
+        sb.AppendLine("        except Exception:");
+        sb.AppendLine("            return text");
+        sb.AppendLine();
         sb.AppendLine("    def krostemod_format_delta_hint(deltas):");
         sb.AppendLine("        # Deltas als kompakter Hint-String, z.B. \"tyler.love -1, justin.love +1\"");
         sb.AppendLine("        parts = []");
@@ -460,7 +472,7 @@ public sealed class KrosteInfoScreenGenerator
         sb.AppendLine("                            hbox:");
         sb.AppendLine("                                spacing 6");
         sb.AppendLine($"                                text \"[[[str(idx+1)]]\" size 15 color \"{GoldHex}\" bold True");
-        sb.AppendLine("                                text \"[krostemod_escape(ctext)]\" size 14 color \"#ffffff\"");
+        sb.AppendLine("                                text \"[krostemod_escape(krostemod_translate_choice(ctext))]\" size 14 color \"#ffffff\"");
         sb.AppendLine("                            if cdeltas:");
         sb.AppendLine($"                                text \"    -> [krostemod_escape(krostemod_format_delta_hint(cdeltas))]\" size 12 color \"{GoldHex}\"");
         sb.AppendLine("                            else:");
