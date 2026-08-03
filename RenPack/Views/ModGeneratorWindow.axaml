@@ -50,12 +50,30 @@
                         <TextBlock Text="{loc:Tr Mod_Section_Game}" Classes="section-label" />
                         <TextBlock Text="{loc:Tr Mod_Game_Description}" Classes="muted"
                                    FontSize="11" TextWrapping="Wrap" />
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                             <TextBox Grid.Column="0" Text="{Binding GameFolder}"
                                      PlaceholderText="{loc:Tr Mod_Game_Placeholder}"
                                      IsEnabled="{Binding !IsBusy}" />
                             <Button Grid.Column="1" Content="{loc:Tr Mod_Pick}"
                                     Command="{Binding PickFolderCommand}" />
+                            <!-- Pack E v0.9: Recent-Games Dropdown. Nur sichtbar
+                                 wenn mind. 1 Recent-Eintrag existiert. Klick auf
+                                 einen Eintrag setzt GameFolder direkt. -->
+                            <Button Grid.Column="2" Content="▾" Padding="10,6"
+                                    IsVisible="{Binding RecentGameFolders.Count}"
+                                    ToolTip.Tip="{loc:Tr Mod_Recent_Tip}">
+                                <Button.Flyout>
+                                    <MenuFlyout ItemsSource="{Binding RecentGameFolders}">
+                                        <MenuFlyout.ItemTemplate>
+                                            <DataTemplate>
+                                                <MenuItem Header="{Binding}"
+                                                          Command="{Binding $parent[Window].((vm:ModGeneratorViewModel)DataContext).PickRecentGameFolderCommand}"
+                                                          CommandParameter="{Binding}" />
+                                            </DataTemplate>
+                                        </MenuFlyout.ItemTemplate>
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
                         </Grid>
                         <!-- Auflösung des game/-Ordners anzeigen wenn abweichend -->
                         <TextBlock FontSize="11" Classes="muted"

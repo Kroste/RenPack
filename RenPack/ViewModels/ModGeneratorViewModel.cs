@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NLog;
 using RenPack.Localization;
+using RenPack.Services;
 using RenPack.Services.Modding;
 
 namespace RenPack.ViewModels;
@@ -24,8 +25,13 @@ public sealed partial class ModGeneratorViewModel : ObservableObject
     private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
     private readonly OneClickModBuilder _builder = new();
+    private readonly RecentFilesService? _recent;
 
     public IModGeneratorUi? Ui { get; set; }
+
+    /// <summary>Zuletzt genutzte Spiel-Ordner — Dropdown neben dem
+    /// Ordner-Picker. Wird bei jeder Recent-Aenderung neu befuellt.</summary>
+    public ObservableCollection<string> RecentGameFolders { get; } = [];
 
     // ---- Spiel-Ordner -----------------------------------------------------
 
@@ -88,9 +94,27 @@ public sealed partial class ModGeneratorViewModel : ObservableObject
     public string ResultChoicesText => LastResult?.Analysis.Choices.Count.ToString() ?? "";
     public string ResultDirText => LastResult?.GameDir ?? "";
 
-    public ModGeneratorViewModel()
+    public ModGeneratorViewModel() : this(null) { }
+
+    public ModGeneratorViewModel(RecentFilesService? recent)
     {
         _selectedModType = AvailableModTypes[0];
+        _recent = recent;
+        RefreshRecentGameFolders();
+        if (_recent is not null) _recent.Changed += (_, _) => RefreshRecentGameFolders();
+    }
+
+    private void RefreshRecentGameFolders()
+    {
+        RecentGameFolders.Clear();
+        if (_recent is null) return;
+        foreach (var f in _recent.ModGameFolders) RecentGameFolders.Add(f);
+    }
+
+    [RelayCommand]
+    private void PickRecentGameFolder(string? path)
+    {
+        if (!string.IsNullOrWhiteSpace(path)) GameFolder = path;
     }
 
     // ---- Commands ---------------------------------------------------------
@@ -188,6 +212,7 @@ public sealed partial class ModGeneratorViewModel : ObservableObject
             StatusText = L.F("Mod_BuildDoneFormat", result.DeployedFileCount, result.GameDir);
             ProgressDetail = "";
             OnPropertyChanged(nameof(HasInstalledMod));
+            _recent?.AddModGameFolder(pickedFolder);
 
             await Ui.ShowMessageAsync(
                 L.T("Mod_BuildDone_Title"),

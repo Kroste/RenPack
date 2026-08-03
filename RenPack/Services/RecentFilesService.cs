@@ -36,10 +36,12 @@ public sealed class RecentFilesService
     public IReadOnlyList<string> Archives => Existing(_data.Archives);
     public IReadOnlyList<string> Saves => Existing(_data.Saves);
     public IReadOnlyList<string> DecompileFolders => ExistingDirs(_data.DecompileFolders);
+    public IReadOnlyList<string> ModGameFolders => ExistingDirs(_data.ModGameFolders);
 
     public void AddArchive(string path) => Add(_data.Archives, path);
     public void AddSave(string path) => Add(_data.Saves, path);
     public void AddDecompileFolder(string path) => Add(_data.DecompileFolders, path);
+    public void AddModGameFolder(string path) => Add(_data.ModGameFolders, path);
 
     private void Add(List<string> list, string path)
     {
@@ -102,5 +104,6 @@ public sealed class RecentFilesService
         public List<string> Archives { get; set; } = [];
         public List<string> Saves { get; set; } = [];
         public List<string> DecompileFolders { get; set; } = [];
+        public List<string> ModGameFolders { get; set; } = [];
     }
 }
