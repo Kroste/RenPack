@@ -242,6 +242,23 @@ Spiel starten — Hinweise erscheinen als [K love+3] etc. in den Menu-Optionen.<
   <data name="Rename_Col_RelationTo" xml:space="preserve"><value>Neues Wort</value></data>
   <data name="Rename_AddRelation" xml:space="preserve"><value>+ Zeile hinzufügen</value></data>
   <data name="Rename_RemoveRelation" xml:space="preserve"><value>− Ausgewählte entfernen</value></data>
+  <data name="Translate_Title" xml:space="preserve"><value>KrosteMod — KI-Übersetzung</value></data>
+  <data name="Translate_Subtitle" xml:space="preserve"><value>Wähle eine oder mehrere Zielsprachen. Die KI übersetzt alle Dialoge und Menü-Texte, und im Ren'Py-Preferences-Menü kannst du jederzeit zurück auf die Original-Sprache wechseln.</value></data>
+  <data name="Translate_Section_Source" xml:space="preserve"><value>QUELLSPRACHE</value></data>
+  <data name="Translate_Source_Instructions" xml:space="preserve"><value>Lass "Auto-Detect" stehen, außer die KI erkennt die Original-Sprache schlecht (z.B. bei gemischtem CN/JP).</value></data>
+  <data name="Translate_Source_Auto" xml:space="preserve"><value>Auto-Detect aus dem Kontext</value></data>
+  <data name="Translate_Section_Targets" xml:space="preserve"><value>ZIELSPRACHEN</value></data>
+  <data name="Translate_Targets_Instructions" xml:space="preserve"><value>Jede ausgewählte Sprache bekommt ihren eigenen tl/&lt;sprache&gt;/-Ordner. Kosten/Zeit skalieren linear — 1000 Zeilen × 3 Sprachen = 3000 KI-Requests.</value></data>
+  <data name="Translate_Stats_Format" xml:space="preserve"><value>{0} einzigartige übersetzbare Strings gefunden (Says + Menü-Choices).</value></data>
+  <data name="Translate_Apply" xml:space="preserve"><value>Übersetzen &amp; Mod bauen</value></data>
+  <data name="Translate_Cancel" xml:space="preserve"><value>Abbrechen</value></data>
+  <data name="Translate_Footer_Hint" xml:space="preserve"><value>Abbrechen stoppt den Build. Anwenden ruft den KI-Provider (Einstellungen → KI) und installiert die Übersetzung als Ren'Py-kompatibler tl/-Ordner.</value></data>
+  <data name="Translate_NoLanguages_Title" xml:space="preserve"><value>Keine Zielsprache ausgewählt</value></data>
+  <data name="Translate_NoLanguages_Body" xml:space="preserve"><value>Du musst mindestens eine Zielsprache wählen. Build abgebrochen.</value></data>
+  <data name="Translate_NoResults_Title" xml:space="preserve"><value>Übersetzung fehlgeschlagen</value></data>
+  <data name="Translate_NoResults_Body" xml:space="preserve"><value>Die KI hat keine brauchbaren Übersetzungen geliefert. Prüfe den Log; der Provider hat evtl. rate-limited oder den Content abgelehnt.</value></data>
+  <data name="Translate_Failed_Title" xml:space="preserve"><value>Übersetzungs-Fehler</value></data>
+  <data name="Translate_Failed_Body_Format" xml:space="preserve"><value>Übersetzung nach {0} fehlgeschlagen: {1}</value></data>
   <data name="RewritePreview_Title" xml:space="preserve"><value>KrosteMod — KI-Rewrite-Vorschau</value></data>
   <data name="RewritePreview_Subtitle" xml:space="preserve"><value>Die KI hat diese Body-Text-Umschreibungen vorgeschlagen. Haekchen entfernen falls du eine nicht willst.</value></data>
   <data name="RewritePreview_Instructions" xml:space="preserve"><value>Nur akzeptierte Zeilen werden in den Mod gepatcht. Lehne alles ab was Bedeutung, Tonfall oder Kontext ueber die reine Namens-Ersetzung hinaus veraendert.</value></data>

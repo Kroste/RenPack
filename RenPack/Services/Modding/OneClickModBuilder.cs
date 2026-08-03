@@ -35,6 +35,7 @@ public sealed class OneClickModBuilder
     private readonly KrosteInfoScreenGenerator _infoScreen;
     private readonly KrosteCheatGenerator _cheat;
     private readonly KrosteRenameGenerator _rename;
+    private readonly KrosteTranslationGenerator _translation;
     private readonly IRenpyArchiveService _archive;
 
     public const string ManifestFileName = "KROSTEMOD_MANIFEST.json";
@@ -43,11 +44,12 @@ public sealed class OneClickModBuilder
     public OneClickModBuilder() : this(new RpycBatchService(), new RenpyModAnalyzer(),
         new KrosteWalkthroughGenerator(), new KrosteInfoScreenGenerator(),
         new KrosteCheatGenerator(), new KrosteRenameGenerator(),
-        new RenpyArchiveService()) { }
+        new KrosteTranslationGenerator(), new RenpyArchiveService()) { }
 
     public OneClickModBuilder(RpycBatchService batch, RenpyModAnalyzer analyzer,
         KrosteWalkthroughGenerator walkthrough, KrosteInfoScreenGenerator infoScreen,
         KrosteCheatGenerator cheat, KrosteRenameGenerator rename,
+        KrosteTranslationGenerator translation,
         IRenpyArchiveService archive)
     {
         _batch = batch;
@@ -56,6 +58,7 @@ public sealed class OneClickModBuilder
         _infoScreen = infoScreen;
         _cheat = cheat;
         _rename = rename;
+        _translation = translation;
         _archive = archive;
     }
 
@@ -71,7 +74,8 @@ public sealed class OneClickModBuilder
     public OneClickResult Build(string userPickedFolder, ModTypeId modType,
         IProgress<OneClickProgress>? progress = null,
         CancellationToken ct = default,
-        Func<IReadOnlyList<RpyCharacter>, IReadOnlyList<RpySayStatement>, RenameConfig?>? renameConfigProvider = null)
+        Func<IReadOnlyList<RpyCharacter>, IReadOnlyList<RpySayStatement>, RenameConfig?>? renameConfigProvider = null,
+        Func<ModAnalysis, TranslationConfig?>? translationConfigProvider = null)
     {
         if (!Directory.Exists(userPickedFolder))
             throw new DirectoryNotFoundException($"Ordner nicht gefunden: {userPickedFolder}");
@@ -201,14 +205,29 @@ public sealed class OneClickModBuilder
                     _rename.Generate(modOut, analysis, renameConfig,
                         decompiledSourceRoot: decompiledDir);
                     break;
+                case ModTypeId.Translate:
+                    // Translate braucht User-Input (Zielsprachen) NACH der
+                    // Analyse — die tatsaechlichen KI-Uebersetzungen macht
+                    // der Provider-Callback (er ruft asynchron den KI-Provider).
+                    if (translationConfigProvider is null)
+                        throw new InvalidOperationException(
+                            "Translate-Mod-Typ erfordert einen translationConfigProvider.");
+                    var translationConfig = translationConfigProvider(analysis)
+                        ?? throw new OperationCanceledException(
+                            "Translation-Konfiguration vom User abgebrochen.");
+                    Directory.CreateDirectory(modOut);
+                    _translation.Generate(modOut, translationConfig);
+                    break;
                 default:
                     throw new NotSupportedException($"Mod-Typ noch nicht implementiert: {modType}");
             }
 
             // 3b. F10-Info-Screen daneben legen — bringt Live-Variable-Werte
             // + Consumer-Liste ingame. Ergaenzt den Walkthrough/Cheat um
-            // „warum-Kontext" fuer den Spieler.
-            _infoScreen.Generate(modOut, analysis);
+            // „warum-Kontext" fuer den Spieler. Fuer Translate-Mod nicht
+            // sinnvoll (User will nur die Uebersetzung, kein Meta-Overlay).
+            if (modType != ModTypeId.Translate)
+                _infoScreen.Generate(modOut, analysis);
 
             // 4. Deploy: modifizierte .rpy nach gameDir, .rpyc backuppen
             //    (nur wenn nicht packedMode — bei packed liegen Originale

@@ -248,6 +248,23 @@ Start the game — hints appear as [K love+3] etc. in the menu options.</value><
   <data name="Rename_Col_RelationTo" xml:space="preserve"><value>New term</value></data>
   <data name="Rename_AddRelation" xml:space="preserve"><value>+ Add row</value></data>
   <data name="Rename_RemoveRelation" xml:space="preserve"><value>− Remove selected</value></data>
+  <data name="Translate_Title" xml:space="preserve"><value>KrosteMod — AI Translation</value></data>
+  <data name="Translate_Subtitle" xml:space="preserve"><value>Pick one or more target languages. AI will translate all dialogue and menu texts, and Ren'Py's built-in Language menu will let you switch back to the original anytime.</value></data>
+  <data name="Translate_Section_Source" xml:space="preserve"><value>SOURCE LANGUAGE</value></data>
+  <data name="Translate_Source_Instructions" xml:space="preserve"><value>Leave on "Auto-detect" unless the AI struggles with your game's original language (e.g. mixed CN/JP).</value></data>
+  <data name="Translate_Source_Auto" xml:space="preserve"><value>Auto-detect from context</value></data>
+  <data name="Translate_Section_Targets" xml:space="preserve"><value>TARGET LANGUAGES</value></data>
+  <data name="Translate_Targets_Instructions" xml:space="preserve"><value>Each selected language gets its own tl/&lt;lang&gt;/ folder. Cost/time scales linearly — 1000 lines × 3 languages = 3000 AI requests.</value></data>
+  <data name="Translate_Stats_Format" xml:space="preserve"><value>{0} unique translatable strings found (say-statements + menu choices).</value></data>
+  <data name="Translate_Apply" xml:space="preserve"><value>Translate &amp; build mod</value></data>
+  <data name="Translate_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Translate_Footer_Hint" xml:space="preserve"><value>Cancel aborts the build. Apply calls the AI provider (Settings → AI) and installs the translation as a Ren'Py-compatible tl/-folder.</value></data>
+  <data name="Translate_NoLanguages_Title" xml:space="preserve"><value>No target language selected</value></data>
+  <data name="Translate_NoLanguages_Body" xml:space="preserve"><value>You have to pick at least one target language. Build aborted.</value></data>
+  <data name="Translate_NoResults_Title" xml:space="preserve"><value>Translation failed</value></data>
+  <data name="Translate_NoResults_Body" xml:space="preserve"><value>The AI did not return any usable translations. Check the log; the provider may have rate-limited or refused the content.</value></data>
+  <data name="Translate_Failed_Title" xml:space="preserve"><value>Translation error</value></data>
+  <data name="Translate_Failed_Body_Format" xml:space="preserve"><value>Translation into {0} failed: {1}</value></data>
   <data name="RewritePreview_Title" xml:space="preserve"><value>KrosteMod — AI Rewrite Preview</value></data>
   <data name="RewritePreview_Subtitle" xml:space="preserve"><value>The AI proposed these body-text rewrites. Uncheck any you don't want applied.</value></data>
   <data name="RewritePreview_Instructions" xml:space="preserve"><value>Only accepted rows are patched into the mod. Reject anything that changes meaning, tone or context beyond the name replacement.</value></data>

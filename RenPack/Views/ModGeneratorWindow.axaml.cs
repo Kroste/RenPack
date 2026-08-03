@@ -121,6 +121,71 @@ public partial class ModGeneratorWindow : ChromeWindow, IModGeneratorUi
         return baseConfig with { BodyTextEdits = acceptedEdits };
     }
 
+    public async Task<TranslationConfig?> PromptTranslationConfigAsync(ModAnalysis analysis)
+    {
+        // Sammle uebersetzbare Strings vorher — Dialog zeigt Count als
+        // Kosten-/Zeit-Hint.
+        var strings = KrosteAiTranslator.CollectTranslatableStrings(analysis);
+
+        var dlg = new TranslationConfigWindow();
+        dlg.SetStats(strings.Count);
+        await dlg.ShowDialog(this);
+        var selection = dlg.Result;
+        if (selection is null) return null;
+        if (selection.TargetLanguages.Count == 0)
+        {
+            await ShowMessageAsync(
+                L.T("Translate_NoLanguages_Title"),
+                L.T("Translate_NoLanguages_Body"));
+            return null;
+        }
+
+        var provider = TryCreateAiProvider();
+        if (provider is null)
+        {
+            await ShowMessageAsync(
+                L.T("RewritePreview_NoProvider_Title"),
+                L.T("RewritePreview_NoProvider_Body"));
+            return null;
+        }
+
+        // KI-Batch pro Zielsprache. Bei mehreren Sprachen laeuft das
+        // sequenziell — parallelisieren waere schneller, aber Cloud-
+        // Provider haben Rate-Limits.
+        var translator = new KrosteAiTranslator(provider);
+        var translated = new Dictionary<TargetLanguage, IReadOnlyDictionary<string, string>>();
+        foreach (var lang in selection.TargetLanguages)
+        {
+            try
+            {
+                var result = await translator.TranslateAsync(strings, lang, selection.SourceLanguage);
+                if (result.Count > 0) translated[lang] = result;
+                else
+                    Log.Warn("Uebersetzung fuer {lang} lieferte 0 Ergebnisse", lang);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Uebersetzung fuer {lang} fehlgeschlagen", lang);
+                await ShowMessageAsync(
+                    L.T("Translate_Failed_Title"),
+                    L.F("Translate_Failed_Body_Format", lang.ToNativeName(), ex.Message));
+            }
+        }
+
+        if (translated.Count == 0)
+        {
+            await ShowMessageAsync(
+                L.T("Translate_NoResults_Title"),
+                L.T("Translate_NoResults_Body"));
+            return null;
+        }
+
+        return new TranslationConfig(
+            TargetLanguages: translated.Keys.ToList(),
+            SourceLanguage: selection.SourceLanguage,
+            TranslatedStrings: translated);
+    }
+
     /// <summary>Ruft die aktuellen KI-Einstellungen ab und baut den passenden
     /// Provider. Wenn kein Provider konfiguriert ist, gibt <c>null</c> zurueck
     /// — Aufrufer zeigt dann die entsprechende Fehlermeldung.</summary>

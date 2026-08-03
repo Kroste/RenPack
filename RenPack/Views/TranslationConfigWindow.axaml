@@ -1,0 +1,79 @@
+<views:ChromeWindow xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="using:RenPack.Views"
+        xmlns:controls="using:RenPack.Controls"
+        xmlns:loc="using:RenPack.Localization"
+        mc:Ignorable="d" d:DesignWidth="620" d:DesignHeight="560"
+        x:Class="RenPack.Views.TranslationConfigWindow"
+        Width="620" Height="600" MinWidth="480" MinHeight="440"
+        WindowStartupLocation="CenterOwner"
+        Title="{loc:Tr Translate_Title}"
+        Background="{DynamicResource KrosteBackgroundBrush}">
+
+    <DockPanel>
+        <controls:TitleBar DockPanel.Dock="Top" Title="{loc:Tr Translate_Title}" />
+
+        <!-- Footer: OK / Cancel -->
+        <Border DockPanel.Dock="Bottom" Padding="18,12"
+                BorderBrush="{DynamicResource KrosteBorderBrush}" BorderThickness="0,1,0,0"
+                Background="{DynamicResource KrosteTitleBarBrush}">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                <TextBlock Grid.Column="0" Text="{loc:Tr Translate_Footer_Hint}"
+                           Classes="muted" FontSize="11"
+                           VerticalAlignment="Center" TextWrapping="Wrap" />
+                <Button Grid.Column="1" x:Name="CancelButton"
+                        Content="{loc:Tr Translate_Cancel}" />
+                <Button Grid.Column="2" x:Name="OkButton" Classes="accent"
+                        Content="{loc:Tr Translate_Apply}" />
+            </Grid>
+        </Border>
+
+        <ScrollViewer>
+            <StackPanel Margin="24" Spacing="14">
+                <StackPanel>
+                    <TextBlock Text="{loc:Tr Translate_Title}" Classes="h1" />
+                    <TextBlock Text="{loc:Tr Translate_Subtitle}" Classes="muted" FontSize="12"
+                               Margin="0,2,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <!-- Quellsprache: optional. Auto-Detect ist default,
+                     der User kann aber explizit setzen wenn die KI ratet
+                     schlecht (z.B. bei Chinesisch/Japanisch schwer zu
+                     unterscheiden). -->
+                <Border Classes="card">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{loc:Tr Translate_Section_Source}" Classes="section-label" />
+                        <TextBlock Text="{loc:Tr Translate_Source_Instructions}" Classes="muted"
+                                   FontSize="11" TextWrapping="Wrap" />
+                        <ComboBox x:Name="SourceLanguageBox" HorizontalAlignment="Stretch"
+                                  Margin="0,4,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Zielsprachen: Multi-Select via Checkboxen. -->
+                <Border Classes="card">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{loc:Tr Translate_Section_Targets}" Classes="section-label" />
+                        <TextBlock Text="{loc:Tr Translate_Targets_Instructions}" Classes="muted"
+                                   FontSize="11" TextWrapping="Wrap" />
+                        <ItemsControl x:Name="TargetLanguageList" Margin="0,4,0,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Columns="2" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Analyse-Info: Anzahl uebersetzbarer Strings. -->
+                <Border Classes="card-flat">
+                    <TextBlock x:Name="StatsText" Text="" TextWrapping="Wrap"
+                               FontSize="12" Padding="8" />
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</views:ChromeWindow>

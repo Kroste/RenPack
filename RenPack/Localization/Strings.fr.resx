@@ -240,6 +240,23 @@ Lance le jeu — les indices apparaissent comme [K love+3] etc. dans les options
   <data name="Rename_Col_RelationTo" xml:space="preserve"><value>Nouveau mot</value></data>
   <data name="Rename_AddRelation" xml:space="preserve"><value>+ Ajouter</value></data>
   <data name="Rename_RemoveRelation" xml:space="preserve"><value>− Supprimer sélection</value></data>
+  <data name="Translate_Title" xml:space="preserve"><value>KrosteMod — Traduction IA</value></data>
+  <data name="Translate_Subtitle" xml:space="preserve"><value>Choisis une ou plusieurs langues cibles. L'IA traduit tous les dialogues et menus ; le menu Langue de Ren'Py permet de revenir à l'original à tout moment.</value></data>
+  <data name="Translate_Section_Source" xml:space="preserve"><value>LANGUE SOURCE</value></data>
+  <data name="Translate_Source_Instructions" xml:space="preserve"><value>Laisse "Détection auto" sauf si l'IA a du mal avec la langue originale (p.ex. CN/JP mélangés).</value></data>
+  <data name="Translate_Source_Auto" xml:space="preserve"><value>Détection automatique</value></data>
+  <data name="Translate_Section_Targets" xml:space="preserve"><value>LANGUES CIBLES</value></data>
+  <data name="Translate_Targets_Instructions" xml:space="preserve"><value>Chaque langue sélectionnée obtient son propre dossier tl/&lt;langue&gt;/. Coût/temps linéaire.</value></data>
+  <data name="Translate_Stats_Format" xml:space="preserve"><value>{0} chaînes uniques traduisibles trouvées (says + choix de menu).</value></data>
+  <data name="Translate_Apply" xml:space="preserve"><value>Traduire &amp; créer mod</value></data>
+  <data name="Translate_Cancel" xml:space="preserve"><value>Annuler</value></data>
+  <data name="Translate_Footer_Hint" xml:space="preserve"><value>Annuler arrête la création. Appliquer appelle l'IA (Paramètres → IA) et installe la traduction comme dossier tl/ Ren'Py.</value></data>
+  <data name="Translate_NoLanguages_Title" xml:space="preserve"><value>Aucune langue sélectionnée</value></data>
+  <data name="Translate_NoLanguages_Body" xml:space="preserve"><value>Sélectionne au moins une langue cible. Build annulé.</value></data>
+  <data name="Translate_NoResults_Title" xml:space="preserve"><value>Traduction échouée</value></data>
+  <data name="Translate_NoResults_Body" xml:space="preserve"><value>L'IA n'a pas fourni de traductions utilisables. Vérifie le journal.</value></data>
+  <data name="Translate_Failed_Title" xml:space="preserve"><value>Erreur de traduction</value></data>
+  <data name="Translate_Failed_Body_Format" xml:space="preserve"><value>Traduction vers {0} échouée : {1}</value></data>
   <data name="Main_RecentFolders_Tip" xml:space="preserve"><value>Dossiers récemment décompilés</value></data>
   <data name="Save_Recent_Tip" xml:space="preserve"><value>Sauvegardes récemment ouvertes</value></data>
   <data name="Main_CompareArchive" xml:space="preserve"><value>🔀 Comparer…</value></data>

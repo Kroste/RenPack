@@ -240,6 +240,23 @@
   <data name="Rename_Col_RelationTo" xml:space="preserve"><value>Новое слово</value></data>
   <data name="Rename_AddRelation" xml:space="preserve"><value>+ Добавить</value></data>
   <data name="Rename_RemoveRelation" xml:space="preserve"><value>− Удалить выбранное</value></data>
+  <data name="Translate_Title" xml:space="preserve"><value>KrosteMod — ИИ-перевод</value></data>
+  <data name="Translate_Subtitle" xml:space="preserve"><value>Выбери одну или несколько целевых языков. ИИ переведёт все диалоги и меню; в меню Preferences Ren'Py можно вернуться к оригиналу.</value></data>
+  <data name="Translate_Section_Source" xml:space="preserve"><value>ИСХОДНЫЙ ЯЗЫК</value></data>
+  <data name="Translate_Source_Instructions" xml:space="preserve"><value>Оставь "Автоопределение", если ИИ не распознаёт язык оригинала (напр. смешанный CN/JP).</value></data>
+  <data name="Translate_Source_Auto" xml:space="preserve"><value>Автоопределение из контекста</value></data>
+  <data name="Translate_Section_Targets" xml:space="preserve"><value>ЦЕЛЕВЫЕ ЯЗЫКИ</value></data>
+  <data name="Translate_Targets_Instructions" xml:space="preserve"><value>Каждый выбранный язык получает свою папку tl/&lt;язык&gt;/. Стоимость/время линейные.</value></data>
+  <data name="Translate_Stats_Format" xml:space="preserve"><value>Найдено {0} уникальных переводимых строк (Says + Menu-Choices).</value></data>
+  <data name="Translate_Apply" xml:space="preserve"><value>Перевести &amp; собрать мод</value></data>
+  <data name="Translate_Cancel" xml:space="preserve"><value>Отмена</value></data>
+  <data name="Translate_Footer_Hint" xml:space="preserve"><value>Отмена прерывает сборку. Применить вызывает ИИ (Настройки → ИИ) и устанавливает перевод как Ren'Py-совместимую tl/-папку.</value></data>
+  <data name="Translate_NoLanguages_Title" xml:space="preserve"><value>Целевой язык не выбран</value></data>
+  <data name="Translate_NoLanguages_Body" xml:space="preserve"><value>Выбери хотя бы один целевой язык. Сборка отменена.</value></data>
+  <data name="Translate_NoResults_Title" xml:space="preserve"><value>Перевод не удался</value></data>
+  <data name="Translate_NoResults_Body" xml:space="preserve"><value>ИИ не вернул пригодных переводов. Проверь журнал.</value></data>
+  <data name="Translate_Failed_Title" xml:space="preserve"><value>Ошибка перевода</value></data>
+  <data name="Translate_Failed_Body_Format" xml:space="preserve"><value>Перевод на {0} не удался: {1}</value></data>
   <data name="Main_RecentFolders_Tip" xml:space="preserve"><value>Недавно декомпилированные папки</value></data>
   <data name="Save_Recent_Tip" xml:space="preserve"><value>Недавно открытые сохранения</value></data>
   <data name="Main_CompareArchive" xml:space="preserve"><value>🔀 Сравнить…</value></data>

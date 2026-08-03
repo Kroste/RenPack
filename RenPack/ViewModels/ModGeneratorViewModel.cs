@@ -55,6 +55,7 @@ public sealed partial class ModGeneratorViewModel : ObservableObject
         new ModType(ModTypeId.Walkthrough, "Walkthrough"),
         new ModType(ModTypeId.Cheat, "Cheat menu (F11)"),
         new ModType(ModTypeId.Rename, "Character rename"),
+        new ModType(ModTypeId.Translate, "Translation (AI)"),
     ];
 
     [ObservableProperty] private ModType _selectedModType;
@@ -157,10 +158,29 @@ public sealed partial class ModGeneratorViewModel : ObservableObject
             return tcs.Task.GetAwaiter().GetResult();
         }
 
+        // Translation-Provider: analog zu RenamePrompt. Die UI-Impl fragt
+        // Zielsprachen ab, ruft die KI und liefert die fertigen Uebersetzungen.
+        TranslationConfig? TranslationPrompt(ModAnalysis analysis)
+        {
+            if (Ui is null) return null;
+            var tcs = new TaskCompletionSource<TranslationConfig?>();
+            Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
+            {
+                try
+                {
+                    var cfg = await Ui.PromptTranslationConfigAsync(analysis);
+                    tcs.TrySetResult(cfg);
+                }
+                catch (Exception ex) { tcs.TrySetException(ex); }
+            });
+            return tcs.Task.GetAwaiter().GetResult();
+        }
+
         try
         {
             var result = await Task.Run(() =>
-                _builder.Build(pickedFolder, pickedType, progress, default, RenamePrompt));
+                _builder.Build(pickedFolder, pickedType, progress, default,
+                    RenamePrompt, TranslationPrompt));
             LastResult = result;
             StatusText = L.F("Mod_BuildDoneFormat", result.DeployedFileCount, result.GameDir);
             ProgressDetail = "";
@@ -247,6 +267,13 @@ public interface IModGeneratorUi
     Task<RenameConfig?> PromptRenameMappingsAsync(
         IReadOnlyList<RpyCharacter> characters,
         IReadOnlyList<RpySayStatement> sayStatements);
+
+    /// <summary>E6: zeigt Dialog zum Auswaehlen der Zielsprachen fuer den
+    /// Translation-Mod. Nach der Auswahl ruft die UI-Impl den KI-Provider
+    /// mit den zu uebersetzenden Strings und liefert die fertige
+    /// <see cref="TranslationConfig"/> mit den akzeptierten Uebersetzungen
+    /// zurueck. <c>null</c> = Cancel.</summary>
+    Task<TranslationConfig?> PromptTranslationConfigAsync(ModAnalysis analysis);
 }
 
 public sealed record ModType(ModTypeId Id, string DisplayName)
