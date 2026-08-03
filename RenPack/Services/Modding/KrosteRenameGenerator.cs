@@ -217,7 +217,15 @@ public sealed class KrosteRenameGenerator
 /// <see cref="BodyTextEdits"/> (E4b, optional): die vom KI-Rewriter
 /// vorgeschlagenen und vom User akzeptierten Body-Text-Ersetzungen. Wenn
 /// null oder leer, bleibt der Original-Dialog-Text unangetastet — es
-/// wird nur der Anzeige-Name des Character-Objekts umbenannt.</summary>
+/// wird nur der Anzeige-Name des Character-Objekts umbenannt.
+///
+/// <see cref="RelationMappings"/> (E4c, optional): freie Wort-zu-Wort-
+/// Mappings, z.B. <c>mother→aunt</c>, <c>son→nephew</c>. Wird zusammen
+/// mit den Character-Mappings an den KI-Rewriter uebergeben — die KI
+/// schreibt Body-Texte konsistent um, inkl. Grammatik (Genitiv, Possessiv,
+/// deutsche Faelle). Betrifft NUR Body-Text; Character-Objekt-Namen bleiben
+/// unveraendert wenn kein zusaetzliches Character-Mapping da ist.</summary>
 public sealed record RenameConfig(
     IReadOnlyDictionary<string, string> Mappings,
-    IReadOnlyList<BodyTextEdit>? BodyTextEdits = null);
+    IReadOnlyList<BodyTextEdit>? BodyTextEdits = null,
+    IReadOnlyDictionary<string, string>? RelationMappings = null);

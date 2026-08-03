@@ -234,6 +234,12 @@
   <data name="Rename_Apply" xml:space="preserve"><value>Применить и создать мод</value></data>
   <data name="Rename_Cancel" xml:space="preserve"><value>Отмена</value></data>
   <data name="Rename_Footer_Hint" xml:space="preserve"><value>Отмена прерывает сборку. Применить создаёт krostemod_rename.rpy и устанавливает его.</value></data>
+  <data name="Rename_Section_Relations" xml:space="preserve"><value>СЛОВА-ОТНОШЕНИЯ / СВОБОДНЫЕ ЗАМЕНЫ</value></data>
+  <data name="Rename_Relations_Instructions" xml:space="preserve"><value>Свободные замены слов вместе с переименованием — напр. "мать" → "тётя", "сын" → "племянник". Требует галочку ИИ-перезаписи выше. Грамматика подстраивается автоматически.</value></data>
+  <data name="Rename_Col_RelationFrom" xml:space="preserve"><value>Старое слово</value></data>
+  <data name="Rename_Col_RelationTo" xml:space="preserve"><value>Новое слово</value></data>
+  <data name="Rename_AddRelation" xml:space="preserve"><value>+ Добавить</value></data>
+  <data name="Rename_RemoveRelation" xml:space="preserve"><value>− Удалить выбранное</value></data>
   <data name="Main_RecentFolders_Tip" xml:space="preserve"><value>Недавно декомпилированные папки</value></data>
   <data name="Save_Recent_Tip" xml:space="preserve"><value>Недавно открытые сохранения</value></data>
   <data name="Main_CompareArchive" xml:space="preserve"><value>🔀 Сравнить…</value></data>

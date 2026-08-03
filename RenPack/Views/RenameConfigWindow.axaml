@@ -56,7 +56,7 @@
                                   CanUserSortColumns="True"
                                   HeadersVisibility="Column"
                                   IsReadOnly="False"
-                                  MinHeight="300" MaxHeight="440"
+                                  MinHeight="200" MaxHeight="300"
                                   GridLinesVisibility="Horizontal"
                                   Margin="0,4,0,0">
                             <DataGrid.Columns>
@@ -74,6 +74,43 @@
                                                     Width="*" />
                             </DataGrid.Columns>
                         </DataGrid>
+                    </StackPanel>
+                </Border>
+
+                <!-- E4c: Beziehungswoerter / freie Text-Substitutionen. Wird
+                     nur wirksam wenn AiRewrite-Checkbox oben aktiv ist —
+                     die Ersetzung passiert im KI-Rewriter. -->
+                <Border Classes="card">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{loc:Tr Rename_Section_Relations}" Classes="section-label" />
+                        <TextBlock Text="{loc:Tr Rename_Relations_Instructions}" Classes="muted"
+                                   FontSize="11" TextWrapping="Wrap" />
+
+                        <DataGrid x:Name="RelationsGrid"
+                                  AutoGenerateColumns="False"
+                                  CanUserReorderColumns="False"
+                                  HeadersVisibility="Column"
+                                  IsReadOnly="False"
+                                  MinHeight="150" MaxHeight="240"
+                                  GridLinesVisibility="Horizontal"
+                                  Margin="0,4,0,0">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn x:DataType="views:RelationRow"
+                                                    Header="{loc:Tr Rename_Col_RelationFrom}"
+                                                    Binding="{Binding From, Mode=TwoWay}"
+                                                    Width="*" />
+                                <DataGridTextColumn x:DataType="views:RelationRow"
+                                                    Header="{loc:Tr Rename_Col_RelationTo}"
+                                                    Binding="{Binding To, Mode=TwoWay}"
+                                                    Width="*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                            <Button x:Name="AddRelationButton"
+                                    Content="{loc:Tr Rename_AddRelation}" />
+                            <Button x:Name="RemoveRelationButton"
+                                    Content="{loc:Tr Rename_RemoveRelation}" />
+                        </StackPanel>
                     </StackPanel>
                 </Border>
             </StackPanel>

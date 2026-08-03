@@ -43,31 +43,35 @@ public sealed class KrosteAiRewriter
     public async Task<IReadOnlyList<BodyTextEdit>> ProposeRewritesAsync(
         IReadOnlyList<RpySayStatement> allSays,
         IReadOnlyDictionary<string, string> nameMappings,
+        IReadOnlyDictionary<string, string>? relationMappings = null,
         IProgress<AiRewriteProgress>? progress = null,
         CancellationToken ct = default)
     {
-        if (nameMappings.Count == 0) return [];
+        var relMap = relationMappings ?? new Dictionary<string, string>(StringComparer.Ordinal);
 
-        // Kandidaten filtern: nur Says die mindestens einen alten Namen
-        // enthalten. Word-Boundary damit "Sam" nicht "Samsung" trifft.
-        var oldNames = nameMappings.Keys
-            .Where(k => !string.IsNullOrWhiteSpace(nameMappings[k]))
+        // Kandidaten filtern: Says die mindestens einen alten Namen ODER ein
+        // Beziehungswort enthalten. Word-Boundary damit "Sam" nicht "Samsung"
+        // trifft und "mom" nicht "moment".
+        var oldTerms = nameMappings
+            .Where(kv => !string.IsNullOrWhiteSpace(kv.Value))
+            .Select(kv => kv.Key)
+            .Concat(relMap.Where(kv => !string.IsNullOrWhiteSpace(kv.Value))
+                          .Select(kv => kv.Key))
+            .Distinct(StringComparer.Ordinal)
             .ToList();
-        if (oldNames.Count == 0) return [];
+        if (oldTerms.Count == 0) return [];
 
-        // Aus dem alten NAMEN (DisplayName) matchen — hier ist der Trick:
-        // nameMappings-Key ist der VAR-Name (sophia), aber im Body-Text
-        // steht der DISPLAY-Name (Sophia). Der Aufrufer muss diese Zuordnung
-        // machen bevor er uns die Mappings gibt. Wir arbeiten hier
-        // ausschliesslich mit Display-Namen. Der Vertrag ist klar:
-        // nameMappings = { "OldDisplayName": "NewDisplayName" }.
-        var boundaryPattern = BuildNameBoundaryRegex(oldNames);
+        // nameMappings-Key ist der VAR-Name (sophia), aber der Aufrufer
+        // liefert bereits Display-Namen als Keys (siehe Contract oben).
+        // relationMappings-Keys sind freie Woerter (mother, mom, ...).
+        var boundaryPattern = BuildNameBoundaryRegex(oldTerms);
         var candidates = allSays
             .Where(s => boundaryPattern.IsMatch(s.RawTextInFile))
             .ToList();
 
-        Log.Info("KrosteAiRewriter: {n} Says von {total} enthalten die {m} umzubenennenden Namen",
-            candidates.Count, allSays.Count, oldNames.Count);
+        Log.Info("KrosteAiRewriter: {n} Says von {total} enthalten die {m} umzubenennenden Terms " +
+            "({names} Namen + {rels} Beziehungen)",
+            candidates.Count, allSays.Count, oldTerms.Count, nameMappings.Count, relMap.Count);
         if (candidates.Count == 0) return [];
 
         var results = new List<BodyTextEdit>(candidates.Count);
@@ -78,7 +82,7 @@ public sealed class KrosteAiRewriter
             progress?.Report(new AiRewriteProgress(done, candidates.Count));
             try
             {
-                var rewrites = await ProcessBatchAsync(batch, nameMappings, ct);
+                var rewrites = await ProcessBatchAsync(batch, nameMappings, relMap, ct);
                 results.AddRange(rewrites);
             }
             catch (Exception ex)
@@ -95,10 +99,11 @@ public sealed class KrosteAiRewriter
 
     private async Task<List<BodyTextEdit>> ProcessBatchAsync(
         IReadOnlyList<RpySayStatement> batch,
-        IReadOnlyDictionary<string, string> mappings,
+        IReadOnlyDictionary<string, string> nameMappings,
+        IReadOnlyDictionary<string, string> relationMappings,
         CancellationToken ct)
     {
-        var systemPrompt = BuildSystemPrompt(mappings);
+        var systemPrompt = BuildSystemPrompt(nameMappings, relationMappings);
         var userPrompt = BuildUserPrompt(batch);
         var response = await _provider.CompleteAsync(systemPrompt, userPrompt, ct);
         return ParseResponse(response, batch);
@@ -106,21 +111,47 @@ public sealed class KrosteAiRewriter
 
     /// <summary>System-Prompt: gibt der KI die Rolle + die Mappings + die
     /// Constraints. Kritisch: KI soll NUR den Text umschreiben (kein Meta-
-    /// Kommentar), Escape-Sequenzen (\", \n) beibehalten, JSON zurueckgeben.</summary>
-    internal static string BuildSystemPrompt(IReadOnlyDictionary<string, string> mappings)
+    /// Kommentar), Escape-Sequenzen (\", \n) beibehalten, JSON zurueckgeben.
+    ///
+    /// Zwei Mapping-Kategorien werden getrennt aufgelistet, damit die KI
+    /// versteht dass Character-Namen exakt sind (case-sensitive Match)
+    /// waehrend Beziehungswoerter grammatikalisch angepasst werden muessen
+    /// (z.B. deutsch "der Mutter" → "der Tante" — Genus und Kasus haengt
+    /// vom Zielwort ab).</summary>
+    internal static string BuildSystemPrompt(
+        IReadOnlyDictionary<string, string> nameMappings,
+        IReadOnlyDictionary<string, string>? relationMappings = null)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("You are rewriting dialogue lines from a Ren'Py visual novel to replace character names consistently.");
-        sb.AppendLine("Apply these name replacements everywhere they appear, including possessive forms (Sophia's → Anna's) and grammatical variants:");
-        foreach (var (from, to) in mappings.Where(kv => !string.IsNullOrWhiteSpace(kv.Value)))
-            sb.AppendLine($"  - \"{from}\" → \"{to}\"");
+        sb.AppendLine("You are rewriting dialogue lines from a Ren'Py visual novel to substitute names and relationship terms consistently.");
+        var relMap = relationMappings ?? new Dictionary<string, string>();
+
+        var nameEntries = nameMappings.Where(kv => !string.IsNullOrWhiteSpace(kv.Value)).ToList();
+        if (nameEntries.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("Character name replacements (exact, case-sensitive; also possessive forms Sophia's → Anna's):");
+            foreach (var (from, to) in nameEntries)
+                sb.AppendLine($"  - \"{from}\" → \"{to}\"");
+        }
+
+        var relEntries = relMap.Where(kv => !string.IsNullOrWhiteSpace(kv.Value)).ToList();
+        if (relEntries.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("Relationship/vocabulary replacements (apply in all inflections and derived forms — plural, possessive, cases in German/French/Spanish etc.):");
+            foreach (var (from, to) in relEntries)
+                sb.AppendLine($"  - \"{from}\" → \"{to}\"");
+        }
+
         sb.AppendLine();
         sb.AppendLine("Rules:");
         sb.AppendLine("  1. Preserve all escape sequences literally: \\\" \\n \\t \\\\ must stay as-is.");
         sb.AppendLine("  2. Preserve Ren'Py text tags: {i}...{/i}, {color=...}...{/color}, [var_name] etc. — do not touch them.");
-        sb.AppendLine("  3. Only rewrite lines that actually mention a name from the list. Leave others exactly as input.");
-        sb.AppendLine("  4. Do not change meaning, tone or length beyond the name substitution.");
-        sb.AppendLine("  5. Return a JSON object mapping the input index (as string) to the rewritten text.");
+        sb.AppendLine("  3. Only rewrite lines that actually mention a term from the lists. Leave others exactly as input.");
+        sb.AppendLine("  4. Do not change meaning, tone or length beyond the substitutions.");
+        sb.AppendLine("  5. For relationship words, adjust grammar naturally — 'my mother' → 'my aunt' in English, 'meine Mutter' → 'meine Tante' in German, etc.");
+        sb.AppendLine("  6. Return a JSON object mapping the input index (as string) to the rewritten text.");
         sb.AppendLine("     Format: {\"0\": \"new text\", \"1\": \"new text\", ...}");
         sb.AppendLine("     If a line does not need rewriting, omit its index from the output.");
         return sb.ToString();

@@ -242,6 +242,12 @@ Start the game — hints appear as [K love+3] etc. in the menu options.</value><
   <data name="Rename_Footer_Hint" xml:space="preserve"><value>Cancel aborts the build. Apply generates krostemod_rename.rpy and installs it.</value></data>
   <data name="Rename_AiRewrite_Label" xml:space="preserve"><value>Also rewrite dialogue mentions with AI (E4b, slow)</value></data>
   <data name="Rename_AiRewrite_Hint" xml:space="preserve"><value>Uses the configured AI provider (Settings → AI) to rewrite say-lines that mention old names — e.g. "Hi Sophia!" → "Hi Anna!". You get a preview before anything is deployed.</value></data>
+  <data name="Rename_Section_Relations" xml:space="preserve"><value>RELATIONSHIP / VOCABULARY WORDS</value></data>
+  <data name="Rename_Relations_Instructions" xml:space="preserve"><value>Free word-to-word substitutions applied together with the character rename — e.g. "mother" → "aunt", "son" → "nephew". Requires the AI-rewrite checkbox above. Grammar is adjusted automatically ("my mother" → "my aunt", "meine Mutter" → "meine Tante").</value></data>
+  <data name="Rename_Col_RelationFrom" xml:space="preserve"><value>Old term</value></data>
+  <data name="Rename_Col_RelationTo" xml:space="preserve"><value>New term</value></data>
+  <data name="Rename_AddRelation" xml:space="preserve"><value>+ Add row</value></data>
+  <data name="Rename_RemoveRelation" xml:space="preserve"><value>− Remove selected</value></data>
   <data name="RewritePreview_Title" xml:space="preserve"><value>KrosteMod — AI Rewrite Preview</value></data>
   <data name="RewritePreview_Subtitle" xml:space="preserve"><value>The AI proposed these body-text rewrites. Uncheck any you don't want applied.</value></data>
   <data name="RewritePreview_Instructions" xml:space="preserve"><value>Only accepted rows are patched into the mod. Reject anything that changes meaning, tone or context beyond the name replacement.</value></data>

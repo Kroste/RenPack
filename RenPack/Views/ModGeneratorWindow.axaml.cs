@@ -51,7 +51,10 @@ public partial class ModGeneratorWindow : ChromeWindow, IModGeneratorUi
 
         // E4b: wenn User die KI-Body-Rewrite-Checkbox aktiviert hat,
         // Rewriter aufrufen und Vorschlaege im Preview-Dialog zeigen.
-        if (!dlg.UseAiRewrite || baseConfig.Mappings.Count == 0)
+        // Rewrite laeuft entweder wenn Character-Mappings ODER Relations
+        // vorhanden sind — bei nur-Relations (E4c) reicht das allein.
+        bool hasRelations = baseConfig.RelationMappings is { Count: > 0 };
+        if (!dlg.UseAiRewrite || (baseConfig.Mappings.Count == 0 && !hasRelations))
             return baseConfig;
 
         // Display-Name-Mappings bauen: der Body-Text enthaelt die
@@ -65,7 +68,7 @@ public partial class ModGeneratorWindow : ChromeWindow, IModGeneratorUi
             .Where(t => !string.IsNullOrEmpty(t.Old))
             .ToDictionary(t => t.Old!, t => t.New, StringComparer.Ordinal);
 
-        if (displayMappings.Count == 0) return baseConfig;
+        if (displayMappings.Count == 0 && !hasRelations) return baseConfig;
 
         var provider = TryCreateAiProvider();
         if (provider is null)
@@ -85,7 +88,8 @@ public partial class ModGeneratorWindow : ChromeWindow, IModGeneratorUi
         IReadOnlyList<BodyTextEdit> proposals;
         try
         {
-            proposals = await rewriter.ProposeRewritesAsync(sayStatements, displayMappings);
+            proposals = await rewriter.ProposeRewritesAsync(
+                sayStatements, displayMappings, baseConfig.RelationMappings);
         }
         catch (Exception ex)
         {

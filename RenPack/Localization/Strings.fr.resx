@@ -234,6 +234,12 @@ Lance le jeu — les indices apparaissent comme [K love+3] etc. dans les options
   <data name="Rename_Apply" xml:space="preserve"><value>Appliquer &amp; créer le mod</value></data>
   <data name="Rename_Cancel" xml:space="preserve"><value>Annuler</value></data>
   <data name="Rename_Footer_Hint" xml:space="preserve"><value>Annuler arrête la création. Appliquer génère krostemod_rename.rpy et l'installe.</value></data>
+  <data name="Rename_Section_Relations" xml:space="preserve"><value>MOTS DE RELATION / SUBSTITUTIONS LIBRES</value></data>
+  <data name="Rename_Relations_Instructions" xml:space="preserve"><value>Substitutions libres mot-à-mot appliquées avec le renommage — p.ex. "mère" → "tante", "fils" → "neveu". Nécessite la case IA-Réécriture ci-dessus. La grammaire est ajustée automatiquement.</value></data>
+  <data name="Rename_Col_RelationFrom" xml:space="preserve"><value>Ancien mot</value></data>
+  <data name="Rename_Col_RelationTo" xml:space="preserve"><value>Nouveau mot</value></data>
+  <data name="Rename_AddRelation" xml:space="preserve"><value>+ Ajouter</value></data>
+  <data name="Rename_RemoveRelation" xml:space="preserve"><value>− Supprimer sélection</value></data>
   <data name="Main_RecentFolders_Tip" xml:space="preserve"><value>Dossiers récemment décompilés</value></data>
   <data name="Save_Recent_Tip" xml:space="preserve"><value>Sauvegardes récemment ouvertes</value></data>
   <data name="Main_CompareArchive" xml:space="preserve"><value>🔀 Comparer…</value></data>

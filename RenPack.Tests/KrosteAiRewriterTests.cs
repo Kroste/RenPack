@@ -140,6 +140,88 @@ public sealed class KrosteAiRewriterTests
         edits.Should().ContainSingle();
     }
 
+    // ---- E4c: Relations ----------------------------------------------------
+
+    [Fact]
+    public async Task Relation_only_mapping_triggers_rewrites_without_character_rename()
+    {
+        // Kein Character-Rename, nur Beziehungswoerter: der Rewriter muss
+        // Says finden die relation-terms erwaehnen und den Provider aufrufen.
+        var provider = new FakeProvider(_ =>
+            """{"0": "I love my aunt very much."}""");
+        var rewriter = new KrosteAiRewriter(provider);
+        var says = new[]
+        {
+            new RpySayStatement("f.rpy", 1, "sam", "I love my mother very much."),
+            new RpySayStatement("f.rpy", 2, "sam", "The weather is fine."),
+        };
+        var relations = new Dictionary<string, string> { ["mother"] = "aunt" };
+        var edits = await rewriter.ProposeRewritesAsync(
+            says,
+            new Dictionary<string, string>(),  // keine Character-Mappings
+            relations,
+            ct: TestContext.Current.CancellationToken);
+        edits.Should().ContainSingle();
+        edits[0].OriginalText.Should().Be("I love my mother very much.");
+        edits[0].NewText.Should().Be("I love my aunt very much.");
+    }
+
+    [Fact]
+    public async Task Relation_and_character_mappings_combined_in_prompt()
+    {
+        var provider = new FakeProvider(_ => "{}");
+        var rewriter = new KrosteAiRewriter(provider);
+        var says = new[]
+        {
+            new RpySayStatement("f.rpy", 1, "n", "Hi Sophia, tell my mother."),
+        };
+        var chars = new Dictionary<string, string> { ["Sophia"] = "Anna" };
+        var rels = new Dictionary<string, string> { ["mother"] = "aunt" };
+        await rewriter.ProposeRewritesAsync(says, chars, rels,
+            ct: TestContext.Current.CancellationToken);
+        // Der System-Prompt muss BEIDE Sektionen enthalten
+        var sys = KrosteAiRewriter.BuildSystemPrompt(chars, rels);
+        sys.Should().Contain("Character name replacements");
+        sys.Should().Contain("\"Sophia\" → \"Anna\"");
+        sys.Should().Contain("Relationship/vocabulary replacements");
+        sys.Should().Contain("\"mother\" → \"aunt\"");
+    }
+
+    [Fact]
+    public async Task Relation_word_boundary_prevents_partial_matches()
+    {
+        // "mother" darf nicht "grandmother" oder "smothering" ohne
+        // Word-Boundary matchen — der Regex wraps beide in \b.
+        var provider = new FakeProvider(_ => "{}");
+        var rewriter = new KrosteAiRewriter(provider);
+        var says = new[]
+        {
+            new RpySayStatement("f.rpy", 1, "n", "The smothering heat."),
+            new RpySayStatement("f.rpy", 2, "n", "Mother!"),
+        };
+        var rels = new Dictionary<string, string> { ["Mother"] = "Aunt" };
+        await rewriter.ProposeRewritesAsync(says, new Dictionary<string, string>(), rels,
+            ct: TestContext.Current.CancellationToken);
+        provider.LastUserPrompt.Should().Contain("Mother!");
+        provider.LastUserPrompt.Should().NotContain("smothering");
+    }
+
+    [Fact]
+    public async Task No_terms_at_all_returns_empty_without_provider_call()
+    {
+        int callCount = 0;
+        var provider = new FakeProvider(_ => { callCount++; return "{}"; });
+        var rewriter = new KrosteAiRewriter(provider);
+        var says = new[] { new RpySayStatement("f.rpy", 1, "n", "Text") };
+        var edits = await rewriter.ProposeRewritesAsync(
+            says,
+            new Dictionary<string, string>(),
+            new Dictionary<string, string>(),
+            ct: TestContext.Current.CancellationToken);
+        edits.Should().BeEmpty();
+        callCount.Should().Be(0);
+    }
+
     // ---- Fake ------------------------------------------------------------
 
     private sealed class FakeProvider : IAiProvider
