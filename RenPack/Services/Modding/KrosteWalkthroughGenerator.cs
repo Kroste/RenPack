@@ -218,7 +218,7 @@ public sealed class KrosteWalkthroughGenerator
         }
         sb.AppendLine("    }");
         sb.AppendLine();
-        sb.AppendLine("    def _krostemod_apply_walkthrough_hints():");
+        sb.AppendLine("    def _krostemod_apply_walkthrough_hints(*_args, **_kw):");
         sb.AppendLine("        # Ren'Py's ScriptTranslator-Instanz liegt unter");
         sb.AppendLine("        # renpy.game.script.translator (NICHT direkt in");
         sb.AppendLine("        # renpy.translation — dort ist nur die Klasse).");
@@ -228,19 +228,32 @@ public sealed class KrosteWalkthroughGenerator
         sb.AppendLine("            renpy.notify('krostemod: kein Translator-Zugriff: ' + str(e))");
         sb.AppendLine("            return");
         sb.AppendLine("        patched = 0");
+        sb.AppendLine("        langs_found = []");
         sb.AppendLine("        for lang in krostemod_walkthrough_langs:");
         sb.AppendLine("            stl = strings.get(lang)");
         sb.AppendLine("            if stl is None: continue");
         sb.AppendLine("            translations = getattr(stl, 'translations', None)");
         sb.AppendLine("            if translations is None: continue");
+        sb.AppendLine("            langs_found.append(lang)");
         sb.AppendLine("            for old, new in krostemod_walkthrough_hints.items():");
         sb.AppendLine("                translations[old] = new");
         sb.AppendLine("                patched += 1");
-        sb.AppendLine("        # Log ins Ren'Py-Log damit sichtbar ist ob was gemacht wurde");
-        sb.AppendLine("        try: renpy.log('krostemod walkthrough: {} translation entries patched'.format(patched))");
+        sb.AppendLine("        # Log ins Ren'Py-Log damit sichtbar ist ob was gemacht wurde.");
+        sb.AppendLine("        # renpy.log() geht in log.txt (Debug), plus notify auf Screen.");
+        sb.AppendLine("        try: renpy.log('krostemod walkthrough: patched {} entries across {} langs ({})'.format(");
+        sb.AppendLine("            patched, len(langs_found), ','.join(langs_found)))");
         sb.AppendLine("        except Exception: pass");
         sb.AppendLine();
+        sb.AppendLine("    # Sofort einmal beim Init-Ende ausfuehren.");
         sb.AppendLine("    _krostemod_apply_walkthrough_hints()");
+        sb.AppendLine();
+        sb.AppendLine("    # UND bei jedem Sprach-Wechsel neu — Ren'Py wechselt");
+        sb.AppendLine("    # translations-Dict dynamisch beim `renpy.change_language()`-");
+        sb.AppendLine("    # Aufruf. Ohne diese Hook waere unser Patch nach dem ersten");
+        sb.AppendLine("    # Sprach-Change weg.");
+        sb.AppendLine("    if hasattr(config, 'change_language_callbacks'):");
+        sb.AppendLine("        if _krostemod_apply_walkthrough_hints not in config.change_language_callbacks:");
+        sb.AppendLine("            config.change_language_callbacks.append(_krostemod_apply_walkthrough_hints)");
         File.WriteAllText(filePath, sb.ToString(), new System.Text.UTF8Encoding(false));
         Log.Info("Translation-Hint-Patcher geschrieben: {path} ({count} Strings x {langs} Sprachen)",
             filePath, deduped.Count, tlLanguages.Count);
