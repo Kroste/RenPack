@@ -221,6 +221,121 @@ public sealed class KrosteCheatGeneratorTests : IDisposable
         candidates.Single(c => c.Name == "fcs.morality").DefaultValue.Should().Be("0");
     }
 
+    // ---- Container-Gruppierung (v0.9-Groups) ------------------------------
+
+    [Fact]
+    public void Builds_single_group_when_no_profile_or_no_containers()
+    {
+        // Ohne Profile ODER Profile ohne Container-Flag: alles in einer
+        // Gruppe mit leerem Label — Screen rendert dann ohne Section-Header.
+        var vars = new[]
+        {
+            new CheatCandidate("love", "int", "0"),
+            new CheatCandidate("respect", "int", "0"),
+        };
+        var groups = KrosteCheatGenerator.BuildGroups(vars, profile: null);
+        groups.Should().ContainSingle();
+        groups[0].Label.Should().BeEmpty();
+        groups[0].Vars.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void Groups_by_container_prefix_when_profile_signals_containers()
+    {
+        // Container-Profile + genug dotted Vars → pro Prefix eine Gruppe,
+        // flat Vars in „General" (leeres Label) am Ende.
+        var vars = new[]
+        {
+            new CheatCandidate("fcs.morality", "int", "0"),
+            new CheatCandidate("fcs.desire", "int", "0"),
+            new CheatCandidate("fcs.intrigue", "int", "0"),
+            new CheatCandidate("samantha.love", "int", "0"),
+            new CheatCandidate("keys", "int", "0"),
+        };
+        var profile = new GameProfile(
+            MenuScreenCandidates: new[] { "choice" },
+            HasCharacterContainers: true,
+            DominantChoiceStyle: ChoiceStyle.Mixed,
+            TranslationLanguages: Array.Empty<string>(),
+            DetectedTitle: null);
+        var groups = KrosteCheatGenerator.BuildGroups(vars, profile);
+
+        groups.Should().HaveCount(3);
+        groups[0].Label.Should().Be("fcs");
+        groups[0].Vars.Should().HaveCount(3);
+        groups[1].Label.Should().Be("samantha");
+        groups[1].Vars.Should().ContainSingle();
+        groups[2].Label.Should().BeEmpty(); // General-Gruppe
+        groups[2].Vars.Should().ContainSingle().Which.Name.Should().Be("keys");
+    }
+
+    [Fact]
+    public void Falls_back_to_flat_when_too_few_dotted_vars()
+    {
+        // Weniger als 3 dotted-Vars → keine Gruppierung, wuerde nur
+        // visueller Overhead sein.
+        var vars = new[]
+        {
+            new CheatCandidate("fcs.morality", "int", "0"),
+            new CheatCandidate("fcs.desire", "int", "0"),
+            new CheatCandidate("love", "int", "0"),
+        };
+        var profile = new GameProfile(
+            MenuScreenCandidates: new[] { "choice" },
+            HasCharacterContainers: true,
+            DominantChoiceStyle: ChoiceStyle.Mixed,
+            TranslationLanguages: Array.Empty<string>(),
+            DetectedTitle: null);
+        var groups = KrosteCheatGenerator.BuildGroups(vars, profile);
+        groups.Should().ContainSingle();
+        groups[0].Vars.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public void Screen_iterates_groups_and_shows_section_headers_when_grouped()
+    {
+        // 4 Vars in 2 verschiedenen Containern → 2 Gruppen → Section-Headers.
+        var choices = new List<RpyChoice>
+        {
+            new("f.rpy", 1, "l", 0, 1, 0, "c0", null,
+                new[] { new VarDelta("fcs.morality", "+=", "1") }),
+            new("f.rpy", 2, "l", 0, 1, 1, "c1", null,
+                new[] { new VarDelta("fcs.desire", "+=", "1") }),
+            new("f.rpy", 3, "l", 0, 1, 2, "c2", null,
+                new[] { new VarDelta("samantha.love", "+=", "1") }),
+            new("f.rpy", 4, "l", 0, 1, 3, "c3", null,
+                new[] { new VarDelta("samantha.lust", "+=", "1") }),
+        };
+        var profile = new GameProfile(
+            MenuScreenCandidates: new[] { "choice" },
+            HasCharacterContainers: true,
+            DominantChoiceStyle: ChoiceStyle.Mixed,
+            TranslationLanguages: Array.Empty<string>(),
+            DetectedTitle: "Test");
+        var path = _gen.Generate(_tmp, MakeAnalysis(choices: choices), profile);
+        var content = File.ReadAllText(path);
+
+        content.Should().Contain("krostemod_cheat_groups");
+        content.Should().Contain("for group_label, group_entries in krostemod_cheat_groups:");
+        content.Should().Contain("[group_label]"); // Section-Header wird gerendert
+    }
+
+    [Fact]
+    public void Screen_omits_section_headers_when_flat()
+    {
+        var choice = new RpyChoice("f.rpy", 1, "l", 0, 1, 0, "text", null,
+            new[] { new VarDelta("love", "+=", "1") });
+        var analysis = MakeAnalysis(
+            vars: new[] { new RpyStoreVariable("love", "0", "int") },
+            choices: new[] { choice });
+        var path = _gen.Generate(_tmp, analysis); // kein Profile → keine Gruppierung
+        var content = File.ReadAllText(path);
+
+        content.Should().Contain("krostemod_cheat_groups");
+        // Screen-Loop existiert trotzdem, aber Section-Header wird nicht emitted.
+        content.Should().NotContain("[group_label]");
+    }
+
     [Fact]
     public void Sorts_numeric_vars_before_bool_flags()
     {

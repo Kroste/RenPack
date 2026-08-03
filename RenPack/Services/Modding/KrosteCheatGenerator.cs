@@ -37,27 +37,75 @@ public sealed class KrosteCheatGenerator
     private const string CheatIconResource = "RenPack.Assets.krostemod_cheat.png";
 
     /// <summary>Schreibt die <c>krostemod_cheat.rpy</c> nach
-    /// <paramref name="destDir"/>. Gibt den erzeugten absoluten Pfad zurueck.</summary>
-    public string Generate(string destDir, ModAnalysis analysis)
+    /// <paramref name="destDir"/>. Gibt den erzeugten absoluten Pfad zurueck.
+    /// Wenn <paramref name="profile"/> Container-Stats meldet
+    /// (<c>HasCharacterContainers=true</c>) und die Kandidaten dotted-Names
+    /// enthalten (<c>fcs.morality</c>), wird der Cheat-Screen pro Container
+    /// gruppiert dargestellt — sonst flach wie bisher.</summary>
+    public string Generate(string destDir, ModAnalysis analysis,
+        GameProfile? profile = null)
     {
         Directory.CreateDirectory(destDir);
         var target = Path.Combine(destDir, "krostemod_cheat.rpy");
 
         var cheatVars = SelectCheatCandidates(analysis);
-        Log.Info("KrosteMod-Cheat: {count} Cheat-Kandidaten aus {totalVars} StoreVars",
-            cheatVars.Count, analysis.StoreVariables.Count);
+        var grouped = BuildGroups(cheatVars, profile);
+        Log.Info("KrosteMod-Cheat: {count} Cheat-Kandidaten aus {totalVars} StoreVars, {groups} Gruppe(n)",
+            cheatVars.Count, analysis.StoreVariables.Count, grouped.Count);
 
         var sb = new StringBuilder();
         WriteHeader(sb, cheatVars.Count);
         WriteCheatData(sb, cheatVars);
+        WriteGroupData(sb, grouped);
         WriteHelpers(sb);
-        WriteScreen(sb);
+        WriteScreen(sb, grouped.Count > 1);
         WriteOverlayIconScreen(sb);
         WriteKeymap(sb);
 
         File.WriteAllText(target, sb.ToString());
         ExtractCheatIcon(destDir);
         return target;
+    }
+
+    /// <summary>Baut die Gruppen-Struktur fuer den Screen. Bei
+    /// Container-Games (fcs.morality, samantha.love) landen alle Vars
+    /// mit dem gleichen Praefix in einer Gruppe. Flat-Vars (love, keys)
+    /// kommen in die „General"-Gruppe. Wird nur aktiviert wenn das
+    /// Profile Container-Style meldet UND mindestens 3 dotted-Vars
+    /// existieren — bei zu wenig Container-Kandidaten waere die
+    /// Section-Struktur nur visuelle Zerhackung.</summary>
+    public static IReadOnlyList<CheatGroup> BuildGroups(
+        IReadOnlyList<CheatCandidate> vars, GameProfile? profile)
+    {
+        bool useGroups = profile is { HasCharacterContainers: true } &&
+            vars.Count(v => v.Name.Contains('.')) >= 3;
+
+        if (!useGroups)
+            return [new CheatGroup("", vars)];
+
+        var byPrefix = new Dictionary<string, List<CheatCandidate>>(StringComparer.Ordinal);
+        var flat = new List<CheatCandidate>();
+        foreach (var v in vars)
+        {
+            int dot = v.Name.IndexOf('.');
+            if (dot < 0) flat.Add(v);
+            else
+            {
+                var prefix = v.Name[..dot];
+                if (!byPrefix.TryGetValue(prefix, out var list))
+                    byPrefix[prefix] = list = new List<CheatCandidate>();
+                list.Add(v);
+            }
+        }
+
+        var result = new List<CheatGroup>();
+        // Container-Gruppen alphabetisch — deterministisch fuer Tests.
+        foreach (var prefix in byPrefix.Keys.OrderBy(k => k, StringComparer.Ordinal))
+            result.Add(new CheatGroup(prefix, byPrefix[prefix]));
+        // General-Gruppe (flat vars) am Ende, falls vorhanden.
+        if (flat.Count > 0)
+            result.Add(new CheatGroup("", flat));
+        return result;
     }
 
     private static void ExtractCheatIcon(string destDir)
@@ -200,6 +248,38 @@ public sealed class KrosteCheatGenerator
         sb.AppendLine();
     }
 
+    /// <summary>Emittiert die Gruppen-Tabelle als Python-Liste von
+    /// 2-Tupeln <c>(group_label, [(name, kind, default), ...])</c>. Bei
+    /// nur einer Gruppe rendert der Screen sie ohne Section-Header
+    /// (label ist leerer String). Die Entries sind identisch zu
+    /// <see cref="WriteCheatData"/> — Redundanz ist Absicht, damit der
+    /// Screen mit einer einzigen Iteration alles hat was er braucht
+    /// (Filter, Kind-Check, Anzeige) ohne separaten Dict-Lookup.</summary>
+    private static void WriteGroupData(StringBuilder sb, IReadOnlyList<CheatGroup> groups)
+    {
+        sb.AppendLine("init 985 python:");
+        sb.AppendLine("    krostemod_cheat_groups = [");
+        foreach (var g in groups)
+        {
+            sb.Append("        (");
+            sb.Append(PyStr(g.Label));
+            sb.AppendLine(", [");
+            foreach (var v in g.Vars)
+            {
+                sb.Append("            (");
+                sb.Append(PyStr(v.Name));
+                sb.Append(", ");
+                sb.Append(PyStr(v.Kind));
+                sb.Append(", ");
+                sb.Append(PyDefault(v));
+                sb.AppendLine("),");
+            }
+            sb.AppendLine("        ]),");
+        }
+        sb.AppendLine("    ]");
+        sb.AppendLine();
+    }
+
     /// <summary>Wandelt den Default-Value (String aus dem .rpy) in ein
     /// Python-Literal um. Ren'Py's <c>default X = Y</c> ist Python-Syntax,
     /// also koennen wir die Rohform durchreichen — mit Fallback fuer
@@ -300,13 +380,18 @@ public sealed class KrosteCheatGenerator
         sb.AppendLine();
     }
 
-    private static void WriteScreen(StringBuilder sb)
+    private static void WriteScreen(StringBuilder sb, bool showGroupHeaders)
     {
         sb.AppendLine("default krostemod_cheat_filter = \"\"");
         sb.AppendLine();
         sb.AppendLine("init 987 python:");
         sb.AppendLine("    def krostemod_set_cheat_filter(new_text):");
         sb.AppendLine("        store.krostemod_cheat_filter = new_text or ''");
+        sb.AppendLine();
+        sb.AppendLine("    def krostemod_cheat_filter_group(entries):");
+        sb.AppendLine("        f = (store.krostemod_cheat_filter or '').lower()");
+        sb.AppendLine("        if not f: return entries");
+        sb.AppendLine("        return [e for e in entries if f in e[0].lower()]");
         sb.AppendLine();
         sb.AppendLine("screen krostemod_cheat():");
         sb.AppendLine("    modal True");
@@ -344,24 +429,37 @@ public sealed class KrosteCheatGenerator
         sb.AppendLine("                ysize 550");
         sb.AppendLine("                vbox:");
         sb.AppendLine("                    spacing 4");
-        sb.AppendLine("                    for entry in krostemod_cheat_vars:");
-        sb.AppendLine("                        $ ce_name = entry[0]");
-        sb.AppendLine("                        $ ce_kind = entry[1]");
-        sb.AppendLine("                        if not krostemod_cheat_filter or krostemod_cheat_filter.lower() in ce_name.lower():");
-        sb.AppendLine("                            hbox:");
-        sb.AppendLine("                                spacing 6");
-        sb.AppendLine("                                yalign 0.5");
-        sb.AppendLine($"                                text \"[ce_name]\" size 13 color \"{GoldHex}\" bold True xsize 260");
-        sb.AppendLine("                                text \"=\" size 13 color \"#888888\"");
-        sb.AppendLine("                                text \"[krostemod_cheat_display(ce_name)]\" size 13 color \"#8fcfff\" xsize 140");
-        sb.AppendLine("                                if ce_kind == \"bool\":");
-        sb.AppendLine("                                    textbutton \"Toggle\" action Function(krostemod_cheat_toggle, ce_name) text_size 12");
-        sb.AppendLine("                                else:");
-        sb.AppendLine("                                    textbutton \"-10\" action Function(krostemod_cheat_adjust, ce_name, -10) text_size 12");
-        sb.AppendLine("                                    textbutton \"-1\"  action Function(krostemod_cheat_adjust, ce_name, -1) text_size 12");
-        sb.AppendLine("                                    textbutton \"+1\"  action Function(krostemod_cheat_adjust, ce_name, 1) text_size 12");
-        sb.AppendLine("                                    textbutton \"+10\" action Function(krostemod_cheat_adjust, ce_name, 10) text_size 12");
-        sb.AppendLine("                                textbutton \"reset\" action Function(krostemod_cheat_reset, ce_name) text_size 12");
+        sb.AppendLine("                    for group_label, group_entries in krostemod_cheat_groups:");
+        sb.AppendLine("                        $ ce_visible = krostemod_cheat_filter_group(group_entries)");
+        sb.AppendLine("                        if ce_visible:");
+        if (showGroupHeaders)
+        {
+            sb.AppendLine("                            if group_label:");
+            sb.AppendLine("                                null height 6");
+            sb.AppendLine($"                                text \"[group_label]\" size 15 color \"{GoldHex}\" bold True");
+            sb.AppendLine("                                text \"─\" * 80 size 10 color \"#555555\"");
+            sb.AppendLine("                            else:");
+            sb.AppendLine("                                null height 6");
+            sb.AppendLine($"                                text \"General\" size 15 color \"{GoldHex}\" bold True");
+            sb.AppendLine("                                text \"─\" * 80 size 10 color \"#555555\"");
+        }
+        sb.AppendLine("                            for entry in ce_visible:");
+        sb.AppendLine("                                $ ce_name = entry[0]");
+        sb.AppendLine("                                $ ce_kind = entry[1]");
+        sb.AppendLine("                                hbox:");
+        sb.AppendLine("                                    spacing 6");
+        sb.AppendLine("                                    yalign 0.5");
+        sb.AppendLine($"                                    text \"[ce_name]\" size 13 color \"{GoldHex}\" bold True xsize 260");
+        sb.AppendLine("                                    text \"=\" size 13 color \"#888888\"");
+        sb.AppendLine("                                    text \"[krostemod_cheat_display(ce_name)]\" size 13 color \"#8fcfff\" xsize 140");
+        sb.AppendLine("                                    if ce_kind == \"bool\":");
+        sb.AppendLine("                                        textbutton \"Toggle\" action Function(krostemod_cheat_toggle, ce_name) text_size 12");
+        sb.AppendLine("                                    else:");
+        sb.AppendLine("                                        textbutton \"-10\" action Function(krostemod_cheat_adjust, ce_name, -10) text_size 12");
+        sb.AppendLine("                                        textbutton \"-1\"  action Function(krostemod_cheat_adjust, ce_name, -1) text_size 12");
+        sb.AppendLine("                                        textbutton \"+1\"  action Function(krostemod_cheat_adjust, ce_name, 1) text_size 12");
+        sb.AppendLine("                                        textbutton \"+10\" action Function(krostemod_cheat_adjust, ce_name, 10) text_size 12");
+        sb.AppendLine("                                    textbutton \"reset\" action Function(krostemod_cheat_reset, ce_name) text_size 12");
         sb.AppendLine();
         sb.AppendLine("            null height 6");
         sb.AppendLine("            textbutton \"Close (F11 / ESC)\" action Hide(\"krostemod_cheat\") xalign 1.0 text_size 14");
@@ -439,3 +537,10 @@ public sealed class KrosteCheatGenerator
 /// <summary>Ein Cheat-Kandidat — eine Store-Variable die im Cheat-Screen
 /// erscheinen soll. Kind ist eine von <c>"int" | "float" | "bool"</c>.</summary>
 public sealed record CheatCandidate(string Name, string Kind, string DefaultValue);
+
+/// <summary>Eine Gruppe zusammengehoriger Cheat-Kandidaten. <c>Label</c>
+/// leer = flat/„General"-Gruppe, sonst der Container-Praefix (<c>fcs</c>,
+/// <c>samantha</c>). Wird pro Container gebildet wenn das GameProfile
+/// Container-Style meldet — sonst gibt's genau eine Gruppe mit leerem
+/// Label die den bisherigen Flat-Layout ersetzt.</summary>
+public sealed record CheatGroup(string Label, IReadOnlyList<CheatCandidate> Vars);

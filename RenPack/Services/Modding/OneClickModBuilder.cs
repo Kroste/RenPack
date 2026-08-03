@@ -206,9 +206,12 @@ public sealed class OneClickModBuilder
                     break;
                 case ModTypeId.Cheat:
                     // Cheat-Mod hat kein .rpy-Patching noetig, nur die
-                    // krostemod_cheat.rpy landet im modOut/.
+                    // krostemod_cheat.rpy landet im modOut/. Profile wird
+                    // durchgereicht damit Container-Games (Boundaries,
+                    // fcs.morality etc.) ihre Stats gruppiert nach
+                    // Container-Praefix im Screen sehen.
                     Directory.CreateDirectory(modOut);
-                    _cheat.Generate(modOut, analysis);
+                    _cheat.Generate(modOut, analysis, profile);
                     break;
                 case ModTypeId.Rename:
                     // Rename braucht User-Input NACH der Analyse (Character-
