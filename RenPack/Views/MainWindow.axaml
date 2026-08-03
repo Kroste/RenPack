@@ -249,144 +249,132 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Kein Eintrag ausgewaehlt -->
-                        <TextBlock Text="{loc:Tr Preview_None}" Classes="muted"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"
-                                   IsVisible="{Binding !Preview.HasContent}" />
-
-                        <!-- Placeholder (unbekanntes Format / zu gross / Fehler) -->
-                        <TextBlock Text="{Binding Preview.Placeholder}" Classes="secondary"
-                                   Padding="16" TextWrapping="Wrap"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"
-                                   IsVisible="{Binding Preview.IsPlaceholder}" />
-
-                        <!-- Bild-Preview (Pack G v0.9): Toggle zwischen Fit
-                             (Uniform+DownOnly, zentriert) und Original-Groesse
-                             (Stretch=None, mit Scrollbars). Doppelklick auf
-                             das Bild oder Ctrl+Wheel wechselt den Modus.
-                             Zwei getrennte Container weil ScrollViewer die
-                             Zentrierung bei kleineren Bildern kaputt macht —
-                             im Fit-Modus daher OHNE ScrollViewer. -->
-                        <Image Source="{Binding Preview.ImageContent}"
-                               Stretch="Uniform" StretchDirection="DownOnly"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               Margin="12"
-                               DoubleTapped="OnPreviewImageDoubleTapped"
-                               PointerWheelChanged="OnPreviewImageWheel">
-                            <Image.IsVisible>
-                                <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
-                                    <Binding Path="Preview.IsImage" />
-                                    <Binding Path="!Preview.ImageOriginalSize" />
-                                </MultiBinding>
-                            </Image.IsVisible>
-                        </Image>
-                        <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                                      VerticalScrollBarVisibility="Auto">
-                            <ScrollViewer.IsVisible>
-                                <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
-                                    <Binding Path="Preview.IsImage" />
-                                    <Binding Path="Preview.ImageOriginalSize" />
-                                </MultiBinding>
-                            </ScrollViewer.IsVisible>
-                            <Image Source="{Binding Preview.ImageContent}"
-                                   Stretch="None"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   Margin="12"
-                                   DoubleTapped="OnPreviewImageDoubleTapped"
-                                   PointerWheelChanged="OnPreviewImageWheel" />
-                        </ScrollViewer>
-
-                        <!-- Video/Audio-Preview: Standbild (ffmpeg-Frame-Grab)
-                             fuer Video wird direkt ueber die Image-Preview
-                             oben gezeigt (IsImage=true). Wenn ffmpeg fehlt
-                             oder das Frame nicht klappt, kommt ein grosses
-                             Emoji-Icon als Fallback. Playback laeuft ueber
-                             den System-Default-Player (VLC/mpv/QuickTime)
-                             via Process.Start(useShellExecute) — kein
-                             LibVLC-Deployment-Kram.
-                             Icons + Hint als Overlay im DockPanel — Play-
-                             Buttons als eigenes Dock=Bottom, sonst wuerde
-                             das Standbild-Image sie ueberdecken. -->
-                        <TextBlock Text="🎬" FontSize="96"
-                                   Foreground="{DynamicResource KrosteGoldBrush}"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center">
-                            <TextBlock.IsVisible>
-                                <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
-                                    <Binding Path="Preview.IsMedia" />
-                                    <Binding Path="!Preview.IsImage" />
-                                    <Binding Path="!Preview.IsAudioOnly" />
-                                </MultiBinding>
-                            </TextBlock.IsVisible>
-                        </TextBlock>
-                        <TextBlock Text="🎵" FontSize="96"
-                                   Foreground="{DynamicResource KrosteGoldBrush}"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   IsVisible="{Binding Preview.IsAudioOnly}" />
-                        <TextBlock Text="{loc:Tr Preview_FfmpegMissing}"
-                                   Classes="secondary"
-                                   Padding="24,140,24,0" TextWrapping="Wrap"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   MaxWidth="480">
-                            <TextBlock.IsVisible>
-                                <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
-                                    <Binding Path="Preview.IsMedia" />
-                                    <Binding Path="!Preview.IsAudioOnly" />
-                                    <Binding Path="!Preview.CanInlinePlay" />
-                                </MultiBinding>
-                            </TextBlock.IsVisible>
-                        </TextBlock>
-                        <!-- Play-Buttons als Dock=Bottom, bleiben immer unter
-                             dem Standbild sichtbar. -->
+                        <!-- Play-Buttons als Dock=Bottom, garantiert immer
+                             unten sichtbar unabhaengig von Standbild-Groesse. -->
                         <StackPanel DockPanel.Dock="Bottom"
                                     Orientation="Horizontal"
                                     HorizontalAlignment="Center"
                                     Margin="0,10,0,12" Spacing="8"
                                     IsVisible="{Binding Preview.IsMedia}">
-                                <!-- Inline-Playback (ffmpeg-Frame-Stream, ~12fps,
-                                     kein Audio). Nur fuer Video, nicht Audio-only.
-                                     Play/Pause-Toggle per zwei Buttons statt Content-
-                                     Converter. -->
-                                <!-- CanInlinePlay = Video UND ffmpeg installiert.
-                                     Ohne ffmpeg macht Inline keinen Sinn und
-                                     wuerde beim Klick krachen. -->
-                                <Button Content="{loc:Tr Preview_PlayInline}"
-                                        Command="{Binding Preview.ToggleInlinePlaybackCommand}"
-                                        ToolTip.Tip="{loc:Tr Preview_PlayInline_Tip}">
-                                    <Button.IsVisible>
-                                        <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
-                                            <Binding Path="Preview.CanInlinePlay" />
-                                            <Binding Path="!Preview.IsPlayingInline" />
-                                        </MultiBinding>
-                                    </Button.IsVisible>
-                                </Button>
-                                <Button IsVisible="{Binding Preview.IsPlayingInline}"
-                                        Content="{loc:Tr Preview_PauseInline}"
-                                        Command="{Binding Preview.ToggleInlinePlaybackCommand}"
-                                        ToolTip.Tip="{loc:Tr Preview_PauseInline_Tip}" />
-                                <Button Classes="accent"
-                                        Content="{loc:Tr Preview_PlayExternal}"
-                                        Command="{Binding Preview.PlayExternalCommand}"
-                                        ToolTip.Tip="{loc:Tr Preview_PlayExternal_Tip}" />
+                            <Button Content="{loc:Tr Preview_PlayInline}"
+                                    Command="{Binding Preview.ToggleInlinePlaybackCommand}"
+                                    ToolTip.Tip="{loc:Tr Preview_PlayInline_Tip}">
+                                <Button.IsVisible>
+                                    <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                        <Binding Path="Preview.CanInlinePlay" />
+                                        <Binding Path="!Preview.IsPlayingInline" />
+                                    </MultiBinding>
+                                </Button.IsVisible>
+                            </Button>
+                            <Button IsVisible="{Binding Preview.IsPlayingInline}"
+                                    Content="{loc:Tr Preview_PauseInline}"
+                                    Command="{Binding Preview.ToggleInlinePlaybackCommand}"
+                                    ToolTip.Tip="{loc:Tr Preview_PauseInline_Tip}" />
+                            <Button Classes="accent"
+                                    Content="{loc:Tr Preview_PlayExternal}"
+                                    Command="{Binding Preview.PlayExternalCommand}"
+                                    ToolTip.Tip="{loc:Tr Preview_PlayExternal_Tip}" />
                         </StackPanel>
 
-                        <!-- Text-Preview: monospaced, scrollbar. -->
-                        <ScrollViewer IsVisible="{Binding Preview.IsText}"
-                                      HorizontalScrollBarVisibility="Auto">
-                            <TextBox Text="{Binding Preview.TextContent, Mode=OneWay}"
-                                     IsReadOnly="True"
-                                     FontFamily="Cascadia Mono,Consolas,Menlo,DejaVu Sans Mono,monospace"
-                                     FontSize="12"
-                                     BorderThickness="0"
-                                     Background="Transparent"
-                                     Padding="12"
-                                     TextWrapping="NoWrap"
-                                     AcceptsReturn="True" />
-                        </ScrollViewer>
+                        <!-- Overlay-Container: alle Content-Layer als Grid
+                             uebereinander. DockPanel wuerde bei mehreren
+                             Fill-Kindern chaotisch layouten (LastChildFill
+                             greift nur einmal). Grid ohne RowDef/ColDef =
+                             alle Kinder in einer Zelle, Z-Order = XAML-
+                             Reihenfolge. -->
+                        <Grid>
+                            <TextBlock Text="{loc:Tr Preview_None}" Classes="muted"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       IsVisible="{Binding !Preview.HasContent}" />
+
+                            <TextBlock Text="{Binding Preview.Placeholder}" Classes="secondary"
+                                       Padding="16" TextWrapping="Wrap"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       IsVisible="{Binding Preview.IsPlaceholder}" />
+
+                            <!-- Video ohne Standbild: 🎬-Icon -->
+                            <TextBlock Text="🎬" FontSize="96"
+                                       Foreground="{DynamicResource KrosteGoldBrush}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center">
+                                <TextBlock.IsVisible>
+                                    <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                        <Binding Path="Preview.IsMedia" />
+                                        <Binding Path="!Preview.IsImage" />
+                                        <Binding Path="!Preview.IsAudioOnly" />
+                                    </MultiBinding>
+                                </TextBlock.IsVisible>
+                            </TextBlock>
+                            <TextBlock Text="🎵" FontSize="96"
+                                       Foreground="{DynamicResource KrosteGoldBrush}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       IsVisible="{Binding Preview.IsAudioOnly}" />
+
+                            <!-- Video ohne ffmpeg: Install-Hinweis -->
+                            <TextBlock Text="{loc:Tr Preview_FfmpegMissing}"
+                                       Classes="secondary"
+                                       Padding="24" TextWrapping="Wrap"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       MaxWidth="480">
+                                <TextBlock.IsVisible>
+                                    <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                        <Binding Path="Preview.IsMedia" />
+                                        <Binding Path="!Preview.IsAudioOnly" />
+                                        <Binding Path="!Preview.CanInlinePlay" />
+                                    </MultiBinding>
+                                </TextBlock.IsVisible>
+                            </TextBlock>
+
+                            <!-- Bild-Preview Fit-Modus (default) -->
+                            <Image Source="{Binding Preview.ImageContent}"
+                                   Stretch="Uniform" StretchDirection="DownOnly"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Margin="12"
+                                   DoubleTapped="OnPreviewImageDoubleTapped"
+                                   PointerWheelChanged="OnPreviewImageWheel">
+                                <Image.IsVisible>
+                                    <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                        <Binding Path="Preview.IsImage" />
+                                        <Binding Path="!Preview.ImageOriginalSize" />
+                                    </MultiBinding>
+                                </Image.IsVisible>
+                            </Image>
+
+                            <!-- Bild-Preview Original-Modus (Doppelklick / Ctrl+Wheel) -->
+                            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Auto">
+                                <ScrollViewer.IsVisible>
+                                    <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                        <Binding Path="Preview.IsImage" />
+                                        <Binding Path="Preview.ImageOriginalSize" />
+                                    </MultiBinding>
+                                </ScrollViewer.IsVisible>
+                                <Image Source="{Binding Preview.ImageContent}"
+                                       Stretch="None"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Margin="12"
+                                       DoubleTapped="OnPreviewImageDoubleTapped"
+                                       PointerWheelChanged="OnPreviewImageWheel" />
+                            </ScrollViewer>
+
+                            <!-- Text-Preview -->
+                            <ScrollViewer IsVisible="{Binding Preview.IsText}"
+                                          HorizontalScrollBarVisibility="Auto">
+                                <TextBox Text="{Binding Preview.TextContent, Mode=OneWay}"
+                                         IsReadOnly="True"
+                                         FontFamily="Cascadia Mono,Consolas,Menlo,DejaVu Sans Mono,monospace"
+                                         FontSize="12"
+                                         BorderThickness="0"
+                                         Background="Transparent"
+                                         Padding="12"
+                                         TextWrapping="NoWrap"
+                                         AcceptsReturn="True" />
+                            </ScrollViewer>
+                        </Grid>
                     </DockPanel>
                 </Border>
             </Grid>
