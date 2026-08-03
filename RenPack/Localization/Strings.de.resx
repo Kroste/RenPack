@@ -130,6 +130,10 @@
   <data name="Preview_LoadFailed" xml:space="preserve"><value>Vorschau konnte nicht geladen werden.</value></data>
   <data name="Preview_PlayExternal" xml:space="preserve"><value>▶ Im Standard-Player abspielen</value></data>
   <data name="Preview_PlayExternal_Tip" xml:space="preserve"><value>Öffnet die Datei im System-Default-Player (VLC, mpv, Windows Media Player…)</value></data>
+  <data name="Preview_PlayInline" xml:space="preserve"><value>▶ Inline abspielen</value></data>
+  <data name="Preview_PlayInline_Tip" xml:space="preserve"><value>Spielt das Video inline mit reduzierter Bildrate (12 fps, ohne Ton) via ffmpeg. Braucht ffmpeg im PATH.</value></data>
+  <data name="Preview_PauseInline" xml:space="preserve"><value>⏸ Pause</value></data>
+  <data name="Preview_PauseInline_Tip" xml:space="preserve"><value>Stoppt die Inline-Video-Vorschau.</value></data>
   <data name="Ctx_Extract" xml:space="preserve"><value>Diese Datei entpacken…</value></data>
   <data name="Ctx_CopyPath" xml:space="preserve"><value>Pfad kopieren</value></data>
   <data name="Status_PathCopiedFormat" xml:space="preserve"><value>Pfad kopiert: {0}</value></data>

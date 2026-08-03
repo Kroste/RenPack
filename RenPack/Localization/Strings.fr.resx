@@ -130,6 +130,10 @@
   <data name="Preview_LoadFailed" xml:space="preserve"><value>Impossible de charger l'aperçu.</value></data>
   <data name="Preview_PlayExternal" xml:space="preserve"><value>▶ Lire dans le lecteur par défaut</value></data>
   <data name="Preview_PlayExternal_Tip" xml:space="preserve"><value>Ouvre le fichier dans le lecteur par défaut du système (VLC, mpv, Windows Media Player…)</value></data>
+  <data name="Preview_PlayInline" xml:space="preserve"><value>▶ Aperçu inline</value></data>
+  <data name="Preview_PlayInline_Tip" xml:space="preserve"><value>Lit la vidéo en ligne à cadence réduite (12 fps, sans audio) via ffmpeg. Nécessite ffmpeg dans le PATH.</value></data>
+  <data name="Preview_PauseInline" xml:space="preserve"><value>⏸ Pause</value></data>
+  <data name="Preview_PauseInline_Tip" xml:space="preserve"><value>Arrête l'aperçu vidéo en ligne.</value></data>
   <data name="Ctx_Extract" xml:space="preserve"><value>Extraire ce fichier…</value></data>
   <data name="Ctx_CopyPath" xml:space="preserve"><value>Copier le chemin</value></data>
   <data name="Status_PathCopiedFormat" xml:space="preserve"><value>Chemin copié : {0}</value></data>

@@ -7,6 +7,7 @@
         xmlns:chrome="using:Avalonia.Controls.Chrome"
         xmlns:vm="using:RenPack.ViewModels"
         xmlns:loc="using:RenPack.Localization"
+        xmlns:conv="using:Avalonia.Data.Converters"
         mc:Ignorable="d" d:DesignWidth="960" d:DesignHeight="660"
         x:Class="RenPack.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
@@ -286,12 +287,33 @@
                                        Foreground="{DynamicResource KrosteGoldBrush}"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center" />
-                            <Button Grid.Row="1" Classes="accent"
-                                    Content="{loc:Tr Preview_PlayExternal}"
-                                    Command="{Binding Preview.PlayExternalCommand}"
-                                    HorizontalAlignment="Center"
-                                    Margin="0,10,0,12"
-                                    ToolTip.Tip="{loc:Tr Preview_PlayExternal_Tip}" />
+                            <StackPanel Grid.Row="1" Orientation="Horizontal"
+                                        HorizontalAlignment="Center"
+                                        Margin="0,10,0,12" Spacing="8">
+                                <!-- Inline-Playback (ffmpeg-Frame-Stream, ~12fps,
+                                     kein Audio). Nur fuer Video, nicht Audio-only.
+                                     Play/Pause-Toggle per zwei Buttons statt Content-
+                                     Converter. -->
+                                <Button IsVisible="{Binding !Preview.IsAudioOnly}"
+                                        Content="{loc:Tr Preview_PlayInline}"
+                                        Command="{Binding Preview.ToggleInlinePlaybackCommand}"
+                                        ToolTip.Tip="{loc:Tr Preview_PlayInline_Tip}">
+                                    <Button.IsVisible>
+                                        <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                            <Binding Path="!Preview.IsAudioOnly" />
+                                            <Binding Path="!Preview.IsPlayingInline" />
+                                        </MultiBinding>
+                                    </Button.IsVisible>
+                                </Button>
+                                <Button IsVisible="{Binding Preview.IsPlayingInline}"
+                                        Content="{loc:Tr Preview_PauseInline}"
+                                        Command="{Binding Preview.ToggleInlinePlaybackCommand}"
+                                        ToolTip.Tip="{loc:Tr Preview_PauseInline_Tip}" />
+                                <Button Classes="accent"
+                                        Content="{loc:Tr Preview_PlayExternal}"
+                                        Command="{Binding Preview.PlayExternalCommand}"
+                                        ToolTip.Tip="{loc:Tr Preview_PlayExternal_Tip}" />
+                            </StackPanel>
                         </Grid>
 
                         <!-- Text-Preview: monospaced, scrollbar. -->

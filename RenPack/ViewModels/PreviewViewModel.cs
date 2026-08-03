@@ -1,5 +1,6 @@
 using System.Text;
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NLog;
@@ -61,6 +62,11 @@ public sealed partial class PreviewViewModel : ObservableObject
     [ObservableProperty] private bool _isMedia;
     [ObservableProperty] private bool _isAudioOnly;
 
+    /// <summary>Inline-Playback laeuft gerade (ffmpeg-Frame-Stream).
+    /// Steuert Button-Beschriftung ▶/⏸ und verhindert Doppel-Start.</summary>
+    [ObservableProperty] private bool _isPlayingInline;
+    private CancellationTokenSource? _inlinePlayCts;
+
     public bool IsText => TextContent is not null;
     public bool IsImage => ImageContent is not null;
     public bool IsPlaceholder => Placeholder is not null;
@@ -80,6 +86,7 @@ public sealed partial class PreviewViewModel : ObservableObject
 
     public void Clear()
     {
+        StopInlinePlayback();
         TextContent = null;
         ImageContent = null;
         Placeholder = null;
@@ -88,6 +95,14 @@ public sealed partial class PreviewViewModel : ObservableObject
         IsMedia = false;
         IsAudioOnly = false;
         CleanupMediaTempFile();
+    }
+
+    private void StopInlinePlayback()
+    {
+        try { _inlinePlayCts?.Cancel(); } catch { }
+        _inlinePlayCts?.Dispose();
+        _inlinePlayCts = null;
+        IsPlayingInline = false;
     }
 
     private void CleanupMediaTempFile()
@@ -194,6 +209,46 @@ public sealed partial class PreviewViewModel : ObservableObject
     {
         if (_media is null || _currentMediaTempPath is null) return;
         _media.OpenExternal(_currentMediaTempPath);
+    }
+
+    /// <summary>Toggle fuer Inline-Video-Playback via ffmpeg-Frame-Stream
+    /// (kein Audio, 12fps Preview-Quali). Ersetzt das erste Frame durch
+    /// eine Bitmap-Reihe im gleichen Image-Widget. Bei Doppelklick pausiert.</summary>
+    [RelayCommand]
+    private async Task ToggleInlinePlaybackAsync()
+    {
+        if (IsPlayingInline)
+        {
+            StopInlinePlayback();
+            return;
+        }
+        if (_media is null || _currentMediaTempPath is null || !_media.HasFfmpeg
+            || IsAudioOnly) return;
+
+        _inlinePlayCts = new CancellationTokenSource();
+        var ct = _inlinePlayCts.Token;
+        IsPlayingInline = true;
+        string path = _currentMediaTempPath;
+
+        try
+        {
+            await foreach (var jpeg in _media.StreamFramesAsync(path, fps: 12, ct))
+            {
+                ct.ThrowIfCancellationRequested();
+                Bitmap bmp;
+                using (var ms = new MemoryStream(jpeg)) bmp = new Bitmap(ms);
+                await Dispatcher.UIThread.InvokeAsync(() => ImageContent = bmp);
+            }
+        }
+        catch (OperationCanceledException) { /* normal: Stop-Klick */ }
+        catch (Exception ex)
+        {
+            Log.Warn(ex, "Inline-Playback fehlgeschlagen: {path}", path);
+        }
+        finally
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => IsPlayingInline = false);
+        }
     }
 
     private static string DecodeText(byte[] bytes)
