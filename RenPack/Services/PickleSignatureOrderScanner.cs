@@ -4,55 +4,57 @@ using System.Text;
 namespace RenPack.Services;
 
 /// <summary>
-/// Mini-Pickle-VM zum Extrahieren der Insertion-Order von
-/// <c>renpy.parameter.Signature.parameters</c>-Dicts.
+/// Ergebnis von <see cref="PickleSignatureOrderScanner.Scan"/> — Queues in
+/// pickle-DFS-Order fuer die verschiedenen Dict-Felder, die von der
+/// Hashtable-Order-Umsortierung betroffen sind.
+/// </summary>
+public sealed class PickleDictOrderResult
+{
+    /// <summary><c>renpy.parameter.Signature.parameters</c> — Label/Screen-Params.</summary>
+    public Queue<List<string>> SignatureParameters { get; } = new();
+
+    /// <summary><c>renpy.ast.Style.properties</c> — Style-Properties.</summary>
+    public Queue<List<string>> StyleProperties { get; } = new();
+}
+
+/// <summary>
+/// Mini-Pickle-VM zum Extrahieren der Insertion-Order von Ren'Py-Dicts, die
+/// von der <see cref="System.Collections.Hashtable"/>-Bucket-Order-Falle
+/// betroffen sind:
 ///
-/// Razorvine.Pickle materialisiert Python-Dicts als <see cref="System.Collections.Hashtable"/>,
-/// dessen Iteration in Hash-Bucket-Order laeuft. Ren'Py's Signature speichert
-/// die Label/Screen-Parameter aber als OrderedDict (Insertion-Order = Quellcode-
-/// Reihenfolge). Ergebnis: der dekompilierte <c>label X(a, b)</c> wird zu
-/// <c>label X(b, a)</c> — mit Positional-Bindung des Callers <c>call X(1, 2)</c>
-/// dann falsche Params. Verifiziert an Interview Desires 0.23:
-/// <c>label try_unlock_truth(index, unlocked_list)</c> muesste sein
-/// <c>(unlocked_list, index)</c>.
+/// <list type="bullet">
+///   <item><c>renpy.parameter.Signature.parameters</c> — kritisch, weil
+///     label/screen-Params per Position gebunden werden.</item>
+///   <item><c>renpy.ast.Style.properties</c> — kosmetisch, aber wichtig
+///     fuer Diff-freundliche Decompile-Ausgabe.</item>
+/// </list>
 ///
-/// Fix: wir scannen die Pickle-Bytes ein zweites Mal mit einem winzigen
-/// eigenen Interpreter, der NUR das noetige Minimum aus dem Pickle-Protokoll
-/// versteht, um Signature-BUILD-Events zu erkennen und die Insertion-Order
-/// der Sub-Dict-Keys herauszuziehen.
-///
-/// Rueckgabe ist eine <see cref="Queue{T}"/> aller Signature-Param-Namen in
-/// pickle-DFS-Order — der Decompiler dequeueed pro AST-Signature einen Eintrag.
-///
-/// Klassen die wir tracken: nur die Signature-Kette. Andere Objekte werden
-/// als <c>null</c>/generisches <see cref="Instance"/> gepusht, damit die
-/// Stack-Balance stimmt aber ihre Struktur uns nicht kuemmert.
+/// Razorvine.Pickle nutzt intern Hashtable und verliert die Insertion-Order.
+/// Wir scannen die Pickle-Bytes ein zweites Mal mit einer minimalen eigenen
+/// VM und emittieren die Reihenfolge pro Instanz in pickle-DFS-Order.
 /// </summary>
 public static class PickleSignatureOrderScanner
 {
-    private const string SignatureClassName = "Signature";
-    private const string SignatureModuleName = "renpy.parameter";
-    private const string ParametersFieldName = "parameters";
+    // Kombinationen (Module, Klasse, StateField) die wir tracken. Alle
+    // haben denselben Zugriffs-Pfad: BUILD auf Instanz, state ist Tuple
+    // (slots, dict), dict[field] ist der Sub-Dict dessen Reihenfolge wir
+    // brauchen.
+    private const string SigModule = "renpy.parameter";
+    private const string SigClass = "Signature";
+    private const string SigField = "parameters";
+    private const string StyleModule = "renpy.ast";
+    private const string StyleClass = "Style";
+    private const string StyleField = "properties";
 
     private static readonly object MarkSentinel = new();
 
-    /// <summary>Class-Ref-Marker: STACK_GLOBAL/GLOBAL laed hiermit eine
-    /// Klassen-Referenz auf den Stack. NEWOBJ liest ihn spaeter, um zu
-    /// wissen welche Klasse instanziiert wird.</summary>
     private sealed record ClassRef(string Module, string Name);
 
-    /// <summary>Marker fuer ein per NEWOBJ/REDUCE erzeugtes Objekt. Wenn
-    /// spaeter BUILD auf dieses Objekt angewendet wird und die Klasse
-    /// <c>renpy.parameter.Signature</c> ist, extrahieren wir die Param-Order
-    /// aus dem State.</summary>
     private sealed class Instance
     {
         public required ClassRef Class { get; init; }
     }
 
-    /// <summary>Marker fuer einen Dict — sammelt (Key, Value)-Paare in
-    /// Insertion-Order. Values koennen andere <see cref="OrderedDictMarker"/>-
-    /// Instanzen oder beliebige Objekte sein.</summary>
     private sealed class OrderedDictMarker
     {
         public List<KeyValuePair<object?, object?>> Entries { get; } = new();
@@ -71,18 +73,22 @@ public static class PickleSignatureOrderScanner
         }
     }
 
-    /// <summary>Tuple-Marker mit den enthaltenen Elementen (fuer TUPLE1/2/3/TUPLE).</summary>
     private sealed class TupleMarker
     {
         public required object?[] Items { get; init; }
     }
 
-    public static Queue<List<string>> Scan(byte[] pickle)
+    /// <summary>Convenience-Overload — liefert nur die Signature-Params-Queue
+    /// (Backward-Compat fuer Aufrufer die nichts weiter brauchen).</summary>
+    public static Queue<List<string>> Scan(byte[] pickle) => ScanAll(pickle).SignatureParameters;
+
+    /// <summary>Voller Scan — liefert alle getrackten Dict-Reihenfolgen.</summary>
+    public static PickleDictOrderResult ScanAll(byte[] pickle)
     {
         var stack = new List<object?>(64);
         var memo = new Dictionary<int, object?>(256);
         int nextMemoAuto = 0;
-        var result = new Queue<List<string>>();
+        var result = new PickleDictOrderResult();
         int pos = 0;
 
         while (pos < pickle.Length)
@@ -105,7 +111,6 @@ public static class PickleSignatureOrderScanner
                     stack.Add(stack[^1]);
                     break;
 
-                // === Push scalars ===
                 case 0x4E: // NONE
                     stack.Add(null); break;
                 case 0x88: // NEWTRUE
@@ -113,16 +118,15 @@ public static class PickleSignatureOrderScanner
                 case 0x89: // NEWFALSE
                     stack.Add(false); break;
 
-                // === Ints ===
-                case 0x49: // INT (text, \n-term)
+                case 0x49: // INT (text)
                     stack.Add(null); pos = SkipUntilNewline(pickle, pos); break;
-                case 0x4A: // BININT (4-byte signed)
+                case 0x4A: // BININT
                     stack.Add(null); pos += 4; break;
                 case 0x4B: // BININT1
                     stack.Add(null); pos += 1; break;
                 case 0x4D: // BININT2
                     stack.Add(null); pos += 2; break;
-                case 0x4C: // LONG (text)
+                case 0x4C: // LONG
                     stack.Add(null); pos = SkipUntilNewline(pickle, pos); break;
                 case 0x8A: // LONG1
                     {
@@ -138,16 +142,14 @@ public static class PickleSignatureOrderScanner
                     }
                     break;
 
-                // === Floats ===
                 case 0x46: // FLOAT (text)
                     stack.Add(null); pos = SkipUntilNewline(pickle, pos); break;
-                case 0x47: // BINFLOAT (8 bytes big-endian)
+                case 0x47: // BINFLOAT (8-byte big-endian)
                     stack.Add(null); pos += 8; break;
 
-                // === Strings (bytes / ascii) ===
-                case 0x53: // STRING (text, quoted, \n-term)
+                case 0x53: // STRING (text)
                     stack.Add(null); pos = SkipUntilNewline(pickle, pos); break;
-                case 0x54: // BINSTRING (4-byte len, ascii)
+                case 0x54: // BINSTRING (4-byte)
                     {
                         int len = BinaryPrimitives.ReadInt32LittleEndian(pickle.AsSpan(pos, 4));
                         pos += 4;
@@ -163,8 +165,7 @@ public static class PickleSignatureOrderScanner
                     }
                     break;
 
-                // === Bytes ===
-                case 0x42: // BINBYTES (4-byte len)
+                case 0x42: // BINBYTES
                     {
                         int len = BinaryPrimitives.ReadInt32LittleEndian(pickle.AsSpan(pos, 4));
                         pos += 4; pos += len;
@@ -177,7 +178,7 @@ public static class PickleSignatureOrderScanner
                         stack.Add(null);
                     }
                     break;
-                case 0x8E: // BINBYTES8 (8-byte len)
+                case 0x8E: // BINBYTES8 (8-byte)
                     {
                         long len = BinaryPrimitives.ReadInt64LittleEndian(pickle.AsSpan(pos, 8));
                         pos += 8; pos += (int)len;
@@ -192,10 +193,9 @@ public static class PickleSignatureOrderScanner
                     }
                     break;
 
-                // === Unicode ===
-                case 0x56: // UNICODE (text, escaped, \n-term)
+                case 0x56: // UNICODE (text)
                     stack.Add(null); pos = SkipUntilNewline(pickle, pos); break;
-                case 0x58: // BINUNICODE (4-byte len utf8)
+                case 0x58: // BINUNICODE (4-byte)
                     {
                         int len = BinaryPrimitives.ReadInt32LittleEndian(pickle.AsSpan(pos, 4));
                         pos += 4;
@@ -210,7 +210,7 @@ public static class PickleSignatureOrderScanner
                         pos += len;
                     }
                     break;
-                case 0x8D: // BINUNICODE8 (8-byte len utf8)
+                case 0x8D: // BINUNICODE8 (8-byte)
                     {
                         long len = BinaryPrimitives.ReadInt64LittleEndian(pickle.AsSpan(pos, 8));
                         pos += 8;
@@ -219,7 +219,6 @@ public static class PickleSignatureOrderScanner
                     }
                     break;
 
-                // === Containers ===
                 case 0x29: // EMPTY_TUPLE
                     stack.Add(new TupleMarker { Items = Array.Empty<object?>() });
                     break;
@@ -258,9 +257,9 @@ public static class PickleSignatureOrderScanner
                         stack.Add(new TupleMarker { Items = new[] { a, b, c } });
                     }
                     break;
-                case 0x6C: // LIST (mark-based)
+                case 0x6C: // LIST
                     PopToMark(stack); stack.Add(null); break;
-                case 0x64: // DICT (mark-based) — pairs (k, v, k, v, ...)
+                case 0x64: // DICT (mark-based)
                     {
                         var items = PopToMark(stack);
                         var d = new OrderedDictMarker();
@@ -270,19 +269,17 @@ public static class PickleSignatureOrderScanner
                     }
                     break;
 
-                // === List / Set operations (Stack sauber halten) ===
-                case 0x61: // APPEND — pop v, list-top stays
+                case 0x61: // APPEND
                     if (stack.Count > 0) stack.RemoveAt(stack.Count - 1);
                     break;
-                case 0x65: // APPENDS — pop items back to mark
+                case 0x65: // APPENDS
                     PopToMark(stack);
                     break;
                 case 0x90: // ADDITEMS
                     PopToMark(stack);
                     break;
 
-                // === Dict operations ===
-                case 0x73: // SETITEM — pop v, pop k, top is dict
+                case 0x73: // SETITEM
                     {
                         var v = stack[^1]; stack.RemoveAt(stack.Count - 1);
                         var k = stack[^1]; stack.RemoveAt(stack.Count - 1);
@@ -290,7 +287,7 @@ public static class PickleSignatureOrderScanner
                             d.Entries.Add(new KeyValuePair<object?, object?>(k, v));
                     }
                     break;
-                case 0x75: // SETITEMS — pop items back to mark, apply pairs
+                case 0x75: // SETITEMS
                     {
                         var items = PopToMark(stack);
                         if (stack[^1] is OrderedDictMarker d)
@@ -301,7 +298,6 @@ public static class PickleSignatureOrderScanner
                     }
                     break;
 
-                // === Memo ===
                 case 0x67: // GET (text)
                     {
                         int end = FindNewline(pickle, pos);
@@ -310,13 +306,13 @@ public static class PickleSignatureOrderScanner
                         stack.Add(memo.TryGetValue(idx, out var v) ? v : null);
                     }
                     break;
-                case 0x68: // BINGET (1-byte)
+                case 0x68: // BINGET
                     {
                         int idx = pickle[pos++];
                         stack.Add(memo.TryGetValue(idx, out var v) ? v : null);
                     }
                     break;
-                case 0x6A: // LONG_BINGET (4-byte)
+                case 0x6A: // LONG_BINGET
                     {
                         int idx = BinaryPrimitives.ReadInt32LittleEndian(pickle.AsSpan(pos, 4));
                         pos += 4;
@@ -345,8 +341,7 @@ public static class PickleSignatureOrderScanner
                     memo[nextMemoAuto++] = stack[^1];
                     break;
 
-                // === Class / Object ===
-                case 0x63: // GLOBAL (module\nname\n)
+                case 0x63: // GLOBAL
                     {
                         int end1 = FindNewline(pickle, pos);
                         string mod = Encoding.UTF8.GetString(pickle, pos, end1 - pos);
@@ -357,14 +352,14 @@ public static class PickleSignatureOrderScanner
                         stack.Add(new ClassRef(mod, name));
                     }
                     break;
-                case 0x93: // STACK_GLOBAL — pop name, pop module, push ref
+                case 0x93: // STACK_GLOBAL
                     {
                         var name = stack[^1] as string; stack.RemoveAt(stack.Count - 1);
                         var mod = stack[^1] as string; stack.RemoveAt(stack.Count - 1);
                         stack.Add(new ClassRef(mod ?? "", name ?? ""));
                     }
                     break;
-                case 0x69: // INST (module\nname\n, then args from mark)
+                case 0x69: // INST
                     {
                         int end1 = FindNewline(pickle, pos);
                         string mod = Encoding.UTF8.GetString(pickle, pos, end1 - pos);
@@ -372,11 +367,11 @@ public static class PickleSignatureOrderScanner
                         int end2 = FindNewline(pickle, pos);
                         string name = Encoding.UTF8.GetString(pickle, pos, end2 - pos);
                         pos = end2 + 1;
-                        PopToMark(stack); // args
+                        PopToMark(stack);
                         stack.Add(new Instance { Class = new ClassRef(mod, name) });
                     }
                     break;
-                case 0x6F: // OBJ (mark, class, args → REDUCE)
+                case 0x6F: // OBJ
                     {
                         var items = PopToMark(stack);
                         var cls = items.Length > 0 ? items[0] as ClassRef : null;
@@ -385,9 +380,9 @@ public static class PickleSignatureOrderScanner
                             : (object?)null);
                     }
                     break;
-                case 0x52: // REDUCE — pop args, pop callable, push result
+                case 0x52: // REDUCE
                     {
-                        stack.RemoveAt(stack.Count - 1); // args
+                        stack.RemoveAt(stack.Count - 1);
                         var cls = stack[^1] as ClassRef;
                         stack.RemoveAt(stack.Count - 1);
                         stack.Add(cls is not null
@@ -395,9 +390,9 @@ public static class PickleSignatureOrderScanner
                             : (object?)null);
                     }
                     break;
-                case 0x81: // NEWOBJ — pop args, pop class, push instance
+                case 0x81: // NEWOBJ
                     {
-                        stack.RemoveAt(stack.Count - 1); // args
+                        stack.RemoveAt(stack.Count - 1);
                         var cls = stack[^1] as ClassRef;
                         stack.RemoveAt(stack.Count - 1);
                         stack.Add(cls is not null
@@ -405,10 +400,10 @@ public static class PickleSignatureOrderScanner
                             : (object?)null);
                     }
                     break;
-                case 0x92: // NEWOBJ_EX — pop kwargs, args, class
+                case 0x92: // NEWOBJ_EX
                     {
-                        stack.RemoveAt(stack.Count - 1); // kwargs
-                        stack.RemoveAt(stack.Count - 1); // args
+                        stack.RemoveAt(stack.Count - 1);
+                        stack.RemoveAt(stack.Count - 1);
                         var cls = stack[^1] as ClassRef;
                         stack.RemoveAt(stack.Count - 1);
                         stack.Add(cls is not null
@@ -416,53 +411,51 @@ public static class PickleSignatureOrderScanner
                             : (object?)null);
                     }
                     break;
-                case 0x62: // BUILD — pop state, apply to top
+                case 0x62: // BUILD
                     {
                         var state = stack[^1]; stack.RemoveAt(stack.Count - 1);
                         var obj = stack[^1];
-                        if (obj is Instance inst
-                            && inst.Class.Name == SignatureClassName
-                            && inst.Class.Module == SignatureModuleName)
+                        if (obj is Instance inst)
                         {
-                            // State ist typischerweise (None, {parameters: <dict>})
-                            // — wir suchen den <dict>-Value nach dem "parameters"-
-                            // Key und extrahieren dessen Insertion-Order.
                             OrderedDictMarker? stateDict = state switch
                             {
                                 TupleMarker t when t.Items.Length >= 2 => t.Items[1] as OrderedDictMarker,
                                 OrderedDictMarker d => d,
                                 _ => null,
                             };
-                            if (stateDict?.Get(ParametersFieldName) is OrderedDictMarker paramsDict)
-                                result.Enqueue(paramsDict.StringKeys());
+                            if (stateDict is not null)
+                            {
+                                if (inst.Class.Module == SigModule && inst.Class.Name == SigClass
+                                    && stateDict.Get(SigField) is OrderedDictMarker sigDict)
+                                {
+                                    result.SignatureParameters.Enqueue(sigDict.StringKeys());
+                                }
+                                else if (inst.Class.Module == StyleModule && inst.Class.Name == StyleClass
+                                    && stateDict.Get(StyleField) is OrderedDictMarker styleDict)
+                                {
+                                    result.StyleProperties.Enqueue(styleDict.StringKeys());
+                                }
+                            }
                         }
                     }
                     break;
 
-                // === Persistent IDs ===
-                case 0x50: // PERSID (text)
+                case 0x50: // PERSID
                     stack.Add(null); pos = SkipUntilNewline(pickle, pos); break;
                 case 0x51: // BINPERSID
                     if (stack.Count > 0) stack.RemoveAt(stack.Count - 1);
                     stack.Add(null);
                     break;
 
-                // === Extensions ===
-                case 0x82: pos += 1; stack.Add(null); break; // EXT1
-                case 0x83: pos += 2; stack.Add(null); break; // EXT2
-                case 0x84: pos += 4; stack.Add(null); break; // EXT4
+                case 0x82: pos += 1; stack.Add(null); break;
+                case 0x83: pos += 2; stack.Add(null); break;
+                case 0x84: pos += 4; stack.Add(null); break;
 
-                // === Protocol / Frame ===
-                case 0x80: // PROTO
-                    pos++; break;
-                case 0x95: // FRAME
-                    pos += 8; break;
+                case 0x80: pos++; break;
+                case 0x95: pos += 8; break;
 
-                // === Out-of-band buffers (proto 5) ===
-                case 0x97: // NEXT_BUFFER
-                    stack.Add(null); break;
-                case 0x98: // READONLY_BUFFER
-                    break;
+                case 0x97: stack.Add(null); break;
+                case 0x98: break;
 
                 default:
                     throw new InvalidDataException(

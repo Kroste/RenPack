@@ -53,27 +53,27 @@ public sealed class RenpyRpycService
         byte[] compressed = ExtractSlotPayload(rpycBytes, RpycVersion);
         byte[] pickle = ZlibDecompress(compressed);
 
-        // Ordered-Dict-Reihenfolge fuer Signature.parameters aus dem Pickle-
-        // Byte-Stream extrahieren (Razorvine.Pickle nutzt Hashtable und
-        // verliert dabei die Insertion-Order — kritisch fuer label/screen-
-        // Parameter, die per Position gebunden werden).
-        Queue<List<string>> sigOrder;
+        // Ordered-Dict-Reihenfolge aus dem Pickle-Byte-Stream extrahieren
+        // (Razorvine.Pickle nutzt Hashtable und verliert dabei die Insertion-
+        // Order — kritisch fuer label/screen-Params (Positional-Bindung) und
+        // kosmetisch fuer style-Properties (Diff-freundliche Ausgabe).
+        PickleDictOrderResult orderings;
         try
         {
-            sigOrder = PickleSignatureOrderScanner.Scan(pickle);
+            orderings = PickleSignatureOrderScanner.ScanAll(pickle);
         }
         catch (Exception ex)
         {
-            Log.Warn(ex, "Signature-Order-Scanner fehlgeschlagen — Params koennten in falscher Reihenfolge stehen");
-            sigOrder = new Queue<List<string>>();
+            Log.Warn(ex, "Dict-Order-Scanner fehlgeschlagen — Params/Properties koennten in falscher Reihenfolge stehen");
+            orderings = new PickleDictOrderResult();
         }
 
         using var u = new Unpickler();
         var root = u.loads(pickle);
         var stmts = ExtractStatements(root);
 
-        // Signature.parameters in-place patchen mit korrekter Reihenfolge.
-        SignatureOrderPatcher.PatchInPlace(stmts, sigOrder);
+        // Signature.parameters + Style.properties in-place patchen.
+        SignatureOrderPatcher.PatchInPlace(stmts, orderings);
 
         return stmts;
     }
