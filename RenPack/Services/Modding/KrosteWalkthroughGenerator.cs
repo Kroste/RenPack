@@ -33,19 +33,44 @@ public sealed class KrosteWalkthroughGenerator
     /// <summary>Baut den Walkthrough-Mod. <paramref name="sourceRoot"/>
     /// ist ein dekompilierter Spiel-Ordner (typischerweise das
     /// <c>game/</c>-Verzeichnis), <paramref name="destRoot"/> das Ziel
-    /// (wird angelegt, existierende Files werden ueberschrieben).</summary>
+    /// (wird angelegt, existierende Files werden ueberschrieben).
+    ///
+    /// <paramref name="gameRootWithTl"/>: optional der Original-<c>game/</c>-
+    /// Ordner. Wenn dort <c>tl/&lt;lang&gt;/</c>-Unterordner existieren
+    /// (das Spiel hat Uebersetzungen), schaltet der Generator in den
+    /// Translation-Aware Mode: Choice-Text bleibt unmodifiziert (sonst
+    /// wuerde Ren'Py's Translation-Lookup den gepatched String nicht mehr
+    /// finden und die deutsche Uebersetzung wuerde greifen — OHNE unseren
+    /// Hint). Stattdessen schreiben wir <c>tl/&lt;lang&gt;/krostemod_walkthrough_hints.rpy</c>
+    /// pro Language mit <c>translate &lt;lang&gt; strings:</c>-Blocks die
+    /// den Original-Text auf Original+Hint mappen.</summary>
     /// <returns>Anzahl geschriebener .rpy-Dateien.</returns>
-    public int Generate(string sourceRoot, string destRoot, ModAnalysis analysis)
+    public int Generate(string sourceRoot, string destRoot, ModAnalysis analysis,
+        string? gameRootWithTl = null)
     {
         if (!Directory.Exists(sourceRoot))
             throw new DirectoryNotFoundException($"Source-Root nicht gefunden: {sourceRoot}");
         Directory.CreateDirectory(destRoot);
+
+        // Translation-Aware Mode: erkennen wenn das Spiel tl/-Ordner hat.
+        // Wir nutzen gameRootWithTl (das echte gameDir des Spiels) — der
+        // sourceRoot ist meist ein Decompile-Temp-Ordner ohne tl/.
+        var tlLanguages = DetectTranslationLanguages(gameRootWithTl ?? sourceRoot);
+        bool translationAware = tlLanguages.Count > 0;
+        if (translationAware)
+            Log.Info("Translation-Aware Mode: {count} tl-Language(s) gefunden ({langs}) — " +
+                "Choice-Text bleibt unmodifiziert, Hints via translate-strings-Files",
+                tlLanguages.Count, string.Join(", ", tlLanguages));
 
         // Choices pro Datei bundeln (Dictionary: file → List<Choice>),
         // damit wir nur die relevanten Dateien anfassen.
         var byFile = analysis.Choices
             .GroupBy(c => c.SourceFile, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
+
+        // Fuer Translation-Aware: (originalText, hintSuffix)-Paare sammeln
+        // die dann in die tl/-Files geschrieben werden.
+        var hintsForTranslation = new List<(string OriginalText, string Hint)>();
 
         int written = 0;
         foreach (var (relPath, choices) in byFile)
@@ -60,9 +85,6 @@ public sealed class KrosteWalkthroughGenerator
             Directory.CreateDirectory(Path.GetDirectoryName(dstAbs)!);
 
             var lines = File.ReadAllLines(srcAbs);
-            // Choice-Line → Choice-Objekt zum schnellen Nachschlagen.
-            // Bei mehreren Choices in derselben Zeile (theoretisch) nehmen
-            // wir den ersten — das kommt in der Praxis nicht vor.
             var choicesByLine = choices
                 .GroupBy(c => c.SourceLine)
                 .ToDictionary(g => g.Key, g => g.First());
@@ -71,7 +93,25 @@ public sealed class KrosteWalkthroughGenerator
             for (int i = 0; i < lines.Length; i++)
             {
                 if (choicesByLine.TryGetValue(i + 1, out var choice))
-                    output.Add(PatchChoiceLine(lines[i], choice));
+                {
+                    if (translationAware)
+                    {
+                        // Choice-Text unmodifiziert lassen, aber (Original, Hint)
+                        // fuer die tl/-Files sammeln.
+                        var hint = FormatHint(choice);
+                        if (!string.IsNullOrEmpty(hint))
+                        {
+                            var original = ExtractQuotedText(lines[i]);
+                            if (original is not null)
+                                hintsForTranslation.Add((original, hint));
+                        }
+                        output.Add(lines[i]);
+                    }
+                    else
+                    {
+                        output.Add(PatchChoiceLine(lines[i], choice));
+                    }
+                }
                 else
                     output.Add(lines[i]);
             }
@@ -80,12 +120,109 @@ public sealed class KrosteWalkthroughGenerator
             written++;
         }
 
+        // Translation-Files pro Language schreiben.
+        if (translationAware && hintsForTranslation.Count > 0)
+        {
+            foreach (var lang in tlLanguages)
+                WriteTranslationHintFile(destRoot, lang, hintsForTranslation);
+            Log.Info("Translation-Aware: {count} Hints in {langs} Sprache(n) via tl/-Files",
+                hintsForTranslation.Count, tlLanguages.Count);
+        }
+
         // README als Hinweis fuer den Nutzer.
-        WriteReadme(destRoot, written, analysis);
+        WriteReadme(destRoot, written, analysis, translationAware, tlLanguages);
 
         Log.Info("KrosteMod-Walkthrough erzeugt: {count} .rpy-Datei(en) → {dest}",
             written, destRoot);
         return written;
+    }
+
+    /// <summary>Listet die Sprachen im <c>game/tl/</c>-Ordner. Ausgeschlossen
+    /// werden Ren'Py-Steuersubordner wie <c>None</c> (default-Sprache-Placeholder).</summary>
+    private static IReadOnlyList<string> DetectTranslationLanguages(string gameDir)
+    {
+        var tlDir = Path.Combine(gameDir, "tl");
+        if (!Directory.Exists(tlDir)) return Array.Empty<string>();
+        var result = new List<string>();
+        foreach (var sub in Directory.EnumerateDirectories(tlDir))
+        {
+            var name = Path.GetFileName(sub);
+            // "None" = default-Sprache-Placeholder von Ren'Py; kein echter tl-Ordner.
+            if (name is "None" or "none") continue;
+            // Muss mind. eine .rpy oder .rpyc-Datei enthalten sonst ist's kein
+            // funktionierender Language-Folder.
+            if (Directory.EnumerateFiles(sub, "*.rpy*").Any())
+                result.Add(name);
+        }
+        return result;
+    }
+
+    /// <summary>Extrahiert den String zwischen den ersten " " einer Zeile —
+    /// respektiert Escape-Sequenzen (\").</summary>
+    private static string? ExtractQuotedText(string line)
+    {
+        int start = line.IndexOf('"');
+        if (start < 0) return null;
+        int end = FindClosingQuote(line, start + 1);
+        if (end < 0) return null;
+        return line.Substring(start + 1, end - start - 1);
+    }
+
+    /// <summary>Schreibt eine krostemod_walkthrough_hints.rpy pro tl-Language
+    /// mit <c>translate &lt;lang&gt; strings:</c>-Blocks. Jeder Block mappt
+    /// den unmodifizierten Original-Choice-Text auf den Hint-erweiterten Text.
+    ///
+    /// Trade-off: wenn das Spiel eine echte Uebersetzung fuer denselben Original-
+    /// String hat, gewinnt die zuletzt geladene Definition (Ren'Py-Load-Order).
+    /// Wir landen im Zweifel spaeter (unser File beginnt mit "krostemod_",
+    /// alphabetisch typisch weit hinten) → Hint sichtbar aber Original-Sprache
+    /// statt Uebersetzung. Fuer den User im Screenshot ist das Verbesserung:
+    /// vorher zeigte Ren'Py entweder Original (ohne Hint) oder Uebersetzung
+    /// (ohne Hint) — mit uns: Original + Hint.</summary>
+    private static void WriteTranslationHintFile(string destRoot, string language,
+        IReadOnlyList<(string OriginalText, string Hint)> hints)
+    {
+        var relDir = Path.Combine("tl", language);
+        var absDir = Path.Combine(destRoot, relDir);
+        Directory.CreateDirectory(absDir);
+        var filePath = Path.Combine(absDir, "krostemod_walkthrough_hints.rpy");
+
+        var sb = new StringBuilder();
+        sb.AppendLine("# =====================================================================");
+        sb.AppendLine($"# KrosteMod — Walkthrough-Hints fuer {language}");
+        sb.AppendLine("# Ergaenzt Choice-Texte um goldene Hint-Suffixes (K var+N).");
+        sb.AppendLine("# Autogeneriert von RenPack — bitte nicht manuell editieren.");
+        sb.AppendLine("# =====================================================================");
+        sb.AppendLine();
+        sb.AppendLine($"translate {language} strings:");
+        sb.AppendLine();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var (originalText, hint) in hints)
+        {
+            if (!seen.Add(originalText)) continue; // Dedup
+            sb.Append("    old \"").Append(EscapeForRenpy(originalText)).AppendLine("\"");
+            sb.Append("    new \"").Append(EscapeForRenpy(originalText)).Append(" ").Append(EscapeForRenpy(hint)).AppendLine("\"");
+            sb.AppendLine();
+        }
+        File.WriteAllText(filePath, sb.ToString(), new System.Text.UTF8Encoding(false));
+        Log.Info("Translation-Hints geschrieben: {path} ({count} Strings)", filePath, seen.Count);
+    }
+
+    private static string EscapeForRenpy(string s)
+    {
+        var sb = new StringBuilder(s.Length + 8);
+        foreach (char c in s)
+        {
+            switch (c)
+            {
+                case '"': sb.Append("\\\""); break;
+                case '\\': sb.Append("\\\\"); break;
+                case '\r': break;
+                case '\n': sb.Append("\\n"); break;
+                default: sb.Append(c); break;
+            }
+        }
+        return sb.ToString();
     }
 
     /// <summary>Fuegt in eine Choice-Header-Zeile den Hint-Suffix ein.
@@ -177,7 +314,8 @@ public sealed class KrosteWalkthroughGenerator
         double.TryParse(s, System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out _);
 
-    private static void WriteReadme(string destRoot, int fileCount, ModAnalysis analysis)
+    private static void WriteReadme(string destRoot, int fileCount, ModAnalysis analysis,
+        bool translationAware, IReadOnlyList<string> tlLanguages)
     {
         var choiceCount = analysis.Choices.Count;
         var sb = new StringBuilder();
@@ -191,12 +329,25 @@ public sealed class KrosteWalkthroughGenerator
         sb.AppendLine($"- Patched files: {fileCount}");
         sb.AppendLine($"- Choices annotated: {choiceCount}");
         sb.AppendLine($"- Store variables discovered: {analysis.StoreVariables.Count}");
+        if (translationAware)
+        {
+            sb.AppendLine();
+            sb.AppendLine("**Translation-Aware Mode aktiv**");
+            sb.AppendLine();
+            sb.AppendLine($"Das Spiel hat Uebersetzungen fuer: {string.Join(", ", tlLanguages)}.");
+            sb.AppendLine("Damit die Hints in JEDER Sprache sichtbar sind, wurden pro Sprache");
+            sb.AppendLine("`tl/<lang>/krostemod_walkthrough_hints.rpy`-Dateien erzeugt. Diese");
+            sb.AppendLine("registrieren fuer jeden Choice einen Uebersetzungs-Ersatz mit Hint.");
+            sb.AppendLine("Trade-off: wenn das Spiel eine echte Uebersetzung fuer denselben");
+            sb.AppendLine("Choice hat, gewinnt die zuletzt geladene Definition — im Zweifel");
+            sb.AppendLine("bleibt der Original-Text (mit Hint) statt der Uebersetzung.");
+        }
         sb.AppendLine();
         sb.AppendLine("## Installation");
         sb.AppendLine();
         sb.AppendLine("1. Backup des Spiel-`game/`-Ordners machen.");
         sb.AppendLine("2. Die Dateien aus diesem Ordner in das Spiel-`game/`-Verzeichnis kopieren.");
-        sb.AppendLine("3. Spiel starten — Hinweise erscheinen als `[K love+3]` etc. in den Menu-Optionen.");
+        sb.AppendLine("3. Spiel starten — Hinweise erscheinen als `(K love+3)` etc. in den Menu-Optionen.");
         sb.AppendLine();
         sb.AppendLine("## Deinstallation");
         sb.AppendLine();

@@ -179,7 +179,10 @@ public sealed class OneClickModBuilder
             switch (modType)
             {
                 case ModTypeId.Walkthrough:
-                    _walkthrough.Generate(decompiledDir, modOut, analysis);
+                    // gameRootWithTl = gameDir damit Walkthrough-Generator
+                    // erkennt ob das Spiel tl/-Uebersetzungen hat und in den
+                    // Translation-Aware Mode wechselt.
+                    _walkthrough.Generate(decompiledDir, modOut, analysis, gameRootWithTl: gameDir);
                     break;
                 case ModTypeId.Cheat:
                     // Cheat-Mod hat kein .rpy-Patching noetig, nur die
