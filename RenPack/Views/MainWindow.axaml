@@ -260,16 +260,23 @@
                                    HorizontalAlignment="Center" VerticalAlignment="Center"
                                    IsVisible="{Binding Preview.IsPlaceholder}" />
 
-                        <!-- Bild-Preview: kleine Bilder Originalgroesse zentriert,
-                             grosse Bilder proportional in den Pane einpassen
-                             (Uniform + DownOnly). Ohne ScrollViewer — dank
-                             DownOnly gibt's nie Overflow. -->
-                        <Image IsVisible="{Binding Preview.IsImage}"
-                               Source="{Binding Preview.ImageContent}"
-                               Stretch="Uniform" StretchDirection="DownOnly"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               Margin="12" />
+                        <!-- Bild-Preview (Pack G v0.9): Toggle zwischen Fit
+                             (Uniform+DownOnly, zentriert) und Original-Groesse
+                             (Stretch=None, mit Scrollbars). Doppelklick auf
+                             das Bild oder Ctrl+Wheel wechselt den Modus. -->
+                        <ScrollViewer IsVisible="{Binding Preview.IsImage}"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Auto">
+                            <Image x:Name="PreviewImage"
+                                   Source="{Binding Preview.ImageContent}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Margin="12"
+                                   Stretch="{Binding Preview.ImageStretch}"
+                                   StretchDirection="{Binding Preview.ImageStretchDirection}"
+                                   DoubleTapped="OnPreviewImageDoubleTapped"
+                                   PointerWheelChanged="OnPreviewImageWheel" />
+                        </ScrollViewer>
 
                         <!-- Video/Audio-Preview: Standbild (ffmpeg-Frame-Grab)
                              fuer Video wird direkt ueber die Image-Preview

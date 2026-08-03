@@ -407,4 +407,28 @@ public partial class MainWindow : ChromeWindow, IUiInteractions
         vm.Load(left, right);
         await new ArchiveDiffWindow { DataContext = vm }.ShowDialog(this);
     }
+
+    /// <summary>Pack G v0.9: Doppelklick auf das Preview-Bild toggled
+    /// zwischen Fit-in-Pane und Original-Groesse (mit Scrollbars).</summary>
+    private void OnPreviewImageDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm
+            && vm.Preview.ToggleImageOriginalSizeCommand.CanExecute(null))
+        {
+            vm.Preview.ToggleImageOriginalSizeCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>Pack G v0.9: Ctrl+Wheel auf dem Preview-Bild toggled
+    /// den Zoom-Modus (nach oben = Original, nach unten = Fit). Ohne
+    /// Ctrl gibt das Wheel den ScrollViewer die normale Scroll-Behandlung
+    /// zurueck.</summary>
+    private void OnPreviewImageWheel(object? sender, PointerWheelEventArgs e)
+    {
+        if (e.KeyModifiers != KeyModifiers.Control) return;
+        if (DataContext is not MainWindowViewModel vm) return;
+        vm.Preview.ImageOriginalSize = e.Delta.Y > 0;
+        e.Handled = true;
+    }
 }

@@ -1,4 +1,5 @@
 using System.Text;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -67,6 +68,22 @@ public sealed partial class PreviewViewModel : ObservableObject
     /// fehlendem ffmpeg bleibt der User beim Extern-Player.</summary>
     [ObservableProperty] private bool _canInlinePlay;
 
+    /// <summary>Pack G v0.9: Bild-Preview zeigt Original-Groesse (mit
+    /// ScrollViewer) statt in den Pane einzupassen. Wird per Doppelklick
+    /// oder Ctrl+Wheel getoggelt. Bei jedem neuen Bild wird auf Fit
+    /// (false) zurueckgesetzt.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ImageStretch))]
+    [NotifyPropertyChangedFor(nameof(ImageStretchDirection))]
+    private bool _imageOriginalSize;
+
+    public Stretch ImageStretch => ImageOriginalSize ? Stretch.None : Stretch.Uniform;
+    public StretchDirection ImageStretchDirection =>
+        ImageOriginalSize ? StretchDirection.Both : StretchDirection.DownOnly;
+
+    [RelayCommand]
+    private void ToggleImageOriginalSize() => ImageOriginalSize = !ImageOriginalSize;
+
     /// <summary>Inline-Playback laeuft gerade (ffmpeg-Frame-Stream).
     /// Steuert Button-Beschriftung ▶/⏸ und verhindert Doppel-Start.</summary>
     [ObservableProperty] private bool _isPlayingInline;
@@ -100,6 +117,7 @@ public sealed partial class PreviewViewModel : ObservableObject
         IsMedia = false;
         IsAudioOnly = false;
         CanInlinePlay = false;
+        ImageOriginalSize = false;
         CleanupMediaTempFile();
     }
 
