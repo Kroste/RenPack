@@ -85,6 +85,7 @@ public partial class App : Application
 
         services.AddSingleton<WindowStateService>();
         services.AddSingleton<RecentFilesService>();
+        services.AddSingleton<FavoriteVarsService>();
         services.AddSingleton<MediaPlaybackService>();
 
         // KI-Services (v0.4b — Multi-Provider)

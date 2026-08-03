@@ -20,20 +20,23 @@ public sealed partial class SaveWindowViewModel : ObservableObject
     private readonly AiProviderFactory? _providerFactory;
     private readonly TranslationService? _translation;
     private readonly RecentFilesService? _recent;
+    private readonly FavoriteVarsService? _favorites;
     private readonly List<SaveVariableViewModel> _allVariables = [];
+    private string _currentSavePath = "";
 
     /// <summary>Von der View gesetzt (Datei-Dialoge, Meldungen).</summary>
     public ISaveUi? Ui { get; set; }
 
     public SaveWindowViewModel(IRenpySaveService saveService, AiSettingsService aiSettings,
         AiProviderFactory providerFactory, TranslationService translation,
-        RecentFilesService recent)
+        RecentFilesService recent, FavoriteVarsService? favorites = null)
     {
         _saveService = saveService;
         _aiSettings = aiSettings;
         _providerFactory = providerFactory;
         _translation = translation;
         _recent = recent;
+        _favorites = favorites;
         RecentSaves = new(_recent.Saves);
         _recent.Changed += (_, _) => RefreshRecent();
         _aiSettings.SettingsChanged += OnAiSettingsChanged;
@@ -177,12 +180,16 @@ public sealed partial class SaveWindowViewModel : ObservableObject
             _undo.Clear();
             _redo.Clear();
             _lastKnownValue.Clear();
+            _currentSavePath = path;
+            var favSet = _favorites?.GetFavorites(path)
+                ?? (IReadOnlySet<string>)new HashSet<string>(StringComparer.Ordinal);
             foreach (var v in info.Variables)
             {
                 var vm = new SaveVariableViewModel(v);
                 vm.PropertyChanged += OnVariableChanged;
                 if (_translation is not null && _translation.TryGetCached(v.Name, out var cached))
                     vm.Description = cached;
+                if (favSet.Contains(v.Name)) vm.IsFavorite = true;
                 _allVariables.Add(vm);
                 _lastKnownValue[vm] = vm.EditableValue;
             }
@@ -377,6 +384,15 @@ public sealed partial class SaveWindowViewModel : ObservableObject
         {
             DirtyCount = _allVariables.Count(v => v.IsDirty);
         }
+        if (e.PropertyName == nameof(SaveVariableViewModel.IsFavorite))
+        {
+            // Pack I v0.9: Favoriten-Aenderung → persistieren + Anzeige neu
+            // sortieren (Favoriten oben).
+            if (_favorites is not null && !string.IsNullOrEmpty(_currentSavePath))
+                _favorites.SetFavorites(_currentSavePath,
+                    _allVariables.Where(v => v.IsFavorite).Select(v => v.Name));
+            ApplyFilter();
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanUndo))]
@@ -464,6 +480,9 @@ public sealed partial class SaveWindowViewModel : ObservableObject
                     || v.EditableValue.Contains(q, StringComparison.OrdinalIgnoreCase))
                 : src.Where(v => v.Name.Contains(q, StringComparison.OrdinalIgnoreCase));
         }
+        // Pack I v0.9: Favoriten zuerst (stabile Sortierung, damit die
+        // Original-Reihenfolge innerhalb der Gruppen erhalten bleibt).
+        src = src.OrderByDescending(v => v.IsFavorite);
         foreach (var v in src) Variables.Add(v);
     }
 

@@ -206,6 +206,7 @@
   <data name="Mod_Recent_Tip" xml:space="preserve"><value>Dossiers de jeu récents</value></data>
   <data name="Main_Filter_SearchContent" xml:space="preserve"><value>Dans le contenu</value></data>
   <data name="Main_Filter_SearchContent_Tip" xml:space="preserve"><value>Rechercher aussi dans le contenu des fichiers (128 Ko max par fichier, 500 fichiers max). Fonctionne aussi sur .rpyc (recherche octet par octet).</value></data>
+  <data name="Save_Favorite_Tip" xml:space="preserve"><value>Ajouter cette variable aux favoris — les favoris sont épinglés en haut et mémorisés par fichier de sauvegarde.</value></data>
   <data name="Mod_Building" xml:space="preserve"><value>Création du mod …</value></data>
   <data name="Mod_Uninstalling" xml:space="preserve"><value>Suppression du mod …</value></data>
   <data name="Mod_Phase_Scanning" xml:space="preserve"><value>Recherche des .rpyc …</value></data>

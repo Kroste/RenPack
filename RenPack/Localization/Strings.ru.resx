@@ -206,6 +206,7 @@
   <data name="Mod_Recent_Tip" xml:space="preserve"><value>Недавно использованные папки игр</value></data>
   <data name="Main_Filter_SearchContent" xml:space="preserve"><value>В содержимом</value></data>
   <data name="Main_Filter_SearchContent_Tip" xml:space="preserve"><value>Искать также в содержимом файлов (первые 128 КБ, макс. 500 файлов). Работает и с .rpyc (побайтовый поиск).</value></data>
+  <data name="Save_Favorite_Tip" xml:space="preserve"><value>Отметить переменную как избранную — избранные закреплены сверху и запоминаются для каждого сохранения.</value></data>
   <data name="Mod_Building" xml:space="preserve"><value>Создание мода …</value></data>
   <data name="Mod_Uninstalling" xml:space="preserve"><value>Удаление мода …</value></data>
   <data name="Mod_Phase_Scanning" xml:space="preserve"><value>Поиск .rpyc …</value></data>

@@ -160,6 +160,33 @@
                               GridLinesVisibility="Horizontal"
                               Background="Transparent">
                         <DataGrid.Columns>
+                            <!-- Pack I v0.9: Favoriten-Toggle. Klick auf ☆/★
+                                 toggled IsFavorite; Favoriten wandern in
+                                 ApplyFilter automatisch nach oben. -->
+                            <DataGridTemplateColumn Width="32" IsReadOnly="True">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate DataType="vm:SaveVariableViewModel">
+                                        <ToggleButton IsChecked="{Binding IsFavorite, Mode=TwoWay}"
+                                                      Padding="0" Background="Transparent"
+                                                      BorderThickness="0"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"
+                                                      ToolTip.Tip="{loc:Tr Save_Favorite_Tip}">
+                                            <ToggleButton.Styles>
+                                                <Style Selector="ToggleButton">
+                                                    <Setter Property="Content" Value="☆" />
+                                                    <Setter Property="FontSize" Value="16" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource KrosteMutedTextBrush}" />
+                                                </Style>
+                                                <Style Selector="ToggleButton:checked">
+                                                    <Setter Property="Content" Value="★" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource KrosteGoldBrush}" />
+                                                </Style>
+                                            </ToggleButton.Styles>
+                                        </ToggleButton>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Width="*" IsReadOnly="True"
                                 Binding="{Binding Name}">
                                 <DataGridTextColumn.Header>

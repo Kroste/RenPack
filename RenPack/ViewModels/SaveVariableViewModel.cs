@@ -45,6 +45,12 @@ public sealed partial class SaveVariableViewModel : ObservableObject
     /// Leer, wenn (noch) keine Übersetzung vorliegt.</summary>
     [ObservableProperty] private string _description = "";
 
+    /// <summary>Pack I v0.9: User-Bookmark. Favorisierte Vars werden per
+    /// Save-Datei-Pfad im <see cref="FavoriteVarsService"/> persistiert
+    /// und in der Anzeige (wenn <c>FavoritesFirst</c> aktiv) an den Anfang
+    /// der Tabelle gezogen.</summary>
+    [ObservableProperty] private bool _isFavorite;
+
     /// <summary>Konvertiert den Anzeige-Text in einen .NET-Wert passend zum Typ.
     /// Wirft <see cref="FormatException"/> bei ungültiger Eingabe.</summary>
     public object? ParseEditedValue() => TypeName switch
