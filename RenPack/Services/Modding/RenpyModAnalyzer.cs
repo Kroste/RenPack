@@ -131,6 +131,7 @@ public sealed class RenpyModAnalyzer
         var consumers = new Dictionary<string, List<VarConsumer>>(StringComparer.Ordinal);
         var menuLocations = new List<(string file, int line)>();
         var says = new List<RpySayStatement>();
+        var globalDeltas = new List<VarDelta>();
 
         var root = Path.GetFullPath(rootDir);
         foreach (var file in Directory.EnumerateFiles(root, "*.rpy", SearchOption.AllDirectories)
@@ -143,7 +144,7 @@ public sealed class RenpyModAnalyzer
                 continue;
             files.Add(rel);
             AnalyzeFile(file, rel, choices, vars, varNamesSeen, chars,
-                consumers, menuLocations, says);
+                consumers, menuLocations, says, globalDeltas);
         }
 
         // Nachtraeglich: Choice-Conditions als MenuChoiceGate-Consumer erfassen.
@@ -185,9 +186,9 @@ public sealed class RenpyModAnalyzer
 
         Log.Info("Mod-Analyse: {files} .rpy-Dateien, {choices} Choices, "
             + "{vars} Store-Variablen, {chars} Characters, {consumers} Variables mit Consumers, "
-            + "{menus} Menu-Locations mit Impact, {says} Say-Statements",
-            files.Count, choices.Count, vars.Count, chars.Count, frozen.Count, menuList.Count, says.Count);
-        return new ModAnalysis(choices, vars, chars, files, frozen, menuList, says);
+            + "{menus} Menu-Locations mit Impact, {says} Say-Statements, {global} Global-Deltas",
+            files.Count, choices.Count, vars.Count, chars.Count, frozen.Count, menuList.Count, says.Count, globalDeltas.Count);
+        return new ModAnalysis(choices, vars, chars, files, frozen, menuList, says, globalDeltas);
     }
 
     private static void AddConsumer(Dictionary<string, List<VarConsumer>> dict,
@@ -218,7 +219,8 @@ public sealed class RenpyModAnalyzer
         HashSet<string> varNamesSeen, List<RpyCharacter> chars,
         Dictionary<string, List<VarConsumer>> consumers,
         List<(string file, int line)> menuLocations,
-        List<RpySayStatement> says)
+        List<RpySayStatement> says,
+        List<VarDelta> globalDeltas)
     {
         var lines = File.ReadAllLines(absPath);
         string currentLabel = "";
@@ -374,6 +376,44 @@ public sealed class RenpyModAnalyzer
                     string charVar = mSay.Groups[1].Success ? mSay.Groups[1].Value : "";
                     string rawText = mSay.Groups[2].Value;
                     says.Add(new RpySayStatement(relPath, i + 1, charVar, rawText));
+                }
+            }
+
+            // Globale Delta-Sammlung fuer den Cheat-Generator: ALLE
+            // `$ X op Y` und `$ obj.update("attr", val)` im ganzen File
+            // (nicht nur in Choice-Bodies). Ohne das fehlen Character-
+            // Container-Stats wie fcs.morality im Cheat-Menue, weil die
+            // Deltas typischerweise in per-jump-erreichten label-Bodies
+            // stehen, nicht direkt unter menu-Choices.
+            var mGlobalAssign = DollarAssignPattern.Match(line);
+            if (mGlobalAssign.Success)
+            {
+                string op = mGlobalAssign.Groups[2].Value;
+                // Reine `$ X = Y` als "assign" sammeln wir NICHT hier
+                // — das sind Initializations, keine Modifikationen die
+                // Cheat-worthy waeren (die stehen schon in StoreVariables).
+                // Nur compound-ops (+=, -=, *=, /=) sind echte Deltas.
+                if (op != "=")
+                {
+                    globalDeltas.Add(new VarDelta(
+                        Variable: mGlobalAssign.Groups[1].Value,
+                        Op: op,
+                        Value: StripLineComment(mGlobalAssign.Groups[3].Value).Trim()));
+                }
+            }
+            else
+            {
+                var mGlobalUpd = DollarUpdateCallPattern.Match(line);
+                if (mGlobalUpd.Success)
+                {
+                    string obj = mGlobalUpd.Groups[1].Value;
+                    string attr = mGlobalUpd.Groups[2].Value;
+                    string val = StripLineComment(mGlobalUpd.Groups[3].Value).Trim();
+                    string op = LooksLikeNumericLiteral(val) ? "+=" : "=";
+                    globalDeltas.Add(new VarDelta(
+                        Variable: $"{obj}.{attr}",
+                        Op: op,
+                        Value: val));
                 }
             }
         }

@@ -196,4 +196,56 @@ public sealed class KrosteCheatGeneratorTests : IDisposable
         // (das bei yalign 0.02 sitzt) → keine Kollision.
         content.Should().Contain("yalign 0.09");
     }
+
+    [Fact]
+    public void Includes_delta_only_vars_like_character_container_attributes()
+    {
+        // Character-Container-Attribute wie fcs.morality haben KEINE
+        // StoreVariable (kein `default fcs.morality = 0`) — sie werden
+        // nur ueber Delta erfasst (`$ fcs.update("morality", 1)`).
+        // Der Cheat-Generator muss sie trotzdem als Kandidaten
+        // aufnehmen — sonst fehlen bei Boundaries of Morality 20+ Stats.
+        var choices = new[]
+        {
+            new RpyChoice("f.rpy", 1, "l", 0, 1, 0, "help", null,
+                new[] { new VarDelta("fcs.morality", "+=", "1") }),
+            new RpyChoice("f.rpy", 2, "l", 0, 1, 1, "ignore", null,
+                new[] { new VarDelta("fcs.intrigue", "+=", "-1") }),
+        };
+        var analysis = MakeAnalysis(choices: choices);
+        var candidates = KrosteCheatGenerator.SelectCheatCandidates(analysis);
+        candidates.Select(c => c.Name).Should().Contain("fcs.morality");
+        candidates.Select(c => c.Name).Should().Contain("fcs.intrigue");
+        candidates.Single(c => c.Name == "fcs.morality").Kind.Should().Be("int");
+        // Default fuer Delta-only-int: "0"
+        candidates.Single(c => c.Name == "fcs.morality").DefaultValue.Should().Be("0");
+    }
+
+    [Fact]
+    public void Sorts_numeric_vars_before_bool_flags()
+    {
+        // User-Praeferenz: die meisten benoetigten Cheats sind Zahlen —
+        // bool-Flags sind sekundaer. Bei begrenzter Slot-Zahl (MaxCheatVars)
+        // sollen ints/floats zuerst kommen.
+        var analysis = MakeAnalysis(
+            vars: new[]
+            {
+                new RpyStoreVariable("flag_a", "False", "bool"),
+                new RpyStoreVariable("money", "0", "int"),
+                new RpyStoreVariable("flag_b", "True", "bool"),
+                new RpyStoreVariable("love", "0", "int"),
+            },
+            consumers: new Dictionary<string, IReadOnlyList<VarConsumer>>
+            {
+                ["flag_a"] = new[] { new VarConsumer("f.rpy", 1, "l", VarConsumerKind.Condition, "if flag_a") },
+                ["money"] = new[] { new VarConsumer("f.rpy", 2, "l", VarConsumerKind.Condition, "if money > 0") },
+                ["flag_b"] = new[] { new VarConsumer("f.rpy", 3, "l", VarConsumerKind.Condition, "if flag_b") },
+                ["love"] = new[] { new VarConsumer("f.rpy", 4, "l", VarConsumerKind.Condition, "if love") },
+            });
+        var candidates = KrosteCheatGenerator.SelectCheatCandidates(analysis);
+        var firstBoolIdx = candidates.ToList().FindIndex(c => c.Kind == "bool");
+        var lastIntIdx = candidates.ToList().FindLastIndex(c => c.Kind == "int");
+        firstBoolIdx.Should().BeGreaterThan(lastIntIdx,
+            "int-Kandidaten muessen vor bool-Kandidaten stehen");
+    }
 }

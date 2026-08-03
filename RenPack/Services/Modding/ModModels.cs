@@ -26,7 +26,8 @@ public sealed record ModAnalysis(
     IReadOnlyList<string> AnalyzedFiles,
     IReadOnlyDictionary<string, IReadOnlyList<VarConsumer>> VariableConsumers,
     IReadOnlyList<RpyMenuLocation> MenuLocations,
-    IReadOnlyList<RpySayStatement> SayStatements);
+    IReadOnlyList<RpySayStatement> SayStatements,
+    IReadOnlyList<VarDelta>? GlobalDeltas = null);
 
 /// <summary>Ein <c>character "text"</c>-Statement (Say). Fuer den
 /// KrosteMod-E4b-Rewriter: wenn User einen Character umbenennt und die

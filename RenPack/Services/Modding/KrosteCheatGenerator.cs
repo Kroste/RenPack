@@ -81,16 +81,28 @@ public sealed class KrosteCheatGenerator
             .GroupBy(v => v.Name, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
 
-        var deltaCounts = analysis.Choices
-            .SelectMany(c => c.Deltas)
-            .GroupBy(d => d.Variable, StringComparer.Ordinal)
-            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
+        // Delta-Aggregation: pro Variable-Name die Anzahl + der zuletzt gesehene
+        // Value (fuer Default-Inferenz bei Delta-only-Vars). Wir mergen Choice-
+        // Deltas UND Global-Deltas (Modifikationen ausserhalb von Menu-Choice-
+        // Bodies, typisch in per-jump-erreichten label-Bodies).
+        var deltaCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+        var deltaTypes = new Dictionary<string, string>(StringComparer.Ordinal);
+        void CollectDelta(VarDelta d)
+        {
+            deltaCounts[d.Variable] = deltaCounts.GetValueOrDefault(d.Variable) + 1;
+            if (!deltaTypes.ContainsKey(d.Variable))
+                deltaTypes[d.Variable] = InferDeltaType(d);
+        }
+        foreach (var choice in analysis.Choices)
+            foreach (var d in choice.Deltas)
+                CollectDelta(d);
+        if (analysis.GlobalDeltas is { } gd)
+            foreach (var d in gd) CollectDelta(d);
 
         var scored = new List<(string name, string kind, string defaultValue, int score)>();
-        // WICHTIG: ueber storeByName.Values iterieren, nicht ueber
-        // analysis.StoreVariables — sonst tauchen Variablen die per
-        // `$ X = ...` in mehreren Labels initialisiert werden mehrfach im
-        // Menue auf. Verifiziert an Interview Desires 0.23 (5x `keys`, 4x `score`).
+        var handled = new HashSet<string>(StringComparer.Ordinal);
+
+        // 1. Explizite Store-Variables (default / $ X = Y)
         foreach (var v in storeByName.Values)
         {
             var kind = v.TypeInferred switch
@@ -103,20 +115,60 @@ public sealed class KrosteCheatGenerator
             deltaCounts.TryGetValue(v.Name, out int deltas);
             int consumers = analysis.VariableConsumers.TryGetValue(v.Name, out var cs)
                 ? cs.Count : 0;
-            // Deltas zaehlen doppelt — die sind der staerkere Impact-Indikator.
             int score = deltas * 2 + consumers;
             if (score == 0) continue;
 
             scored.Add((v.Name, kind, v.DefaultValue, score));
+            handled.Add(v.Name);
         }
 
+        // 2. Delta-Only-Variables (typisch Character-Container-Attribute wie
+        //    fcs.morality, samantha.love — werden nur ueber .update() gesetzt,
+        //    kein explizites default). Ohne diese Erfassung fehlten in
+        //    Boundaries of Morality die 20+ wichtigen Story-Stats.
+        foreach (var (name, count) in deltaCounts)
+        {
+            if (handled.Contains(name)) continue;
+            var kind = deltaTypes.TryGetValue(name, out var t) ? t : "int";
+            if (kind != "int" && kind != "float") continue; // nur numeric — bool via .update ist selten
+            int consumers = analysis.VariableConsumers.TryGetValue(name, out var cs)
+                ? cs.Count : 0;
+            int score = count * 2 + consumers;
+            if (score == 0) continue;
+            // Default fuer Delta-only-Vars: 0 fuer int, 0.0 fuer float.
+            string defaultValue = kind == "float" ? "0.0" : "0";
+            scored.Add((name, kind, defaultValue, score));
+        }
+
+        // Sortier-Reihenfolge: zuerst nach Type-Prio (int/float vor bool),
+        // dann nach Score. Der User meinte: die meisten benoetigten Cheats
+        // sind Zahlen — bool-Flags haben typischerweise nur Toggle-Wert
+        // und lassen sich zur Not per Save-Editor umbiegen.
         return scored
-            .OrderByDescending(x => x.score)
+            .OrderBy(x => TypePriority(x.kind))
+            .ThenByDescending(x => x.score)
             .ThenBy(x => x.name, StringComparer.Ordinal)
             .Take(MaxCheatVars)
             .Select(x => new CheatCandidate(x.name, x.kind, x.defaultValue))
             .ToList();
     }
+
+    /// <summary>Inferiert Type aus einem Delta-Value. `+= 1` → int,
+    /// `= 3.5` → float, `= True` → bool, sonst int (Default).</summary>
+    private static string InferDeltaType(VarDelta d)
+    {
+        var v = d.Value.Trim();
+        if (v is "True" or "False") return "bool";
+        if (v.Contains('.') && double.TryParse(v, System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out _)) return "float";
+        if (long.TryParse(v.TrimStart('+', '-'), out _)) return "int";
+        return "int";
+    }
+
+    private static int TypePriority(string kind) => kind switch
+    {
+        "int" => 0, "float" => 1, "bool" => 2, _ => 3,
+    };
 
     private static void WriteHeader(StringBuilder sb, int count)
     {
@@ -172,27 +224,61 @@ public sealed class KrosteCheatGenerator
         sb.AppendLine("        if s is None: return ''");
         sb.AppendLine("        return s.replace('{', '{{').replace('[', '[[')");
         sb.AppendLine();
+        // dotted-name-Support fuer Character-Container-Attribute wie
+        // `fcs.morality`, `samantha.love`. Statt setattr(store, 'fcs.morality', v)
+        // navigieren wir per Punkt-Split: store → fcs → attr=morality → value.
+        // Beim Setzen bevorzugen wir die `update(attr, value)`-Methode wenn
+        // sie existiert (viele Ren'Py-Container implementieren sie), sonst
+        // Fallback auf setattr.
+        sb.AppendLine("    def krostemod_cheat_resolve(name):");
+        sb.AppendLine("        parts = name.split('.')");
+        sb.AppendLine("        obj = store");
+        sb.AppendLine("        for p in parts[:-1]:");
+        sb.AppendLine("            obj = getattr(obj, p, None)");
+        sb.AppendLine("            if obj is None: return None, None");
+        sb.AppendLine("        return obj, parts[-1]");
+        sb.AppendLine();
+        sb.AppendLine("    def krostemod_cheat_get(name):");
+        sb.AppendLine("        obj, attr = krostemod_cheat_resolve(name)");
+        sb.AppendLine("        if obj is None: return None");
+        sb.AppendLine("        try: return getattr(obj, attr)");
+        sb.AppendLine("        except Exception: return None");
+        sb.AppendLine();
+        sb.AppendLine("    def krostemod_cheat_set(name, value):");
+        sb.AppendLine("        obj, attr = krostemod_cheat_resolve(name)");
+        sb.AppendLine("        if obj is None: return");
+        sb.AppendLine("        try:");
+        sb.AppendLine("            upd = getattr(obj, 'update', None)");
+        sb.AppendLine("            if callable(upd) and obj is not store:");
+        sb.AppendLine("                upd(attr, value)");
+        sb.AppendLine("            else:");
+        sb.AppendLine("                setattr(obj, attr, value)");
+        sb.AppendLine("        except Exception as ex:");
+        sb.AppendLine("            renpy.notify('krostemod set failed: ' + str(ex))");
+        sb.AppendLine();
         sb.AppendLine("    def krostemod_cheat_display(name):");
         sb.AppendLine("        try:");
-        sb.AppendLine("            v = getattr(store, name)");
-        sb.AppendLine("            s = repr(v) if v is not None else 'None'");
+        sb.AppendLine("            v = krostemod_cheat_get(name)");
+        sb.AppendLine("            if v is None: return '<unset>'");
+        sb.AppendLine("            s = repr(v)");
         sb.AppendLine("        except Exception:");
         sb.AppendLine("            return '<unset>'");
         sb.AppendLine("        return krostemod_cheat_escape(s)");
         sb.AppendLine();
         sb.AppendLine("    def krostemod_cheat_adjust(name, delta):");
         sb.AppendLine("        try:");
-        sb.AppendLine("            v = getattr(store, name, 0)");
+        sb.AppendLine("            v = krostemod_cheat_get(name)");
         sb.AppendLine("            if v is None: v = 0");
-        sb.AppendLine("            setattr(store, name, v + delta)");
+        sb.AppendLine("            krostemod_cheat_set(name, v + delta)");
         sb.AppendLine("            renpy.restart_interaction()");
         sb.AppendLine("        except Exception as ex:");
         sb.AppendLine("            renpy.notify('krostemod adjust failed: ' + str(ex))");
         sb.AppendLine();
         sb.AppendLine("    def krostemod_cheat_toggle(name):");
         sb.AppendLine("        try:");
-        sb.AppendLine("            v = getattr(store, name, False)");
-        sb.AppendLine("            setattr(store, name, not bool(v))");
+        sb.AppendLine("            v = krostemod_cheat_get(name)");
+        sb.AppendLine("            if v is None: v = False");
+        sb.AppendLine("            krostemod_cheat_set(name, not bool(v))");
         sb.AppendLine("            renpy.restart_interaction()");
         sb.AppendLine("        except Exception as ex:");
         sb.AppendLine("            renpy.notify('krostemod toggle failed: ' + str(ex))");
@@ -200,14 +286,14 @@ public sealed class KrosteCheatGenerator
         sb.AppendLine("    def krostemod_cheat_reset(name):");
         sb.AppendLine("        for entry in krostemod_cheat_vars:");
         sb.AppendLine("            if entry[0] == name:");
-        sb.AppendLine("                try: setattr(store, name, entry[2])");
+        sb.AppendLine("                try: krostemod_cheat_set(name, entry[2])");
         sb.AppendLine("                except Exception: pass");
         sb.AppendLine("                renpy.restart_interaction()");
         sb.AppendLine("                return");
         sb.AppendLine();
         sb.AppendLine("    def krostemod_cheat_reset_all():");
         sb.AppendLine("        for entry in krostemod_cheat_vars:");
-        sb.AppendLine("            try: setattr(store, entry[0], entry[2])");
+        sb.AppendLine("            try: krostemod_cheat_set(entry[0], entry[2])");
         sb.AppendLine("            except Exception: pass");
         sb.AppendLine("        renpy.restart_interaction()");
         sb.AppendLine();
