@@ -173,9 +173,16 @@ public sealed class KrosteInfoScreenGenerator
         sb.AppendLine("        return s.replace('{', '{{').replace('[', '[[')");
         sb.AppendLine();
         sb.AppendLine("    def krostemod_get_value(name):");
+        sb.AppendLine("        # Dotted-Name-Support fuer Character-Container-");
+        sb.AppendLine("        # Attribute wie tyler.love, fcs.morality. Ein");
+        sb.AppendLine("        # simpler getattr(store, 'tyler.love') funktioniert");
+        sb.AppendLine("        # NICHT (sucht Attribut mit Dot im Namen).");
         sb.AppendLine("        try:");
-        sb.AppendLine("            v = getattr(store, name)");
-        sb.AppendLine("            s = repr(v) if v is not None else 'None'");
+        sb.AppendLine("            obj = store");
+        sb.AppendLine("            parts = name.split('.')");
+        sb.AppendLine("            for p in parts:");
+        sb.AppendLine("                obj = getattr(obj, p)");
+        sb.AppendLine("            s = repr(obj) if obj is not None else 'None'");
         sb.AppendLine("        except Exception:");
         sb.AppendLine("            return '<unset>'");
         sb.AppendLine("        return krostemod_escape(s)");
