@@ -204,6 +204,8 @@
   <data name="Mod_LaunchGame" xml:space="preserve"><value>▶ Lancer le jeu</value></data>
   <data name="Mod_LaunchGame_Tip" xml:space="preserve"><value>Lance l'exécutable du jeu (.sh/.exe) dans le dossier racine via le gestionnaire système par défaut.</value></data>
   <data name="Mod_Recent_Tip" xml:space="preserve"><value>Dossiers de jeu récents</value></data>
+  <data name="Main_Filter_SearchContent" xml:space="preserve"><value>Dans le contenu</value></data>
+  <data name="Main_Filter_SearchContent_Tip" xml:space="preserve"><value>Rechercher aussi dans le contenu des fichiers (128 Ko max par fichier, 500 fichiers max). Fonctionne aussi sur .rpyc (recherche octet par octet).</value></data>
   <data name="Mod_Building" xml:space="preserve"><value>Création du mod …</value></data>
   <data name="Mod_Uninstalling" xml:space="preserve"><value>Suppression du mod …</value></data>
   <data name="Mod_Phase_Scanning" xml:space="preserve"><value>Recherche des .rpyc …</value></data>

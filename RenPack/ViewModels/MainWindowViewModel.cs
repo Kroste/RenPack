@@ -130,6 +130,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
         set { if (SetProperty(ref _filterText, value)) ApplyFilter(); }
     }
 
+    /// <summary>Pack F v0.9: Filter matcht zusaetzlich zum Datei-Namen auch
+    /// den Datei-Inhalt (max 128 KB pro Entry, max 500 Entries gescannt).
+    /// Byte-basierte Suche — funktioniert auch bei .rpyc (Pickle-Bytes
+    /// enthalten Strings als BINUNICODE-Sequenzen).</summary>
+    private bool _searchInContent;
+    public bool SearchInContent
+    {
+        get => _searchInContent;
+        set { if (SetProperty(ref _searchInContent, value)) ApplyFilter(); }
+    }
+
     public bool HasArchive => Archive is not null;
 
     public string ArchiveSummary => Archive is null
@@ -421,6 +432,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             SelectedCount = _allEntries.Count(x => x.IsSelected);
     }
 
+    private CancellationTokenSource? _contentSearchCts;
+
     private void ApplyFilter()
     {
         Entries.Clear();
@@ -428,6 +441,83 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (!string.IsNullOrWhiteSpace(FilterText))
             src = src.Where(e => e.Path.Contains(FilterText, StringComparison.OrdinalIgnoreCase));
         foreach (var e in src) Entries.Add(e);
+
+        // Content-Suche: laeuft parallel im Hintergrund, fuegt zusaetzliche
+        // Matches (die im Path nicht standen) nach + nach zur Liste hinzu.
+        _ = StartContentSearchAsync();
+    }
+
+    private async Task StartContentSearchAsync()
+    {
+        _contentSearchCts?.Cancel();
+        _contentSearchCts?.Dispose();
+        _contentSearchCts = null;
+        if (!SearchInContent || string.IsNullOrWhiteSpace(FilterText) || FilterText.Length < 3
+            || Archive is null || _allEntries.Count == 0)
+            return;
+
+        var cts = new CancellationTokenSource();
+        _contentSearchCts = cts;
+        var ct = cts.Token;
+
+        string needleStr = FilterText;
+        byte[] needle = System.Text.Encoding.UTF8.GetBytes(needleStr);
+        string archivePath = Archive.ArchivePath;
+        // Snapshot der Kandidaten (Entries die NICHT schon per Path-Match drin sind)
+        var pathMatches = new HashSet<string>(
+            _allEntries.Where(e => e.Path.Contains(needleStr, StringComparison.OrdinalIgnoreCase))
+                       .Select(e => e.Path),
+            StringComparer.Ordinal);
+        var candidates = _allEntries
+            .Where(e => !pathMatches.Contains(e.Path))
+            .Take(500) // hard-cap gegen 6k-Files-Archive
+            .ToList();
+
+        const long MaxBytesPerEntry = 128 * 1024;
+        try
+        {
+            var extraMatches = await Task.Run(() =>
+            {
+                var hits = new List<ArchiveEntryViewModel>();
+                foreach (var e in candidates)
+                {
+                    if (ct.IsCancellationRequested) break;
+                    try
+                    {
+                        var bytes = _archiveService.ReadEntryBytes(archivePath, e.Entry, MaxBytesPerEntry);
+                        if (bytes is null || bytes.Length == 0) continue;
+                        if (IndexOfBytes(bytes, needle) >= 0) hits.Add(e);
+                    }
+                    catch { /* single-entry-Fehler ignorieren */ }
+                }
+                return hits;
+            }, ct);
+
+            if (ct.IsCancellationRequested) return;
+            foreach (var e in extraMatches) Entries.Add(e);
+        }
+        catch (OperationCanceledException) { /* normal bei Filter-Update */ }
+    }
+
+    /// <summary>Byte-Substring-Suche via Boyer-Moore-Horspool-Lite (nur
+    /// Bad-Character-Table). Fuer kurze needles (unter 32 Bytes) reicht das,
+    /// deutlich schneller als naives Iterate-and-Compare.</summary>
+    private static int IndexOfBytes(byte[] haystack, byte[] needle)
+    {
+        if (needle.Length == 0) return 0;
+        if (needle.Length > haystack.Length) return -1;
+        Span<int> shift = stackalloc int[256];
+        for (int i = 0; i < 256; i++) shift[i] = needle.Length;
+        for (int i = 0; i < needle.Length - 1; i++) shift[needle[i]] = needle.Length - 1 - i;
+        int pos = 0;
+        while (pos <= haystack.Length - needle.Length)
+        {
+            int j = needle.Length - 1;
+            while (j >= 0 && haystack[pos + j] == needle[j]) j--;
+            if (j < 0) return pos;
+            pos += shift[haystack[pos + needle.Length - 1]];
+        }
+        return -1;
     }
 
     // ---- CanExecute ---------------------------------------------------------
