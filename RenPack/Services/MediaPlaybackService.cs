@@ -209,23 +209,41 @@ public sealed class MediaPlaybackService
         }
     }
 
-    /// <summary>Suche nach ffmpeg im PATH bzw. an typischen Stellen.
-    /// Muster wie in Spektivs FfmpegFrameGrabber.</summary>
+    /// <summary>Suche nach ffmpeg. Erst <c>RENPACK_FFMPEG</c>-Env-Var,
+    /// dann typische absolute Pfade, dann echter <c>PATH</c>-Scan mit
+    /// Datei-Existenz-Check. Wenn nichts gefunden: <c>null</c> → das UI
+    /// blendet Inline-Play aus. Frueherer Fallback „vertraue Process.Start
+    /// mit relativem Namen" war unzuverlaessig (Windows macht kein
+    /// PATH-Lookup mit <c>UseShellExecute=false</c>, auf Linux crasht
+    /// <c>execvp</c> erst zur Laufzeit — statt ehrlich vorher zu sagen
+    /// „ffmpeg fehlt").</summary>
     private static string? ResolveFfmpeg()
     {
         var explicitPath = Environment.GetEnvironmentVariable("RENPACK_FFMPEG");
         if (!string.IsNullOrEmpty(explicitPath) && File.Exists(explicitPath))
             return explicitPath;
 
-        var candidates = OperatingSystem.IsWindows()
-            ? new[] { "ffmpeg.exe" }
-            : new[] { "/usr/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/opt/homebrew/bin/ffmpeg", "ffmpeg" };
+        bool isWindows = OperatingSystem.IsWindows();
+        string exeName = isWindows ? "ffmpeg.exe" : "ffmpeg";
 
-        foreach (var c in candidates)
+        var wellKnownPaths = isWindows
+            ? Array.Empty<string>()
+            : new[] { "/usr/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/opt/homebrew/bin/ffmpeg" };
+        foreach (var p in wellKnownPaths)
+            if (File.Exists(p)) return p;
+
+        var pathVar = Environment.GetEnvironmentVariable("PATH");
+        if (string.IsNullOrEmpty(pathVar)) return null;
+        foreach (var dir in pathVar.Split(Path.PathSeparator))
         {
-            if (Path.IsPathRooted(c) && File.Exists(c)) return c;
-            if (!Path.IsPathRooted(c)) return c; // vertraue PATH bei Process.Start
+            if (string.IsNullOrEmpty(dir)) continue;
+            string trimmed = dir.Trim('"'); // Windows-PATH kann Anfuehrungszeichen haben
+            string full = Path.Combine(trimmed, exeName);
+            if (File.Exists(full)) return full;
         }
+        Log.Info("ffmpeg im PATH nicht gefunden — Inline-Preview deaktiviert. " +
+            "Install: Linux 'sudo dnf install ffmpeg-free' (Fedora) / 'sudo apt install ffmpeg' (Debian), " +
+            "Windows 'winget install ffmpeg', macOS 'brew install ffmpeg'.");
         return null;
     }
 }

@@ -128,6 +128,7 @@
   <data name="Preview_UnsupportedFormat" xml:space="preserve"><value>Keine Vorschau für {0}-Dateien.</value></data>
   <data name="Preview_TooLargeFormat" xml:space="preserve"><value>Datei ist {0} — zu groß für Vorschau (Limit: {1}).</value></data>
   <data name="Preview_LoadFailed" xml:space="preserve"><value>Vorschau konnte nicht geladen werden.</value></data>
+  <data name="Preview_FfmpegMissing" xml:space="preserve"><value>ffmpeg nicht gefunden — Inline-Vorschau deaktiviert. Bitte ffmpeg installieren (Linux: 'sudo dnf install ffmpeg-free' / 'sudo apt install ffmpeg', Windows: 'winget install ffmpeg', macOS: 'brew install ffmpeg') oder den Standard-Player nutzen.</value></data>
   <data name="Preview_PlayExternal" xml:space="preserve"><value>▶ Im Standard-Player abspielen</value></data>
   <data name="Preview_PlayExternal_Tip" xml:space="preserve"><value>Öffnet die Datei im System-Default-Player (VLC, mpv, Windows Media Player…)</value></data>
   <data name="Preview_PlayInline" xml:space="preserve"><value>▶ Inline abspielen</value></data>

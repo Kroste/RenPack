@@ -128,6 +128,7 @@
   <data name="Preview_UnsupportedFormat" xml:space="preserve"><value>Aucun aperçu pour les fichiers {0}.</value></data>
   <data name="Preview_TooLargeFormat" xml:space="preserve"><value>Fichier {0} — trop grand pour l'aperçu (limite : {1}).</value></data>
   <data name="Preview_LoadFailed" xml:space="preserve"><value>Impossible de charger l'aperçu.</value></data>
+  <data name="Preview_FfmpegMissing" xml:space="preserve"><value>ffmpeg introuvable — aperçu en ligne désactivé. Installez ffmpeg (Linux : 'sudo dnf install ffmpeg-free' / 'sudo apt install ffmpeg', Windows : 'winget install ffmpeg', macOS : 'brew install ffmpeg') ou utilisez le lecteur par défaut.</value></data>
   <data name="Preview_PlayExternal" xml:space="preserve"><value>▶ Lire dans le lecteur par défaut</value></data>
   <data name="Preview_PlayExternal_Tip" xml:space="preserve"><value>Ouvre le fichier dans le lecteur par défaut du système (VLC, mpv, Windows Media Player…)</value></data>
   <data name="Preview_PlayInline" xml:space="preserve"><value>▶ Aperçu inline</value></data>

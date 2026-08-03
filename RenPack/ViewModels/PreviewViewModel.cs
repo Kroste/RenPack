@@ -62,6 +62,11 @@ public sealed partial class PreviewViewModel : ObservableObject
     [ObservableProperty] private bool _isMedia;
     [ObservableProperty] private bool _isAudioOnly;
 
+    /// <summary>Inline-Playback ist verfuegbar (Video + ffmpeg installiert).
+    /// Steuert Sichtbarkeit des ▶-Inline-Buttons. Bei Audio-Only oder
+    /// fehlendem ffmpeg bleibt der User beim Extern-Player.</summary>
+    [ObservableProperty] private bool _canInlinePlay;
+
     /// <summary>Inline-Playback laeuft gerade (ffmpeg-Frame-Stream).
     /// Steuert Button-Beschriftung ▶/⏸ und verhindert Doppel-Start.</summary>
     [ObservableProperty] private bool _isPlayingInline;
@@ -94,6 +99,7 @@ public sealed partial class PreviewViewModel : ObservableObject
         HasContent = false;
         IsMedia = false;
         IsAudioOnly = false;
+        CanInlinePlay = false;
         CleanupMediaTempFile();
     }
 
@@ -169,6 +175,7 @@ public sealed partial class PreviewViewModel : ObservableObject
     {
         IsMedia = true;
         IsAudioOnly = !isVideo;
+        CanInlinePlay = isVideo && _media is not null && _media.HasFfmpeg;
 
         // Die Datei ins Temp-Verzeichnis extrahieren — brauchen wir sowohl
         // fuer ffmpeg-Frame-Grab als auch fuer den externen Player.
@@ -183,16 +190,17 @@ public sealed partial class PreviewViewModel : ObservableObject
         {
             Placeholder = L.T("Preview_LoadFailed");
             IsMedia = false;
+            CanInlinePlay = false;
             return;
         }
         _currentMediaTempPath = tmp;
 
         // Video: erstes Frame per ffmpeg grabben und als Standbild anzeigen.
-        // Wenn ffmpeg nicht da ist oder das Grabben fehlschlaegt, kommt kein
-        // Bild — der Extern-Player-Button ist trotzdem sichtbar.
-        if (isVideo && _media is not null && _media.HasFfmpeg)
+        // Wenn ffmpeg fehlt: kein Frame + kein Inline-Button, das Media-
+        // Grid zeigt stattdessen den FfmpegMissing-Hint (siehe XAML).
+        if (isVideo && CanInlinePlay)
         {
-            var frameBytes = await _media.GrabFirstFrameAsync(tmp);
+            var frameBytes = await _media!.GrabFirstFrameAsync(tmp);
             if (frameBytes is not null)
             {
                 using var ms = new MemoryStream(frameBytes);
