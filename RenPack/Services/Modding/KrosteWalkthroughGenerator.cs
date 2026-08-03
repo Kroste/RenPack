@@ -120,12 +120,11 @@ public sealed class KrosteWalkthroughGenerator
             written++;
         }
 
-        // Translation-Files pro Language schreiben.
+        // Translation-Runtime-Patcher schreiben (EINE Datei fuer alle Sprachen).
         if (translationAware && hintsForTranslation.Count > 0)
         {
-            foreach (var lang in tlLanguages)
-                WriteTranslationHintFile(destRoot, lang, hintsForTranslation);
-            Log.Info("Translation-Aware: {count} Hints in {langs} Sprache(n) via tl/-Files",
+            WriteTranslationHintPatcher(destRoot, tlLanguages, hintsForTranslation);
+            Log.Info("Translation-Aware: {count} Hints via Runtime-Patcher fuer {langs} Sprache(n)",
                 hintsForTranslation.Count, tlLanguages.Count);
         }
 
@@ -168,61 +167,105 @@ public sealed class KrosteWalkthroughGenerator
         return line.Substring(start + 1, end - start - 1);
     }
 
-    /// <summary>Schreibt eine krostemod_walkthrough_hints.rpy pro tl-Language
-    /// mit <c>translate &lt;lang&gt; strings:</c>-Blocks. Jeder Block mappt
-    /// den unmodifizierten Original-Choice-Text auf den Hint-erweiterten Text.
+    /// <summary>Schreibt EINE <c>krostemod_walkthrough_hints.rpy</c> im
+    /// game/-Root mit einem <c>init 999 python:</c>-Block der zur Runtime
+    /// das Translation-Dictionary jeder tl-Language direkt patcht.
     ///
-    /// Trade-off: wenn das Spiel eine echte Uebersetzung fuer denselben Original-
-    /// String hat, gewinnt die zuletzt geladene Definition (Ren'Py-Load-Order).
-    /// Wir landen im Zweifel spaeter (unser File beginnt mit "krostemod_",
-    /// alphabetisch typisch weit hinten) → Hint sichtbar aber Original-Sprache
-    /// statt Uebersetzung. Fuer den User im Screenshot ist das Verbesserung:
-    /// vorher zeigte Ren'Py entweder Original (ohne Hint) oder Uebersetzung
-    /// (ohne Hint) — mit uns: Original + Hint.</summary>
-    private static void WriteTranslationHintFile(string destRoot, string language,
+    /// Warum nicht AST-basiertes <c>translate &lt;lang&gt; strings:</c>? Ren'Py
+    /// wirft <c>Exception('A translation for "..." already exists at ...')</c>
+    /// bei Duplikaten — und Boundaries of Morality hat fuer viele Choice-
+    /// Strings bereits eine Uebersetzung. Verifiziert an traceback.txt vom
+    /// User (v0.9.1-Bug).
+    ///
+    /// Der Runtime-Patcher umgeht die Duplikat-Pruefung, indem er direkt
+    /// ins <c>translator.strings[lang].translations</c>-Dict schreibt.
+    /// UEBERSCHREIBT bestehende Uebersetzungen — genau das was wir wollen:
+    /// unsere Hint-Version soll gewinnen. Falls unser Original-String nicht
+    /// exakt matcht (weil Ren'Py's Bytecode einen anderen Text hat), passiert
+    /// nichts (silent no-op).</summary>
+    private static void WriteTranslationHintPatcher(string destRoot,
+        IReadOnlyList<string> tlLanguages,
         IReadOnlyList<(string OriginalText, string Hint)> hints)
     {
-        var relDir = Path.Combine("tl", language);
-        var absDir = Path.Combine(destRoot, relDir);
-        Directory.CreateDirectory(absDir);
-        var filePath = Path.Combine(absDir, "krostemod_walkthrough_hints.rpy");
+        // Dedup nach Original-Text (der Hint ist deterministisch pro Text).
+        var deduped = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (orig, hint) in hints)
+            if (!deduped.ContainsKey(orig)) deduped[orig] = hint;
 
+        var filePath = Path.Combine(destRoot, "krostemod_walkthrough_hints.rpy");
         var sb = new StringBuilder();
         sb.AppendLine("# =====================================================================");
-        sb.AppendLine($"# KrosteMod — Walkthrough-Hints fuer {language}");
-        sb.AppendLine("# Ergaenzt Choice-Texte um goldene Hint-Suffixes (K var+N).");
+        sb.AppendLine("# KrosteMod — Walkthrough-Hints (Translation-Aware Runtime-Patcher)");
+        sb.AppendLine($"# {deduped.Count} unique Choice-Strings, {tlLanguages.Count} Zielsprachen: {string.Join(", ", tlLanguages)}");
         sb.AppendLine("# Autogeneriert von RenPack — bitte nicht manuell editieren.");
         sb.AppendLine("# =====================================================================");
         sb.AppendLine();
-        sb.AppendLine($"translate {language} strings:");
+        // Late init damit alle tl-Files bereits geladen sind. Wir muessen
+        // NACH dem Original-Translation-Load kommen, sonst ueberschreibt
+        // das Original unsere Patches.
+        sb.AppendLine("init 999 python:");
         sb.AppendLine();
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var (originalText, hint) in hints)
+        sb.AppendLine("    krostemod_walkthrough_langs = " + FormatPythonStringList(tlLanguages));
+        sb.AppendLine();
+        sb.AppendLine("    krostemod_walkthrough_hints = {");
+        foreach (var (orig, hint) in deduped)
         {
-            if (!seen.Add(originalText)) continue; // Dedup
-            sb.Append("    old \"").Append(EscapeForRenpy(originalText)).AppendLine("\"");
-            sb.Append("    new \"").Append(EscapeForRenpy(originalText)).Append(" ").Append(EscapeForRenpy(hint)).AppendLine("\"");
-            sb.AppendLine();
+            sb.Append("        ")
+              .Append(FormatPythonString(orig))
+              .Append(": ")
+              .Append(FormatPythonString(orig + " " + hint))
+              .AppendLine(",");
         }
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    def _krostemod_apply_walkthrough_hints():");
+        sb.AppendLine("        try:");
+        sb.AppendLine("            from renpy.translation import translator");
+        sb.AppendLine("        except Exception:");
+        sb.AppendLine("            return");
+        sb.AppendLine("        strings = getattr(translator, 'strings', None)");
+        sb.AppendLine("        if not strings:");
+        sb.AppendLine("            return");
+        sb.AppendLine("        for lang in krostemod_walkthrough_langs:");
+        sb.AppendLine("            stl = strings.get(lang)");
+        sb.AppendLine("            if stl is None: continue");
+        sb.AppendLine("            translations = getattr(stl, 'translations', None)");
+        sb.AppendLine("            if translations is None: continue");
+        sb.AppendLine("            for old, new in krostemod_walkthrough_hints.items():");
+        sb.AppendLine("                translations[old] = new");
+        sb.AppendLine();
+        sb.AppendLine("    _krostemod_apply_walkthrough_hints()");
         File.WriteAllText(filePath, sb.ToString(), new System.Text.UTF8Encoding(false));
-        Log.Info("Translation-Hints geschrieben: {path} ({count} Strings)", filePath, seen.Count);
+        Log.Info("Translation-Hint-Patcher geschrieben: {path} ({count} Strings x {langs} Sprachen)",
+            filePath, deduped.Count, tlLanguages.Count);
     }
 
-    private static string EscapeForRenpy(string s)
+    /// <summary>Python-String-Literal mit Escape-Handling fuer alle
+    /// problematischen Zeichen (Quotes, Backslash, Newlines, Unicode).
+    /// Wir nutzen ALWAYS Double-Quotes und escapen entsprechend.</summary>
+    private static string FormatPythonString(string s)
     {
         var sb = new StringBuilder(s.Length + 8);
+        sb.Append('"');
         foreach (char c in s)
         {
             switch (c)
             {
                 case '"': sb.Append("\\\""); break;
                 case '\\': sb.Append("\\\\"); break;
-                case '\r': break;
+                case '\r': sb.Append("\\r"); break;
                 case '\n': sb.Append("\\n"); break;
+                case '\t': sb.Append("\\t"); break;
                 default: sb.Append(c); break;
             }
         }
+        sb.Append('"');
         return sb.ToString();
+    }
+
+    private static string FormatPythonStringList(IEnumerable<string> items)
+    {
+        return "[" + string.Join(", ", items.Select(FormatPythonString)) + "]";
     }
 
     /// <summary>Fuegt in eine Choice-Header-Zeile den Hint-Suffix ein.
