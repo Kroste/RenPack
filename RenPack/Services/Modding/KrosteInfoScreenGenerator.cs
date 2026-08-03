@@ -310,10 +310,12 @@ public sealed class KrosteInfoScreenGenerator
         sb.AppendLine("        return ', '.join(parts) if parts else '(kein numerischer Impact)'");
         sb.AppendLine();
         sb.AppendLine("    def krostemod_menu_hint_visible():");
-        sb.AppendLine("        # \"!\"-Button NUR sichtbar wenn ein Choice-Menu laueft UND");
-        sb.AppendLine("        # wir Impact-Daten fuer dieses Menu haben.");
-        sb.AppendLine("        if renpy.get_screen('choice') is None: return False");
-        sb.AppendLine("        return bool(krostemod_current_menu_vars())");
+        sb.AppendLine("        # Sichtbar wenn wir Choice-Detail-Info fuer das aktuelle Menu");
+        sb.AppendLine("        # haben. Frueher checkten wir renpy.get_screen('choice') — aber");
+        sb.AppendLine("        # viele Spiele haben Custom-Menu-Screens die nicht 'choice'");
+        sb.AppendLine("        # heissen (Boundaries of Morality). Direkt gegen menu_choices/");
+        sb.AppendLine("        # menu_impact-Dict pruefen ist robuster.");
+        sb.AppendLine("        return bool(krostemod_current_menu_choices() or krostemod_current_menu_vars())");
         sb.AppendLine();
     }
 
