@@ -304,6 +304,74 @@ public sealed class SaveServiceTests : IDisposable
     }
 
     [Fact]
+    public void Roundtrip_edit_list_and_dict_via_python_literal()
+    {
+        // v0.5: Listen/Dict-Editing im Save-Editor. Der User sieht den Wert
+        // als Python-Literal, editiert ihn, wir parsen + encoden + splicen.
+        var py = PythonExe();
+        if (py is null) { Assert.Skip("python3 nicht verfügbar"); return; }
+
+        var savePath = Path.Combine(_tmp, "list_dict.save");
+        RunPython(py, PyBuildSaveWithListAndDict, savePath);
+
+        var beforeInfo = _svc.Read(savePath);
+        beforeInfo.LogError.Should().BeNull();
+        beforeInfo.Variables.Should().Contain(v => v.Name == "flags"
+            && v.TypeName == "list");
+        beforeInfo.Variables.Should().Contain(v => v.Name == "stats"
+            && v.TypeName == "dict");
+
+        // Wir aendern die Liste [1,2,3] auf [10,20,30,40] (add + change)
+        // und dict {a:1,b:2} auf {a:99, c:3} (rename+change).
+        var edited = Path.Combine(_tmp, "list_dict.edited.save");
+        _svc.Write(savePath, edited, [
+            new SaveEdit("flags", new List<object?> { 10L, 20L, 30L, 40L }),
+            new SaveEdit("stats", new Dictionary<object, object?> { { "a", 99L }, { "c", 3L } }),
+        ]);
+
+        var after = _svc.Read(edited);
+        after.LogError.Should().BeNull();
+        var flags = after.Variables.Single(v => v.Name == "flags");
+        flags.Value.Should().Be("[10, 20, 30, 40]");
+        var stats = after.Variables.Single(v => v.Name == "stats");
+        // Dict-Reihenfolge kann per Hashtable variieren — pruefe beide Keys.
+        stats.Value.Should().Contain("'a': 99");
+        stats.Value.Should().Contain("'c': 3");
+    }
+
+    private const string PyBuildSaveWithListAndDict = """
+        import sys, os, types, pickle, json, zipfile
+        outpath = sys.argv[1]
+
+        for mod in ('renpy', 'renpy.rollback'):
+            sys.modules[mod] = types.ModuleType(mod)
+
+        class RollbackLog:
+            __module__ = 'renpy.rollback'
+            def __init__(self):
+                self.log = []
+                self.identifier = 'test-listdict'
+            def __reduce_ex__(self, proto):
+                return (RollbackLog, (), (self.log, self.identifier))
+        sys.modules['renpy.rollback'].RollbackLog = RollbackLog
+
+        roots = {
+            'store.flags': [1, 2, 3],
+            'store.stats': {'a': 1, 'b': 2},
+            'store.name': 'Alice',
+        }
+        log_bytes = pickle.dumps((roots, RollbackLog()), protocol=5)
+
+        with zipfile.ZipFile(outpath, 'w', zipfile.ZIP_DEFLATED) as z:
+            z.writestr('log', log_bytes)
+            z.writestr('json', json.dumps({
+                '_save_name': 'ListDict',
+                '_renpy_version': [8, 4, 1, 25072401],
+                '_ctime': 1778676757,
+            }))
+        """;
+
+    [Fact]
     public void Write_can_replace_original_file_atomically()
     {
         var py = PythonExe();

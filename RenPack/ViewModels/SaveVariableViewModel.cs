@@ -17,7 +17,15 @@ public sealed partial class SaveVariableViewModel : ObservableObject
         _originalValue = v.Value;
         _editableValue = v.Value;
         IsInternal = v.IsInternal;
-        IsEditable = TypeName is "int" or "float" or "str" or "bool" or "None";
+        // Simple types: direkt editierbar. list/dict/tuple: nur wenn der
+        // Value als Python-Literal parsebar ist (siehe ValueDisplay in
+        // RenpySaveService — der Display-Text ist bereits das Literal).
+        IsEditable = TypeName switch
+        {
+            "int" or "float" or "str" or "bool" or "None" => true,
+            "list" or "dict" or "tuple" => PythonLiteral.TryParse(v.Value, out _),
+            _ => false,
+        };
     }
 
     public string Name { get; }
@@ -46,6 +54,7 @@ public sealed partial class SaveVariableViewModel : ObservableObject
         "float" => double.Parse(EditableValue, CultureInfo.InvariantCulture),
         "str" => EditableValue,
         "None" => null,
+        "list" or "dict" or "tuple" => PythonLiteral.Parse(EditableValue),
         _ => throw new NotSupportedException($"Typ {TypeName} ist nicht editierbar."),
     };
 }

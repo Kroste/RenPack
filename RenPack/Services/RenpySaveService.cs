@@ -319,6 +319,15 @@ public sealed class RenpySaveService : IRenpySaveService
     private static string ValueDisplay(object? v)
     {
         const int max = 200;
+        // Listen/Dicts/Tuples deren Inhalt "einfach editierbar" ist (nur
+        // Skalare + verschachtelte einfach-editierbare Container), zeigen
+        // wir als Python-Literal — der User kann sie im Save-Editor direkt
+        // im Text-Feld editieren. Sonst Fallback auf "[N Elemente]".
+        if (v is IDictionary or IList or object?[] && IsSimplyEditable(v))
+        {
+            var lit = PythonLiteral.Format(v);
+            return lit.Length > max ? lit[..max] + "…" : lit;
+        }
         string s = v switch
         {
             null => "None",
@@ -333,6 +342,42 @@ public sealed class RenpySaveService : IRenpySaveService
             _ => v.ToString() ?? "",
         };
         return s.Length > max ? s[..max] + "…" : s;
+    }
+
+    /// <summary>Prueft rekursiv, ob ein Wert komplett aus einfach editier-
+    /// baren Typen besteht (null, bool, int, float, string) — direkt oder
+    /// in flachen/verschachtelten Listen/Dicts/Tuples. ClassDict-Objekte
+    /// (Opaque-Ren'Py-Klassen) machen den Wert nicht editierbar.</summary>
+    public static bool IsSimplyEditable(object? v)
+    {
+        switch (v)
+        {
+            case null:
+            case bool:
+            case string:
+            case int or long or short or byte:
+            case double or float:
+                return true;
+            case ClassDict:
+                return false;
+            case IDictionary dict:
+                foreach (DictionaryEntry e in dict)
+                {
+                    if (!IsSimplyEditable(e.Key)) return false;
+                    if (!IsSimplyEditable(e.Value)) return false;
+                }
+                return true;
+            case object?[] tuple:
+                foreach (var it in tuple)
+                    if (!IsSimplyEditable(it)) return false;
+                return true;
+            case IList list:
+                foreach (var it in list)
+                    if (!IsSimplyEditable(it)) return false;
+                return true;
+            default:
+                return false;
+        }
     }
 
     // ---- Zip-Helfer --------------------------------------------------------
