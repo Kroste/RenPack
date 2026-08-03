@@ -109,6 +109,18 @@ public sealed partial class SaveDiffViewModel : ObservableObject
 
     partial void OnSelectedRowChanged(SaveDiffRow? value)
         => MigrateFromRightCommand.NotifyCanExecuteChanged();
+
+    /// <summary>Pack H v0.9: Per-Zeile-Command fuer den Copy-from-B-Button
+    /// in der DataGrid-Spalte. Anders als <see cref="MigrateFromRightCommand"/>
+    /// braucht diese Variante keine SelectedRow — der Row-Parameter kommt
+    /// direkt aus dem DataGrid-Zeilen-Context.</summary>
+    [RelayCommand]
+    private void MigrateRow(SaveDiffRow? row)
+    {
+        if (row is null || OnMigrateFromRight is null) return;
+        if (row.Change is not (DiffChange.Modified or DiffChange.Added)) return;
+        OnMigrateFromRight(row);
+    }
 }
 
 public enum DiffChange { Unchanged, Added, Removed, Modified }

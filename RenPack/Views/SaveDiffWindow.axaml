@@ -76,6 +76,30 @@
                             Binding="{Binding LeftValue}" />
                         <DataGridTextColumn Header="B" Width="2*" IsReadOnly="True"
                             Binding="{Binding RightValue}" />
+                        <!-- Pack H v0.9: Per-Zeile-Button „B → A". Nur aktiv fuer
+                             Added/Modified. Der klassische Rechtsklick-Weg
+                             bleibt als Fallback im ContextMenu. -->
+                        <DataGridTemplateColumn Width="60" IsReadOnly="True">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate DataType="vm:SaveDiffRow">
+                                    <Button Content="← B"
+                                            Padding="6,2"
+                                            FontSize="11"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Command="{Binding $parent[Window].((vm:SaveDiffViewModel)DataContext).MigrateRowCommand}"
+                                            CommandParameter="{Binding}"
+                                            ToolTip.Tip="{loc:Tr Diff_MigrateFromRight}">
+                                        <Button.IsVisible>
+                                            <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                                                <Binding Path="Change" Converter="{x:Static ObjectConverters.Equal}" ConverterParameter="{x:Static vm:DiffChange.Modified}" />
+                                                <Binding Path="Change" Converter="{x:Static ObjectConverters.Equal}" ConverterParameter="{x:Static vm:DiffChange.Added}" />
+                                            </MultiBinding>
+                                        </Button.IsVisible>
+                                    </Button>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                     </DataGrid.Columns>
                 </DataGrid>
             </Border>
