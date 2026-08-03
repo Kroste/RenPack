@@ -263,17 +263,37 @@
                         <!-- Bild-Preview (Pack G v0.9): Toggle zwischen Fit
                              (Uniform+DownOnly, zentriert) und Original-Groesse
                              (Stretch=None, mit Scrollbars). Doppelklick auf
-                             das Bild oder Ctrl+Wheel wechselt den Modus. -->
-                        <ScrollViewer IsVisible="{Binding Preview.IsImage}"
-                                      HorizontalScrollBarVisibility="Auto"
+                             das Bild oder Ctrl+Wheel wechselt den Modus.
+                             Zwei getrennte Container weil ScrollViewer die
+                             Zentrierung bei kleineren Bildern kaputt macht —
+                             im Fit-Modus daher OHNE ScrollViewer. -->
+                        <Image Source="{Binding Preview.ImageContent}"
+                               Stretch="Uniform" StretchDirection="DownOnly"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Margin="12"
+                               DoubleTapped="OnPreviewImageDoubleTapped"
+                               PointerWheelChanged="OnPreviewImageWheel">
+                            <Image.IsVisible>
+                                <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                    <Binding Path="Preview.IsImage" />
+                                    <Binding Path="!Preview.ImageOriginalSize" />
+                                </MultiBinding>
+                            </Image.IsVisible>
+                        </Image>
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto"
                                       VerticalScrollBarVisibility="Auto">
-                            <Image x:Name="PreviewImage"
-                                   Source="{Binding Preview.ImageContent}"
+                            <ScrollViewer.IsVisible>
+                                <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                    <Binding Path="Preview.IsImage" />
+                                    <Binding Path="Preview.ImageOriginalSize" />
+                                </MultiBinding>
+                            </ScrollViewer.IsVisible>
+                            <Image Source="{Binding Preview.ImageContent}"
+                                   Stretch="None"
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"
                                    Margin="12"
-                                   Stretch="{Binding Preview.ImageStretch}"
-                                   StretchDirection="{Binding Preview.ImageStretchDirection}"
                                    DoubleTapped="OnPreviewImageDoubleTapped"
                                    PointerWheelChanged="OnPreviewImageWheel" />
                         </ScrollViewer>
