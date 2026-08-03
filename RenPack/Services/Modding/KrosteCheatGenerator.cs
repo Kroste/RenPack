@@ -227,9 +227,6 @@ public sealed class KrosteCheatGenerator
         // dotted-name-Support fuer Character-Container-Attribute wie
         // `fcs.morality`, `samantha.love`. Statt setattr(store, 'fcs.morality', v)
         // navigieren wir per Punkt-Split: store → fcs → attr=morality → value.
-        // Beim Setzen bevorzugen wir die `update(attr, value)`-Methode wenn
-        // sie existiert (viele Ren'Py-Container implementieren sie), sonst
-        // Fallback auf setattr.
         sb.AppendLine("    def krostemod_cheat_resolve(name):");
         sb.AppendLine("        parts = name.split('.')");
         sb.AppendLine("        obj = store");
@@ -244,15 +241,19 @@ public sealed class KrosteCheatGenerator
         sb.AppendLine("        try: return getattr(obj, attr)");
         sb.AppendLine("        except Exception: return None");
         sb.AppendLine();
+        // WICHTIG: IMMER setattr, NIE .update() als Setter. Viele
+        // Ren'Py-Container-Klassen (Boundaries of Morality's fcs, div.
+        // andere Games) implementieren `update(attr, val)` additiv —
+        // `fcs.update('morality', 5)` bedeutet dort `morality += 5`,
+        // nicht `= 5`. Wenn wir aus adjust() den bereits berechneten
+        // absoluten Ziel-Wert reingeben und dann update() aufrufen,
+        // wird der Wert erneut addiert → Minus-Buttons erhoehen sogar.
+        // setattr ist der zuverlaessige, semantisch-eindeutige Weg.
         sb.AppendLine("    def krostemod_cheat_set(name, value):");
         sb.AppendLine("        obj, attr = krostemod_cheat_resolve(name)");
         sb.AppendLine("        if obj is None: return");
         sb.AppendLine("        try:");
-        sb.AppendLine("            upd = getattr(obj, 'update', None)");
-        sb.AppendLine("            if callable(upd) and obj is not store:");
-        sb.AppendLine("                upd(attr, value)");
-        sb.AppendLine("            else:");
-        sb.AppendLine("                setattr(obj, attr, value)");
+        sb.AppendLine("            setattr(obj, attr, value)");
         sb.AppendLine("        except Exception as ex:");
         sb.AppendLine("            renpy.notify('krostemod set failed: ' + str(ex))");
         sb.AppendLine();
