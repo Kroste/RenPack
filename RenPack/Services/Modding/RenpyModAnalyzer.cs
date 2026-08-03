@@ -95,6 +95,14 @@ public sealed class RenpyModAnalyzer
         @"\b([a-zA-Z_][a-zA-Z_0-9]*)\b",
         RegexOptions.Compiled);
 
+    /// <summary><c>jump X</c> oder <c>call X</c> — Kontrollfluss-Sprung.
+    /// Wir folgen in <see cref="CollectChoiceBodyDeltas"/>, damit Choices
+    /// deren Body nur aus einem Jump besteht (typisch bei
+    /// „Weiche in ein anderes Label"-Menus) trotzdem ihren Impact melden.</summary>
+    private static readonly Regex JumpPattern = new(
+        @"^\s*(?:jump|call)\s+([A-Za-z_][A-Za-z0-9_]*)",
+        RegexOptions.Compiled);
+
     /// <summary>Say-Statement: <c>character "text"</c> oder nur <c>"text"</c>
     /// (Narrator). Der Text kann Escape-Sequenzen enthalten. Wir extrahieren
     /// den optionalen Character-Identifier und den Raw-Text (mit Escapes).
@@ -223,6 +231,7 @@ public sealed class RenpyModAnalyzer
         List<VarDelta> globalDeltas)
     {
         var lines = File.ReadAllLines(absPath);
+        var labelLines = BuildLabelMap(lines);
         string currentLabel = "";
         int menuIndexInLabel = -1;
 
@@ -289,7 +298,7 @@ public sealed class RenpyModAnalyzer
                         string? condition = mChoice.Groups[4].Success
                             ? mChoice.Groups[4].Value.Trim() : null;
 
-                        var deltas = CollectChoiceBodyDeltas(lines, i + 1, indent);
+                        var deltas = CollectChoiceBodyDeltas(lines, i + 1, indent, labelLines);
                         choices.Add(new RpyChoice(
                             SourceFile: relPath,
                             SourceLine: i + 1,
@@ -444,13 +453,37 @@ public sealed class RenpyModAnalyzer
     /// Choices — aber nur die DIREKTEN Deltas, nicht die aus
     /// verschachtelten <c>menu:</c>-Bloecken. Sobald ein inneres
     /// <c>menu:</c> aufgemacht wird, ueberspringen wir alle Zeilen bis
-    /// wir wieder auf oder unter dessen Indent-Level zurueck sind.</summary>
+    /// wir wieder auf oder unter dessen Indent-Level zurueck sind.
+    ///
+    /// **Jump-Follow:** Sieht der Body ein <c>jump X</c> oder <c>call X</c>,
+    /// folgen wir in den Body von Label X (nur bekannte Labels im selben
+    /// File, Zyklen werden per <c>visitedLabels</c> abgefangen, Tiefe max 3).
+    /// Ohne das haetten Choices deren Body NUR aus <c>jump next_scene</c>
+    /// besteht (typisch in Boundaries of Morality) keine Deltas und wuerden
+    /// im Info-Popup als „no info" durchfallen.</summary>
     private static IReadOnlyList<VarDelta> CollectChoiceBodyDeltas(
-        string[] lines, int startIndex, int choiceIndent)
+        string[] lines, int startIndex, int choiceIndent,
+        IReadOnlyDictionary<string, int> labelLines)
     {
         var deltas = new List<VarDelta>();
-        int? skipUntilIndent = null; // wenn gesetzt: alles ignorieren
-                                     // bis Indent <= skipUntilIndent
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+        CollectDeltasFromRange(lines, startIndex, choiceIndent, deltas,
+            labelLines, visited, depth: 0);
+        return deltas;
+    }
+
+    private static void CollectDeltasFromRange(
+        string[] lines, int startIndex, int stopIndent,
+        List<VarDelta> deltas,
+        IReadOnlyDictionary<string, int> labelLines,
+        HashSet<string> visitedLabels, int depth)
+    {
+        // Safety: chain-depth cap gegen Jump-Ketten wie A→B→C.
+        // 3 reicht fuer typische „choice → transition-label → scene-label" Ketten.
+        const int MaxDepth = 3;
+        if (depth > MaxDepth) return;
+
+        int? skipUntilIndent = null;
 
         for (int i = startIndex; i < lines.Length; i++)
         {
@@ -458,18 +491,15 @@ public sealed class RenpyModAnalyzer
             var trimmed = line.TrimStart();
             if (trimmed.Length == 0) continue;
             int indent = line.Length - trimmed.Length;
-            if (indent <= choiceIndent) break;
+            if (indent <= stopIndent) break;
             if (trimmed[0] == '#') continue;
 
-            // Skip-Modus: warten bis wir aus dem verschachtelten Block raus sind
             if (skipUntilIndent is int skip)
             {
                 if (indent <= skip) skipUntilIndent = null;
                 else continue;
             }
 
-            // Verschachteltes menu: entdeckt → alle deeper-indented Zeilen
-            // ueberspringen (ihre Deltas gehoeren zu ihren eigenen Choices)
             var mMenu = MenuPattern.Match(line);
             if (mMenu.Success)
             {
@@ -486,12 +516,6 @@ public sealed class RenpyModAnalyzer
                     Value: StripLineComment(m.Groups[3].Value).Trim()));
                 continue;
             }
-            // Character-Method-Delta: `$ obj.update("attr", value)`. Wir
-            // synthetisieren einen Delta mit Variable "obj.attr". Ob "="
-            // oder "+=" ist Konvention der jeweiligen Spiel-Klasse — die
-            // Mehrheit implementiert `update()` additiv (verifiziert an
-            // Boundaries of Morality's `fcs.update('morality', 1)`). Wir
-            // gehen bei numerischen Werten von "+=" aus.
             var mUpd = DollarUpdateCallPattern.Match(line);
             if (mUpd.Success)
             {
@@ -503,9 +527,39 @@ public sealed class RenpyModAnalyzer
                     Variable: $"{obj}.{attr}",
                     Op: op,
                     Value: val));
+                continue;
+            }
+
+            // jump X / call X → in Ziel-Label reinfolgen und dessen
+            // Body-Deltas mitnehmen. Nur bekannte Labels, keine Zyklen.
+            var mJump = JumpPattern.Match(line);
+            if (mJump.Success)
+            {
+                string target = mJump.Groups[1].Value;
+                if (visitedLabels.Add(target) &&
+                    labelLines.TryGetValue(target, out int labelLine))
+                {
+                    var labelLineText = lines[labelLine];
+                    int labelIndent = labelLineText.Length - labelLineText.TrimStart().Length;
+                    CollectDeltasFromRange(lines, labelLine + 1, labelIndent,
+                        deltas, labelLines, visitedLabels, depth + 1);
+                }
             }
         }
-        return deltas;
+    }
+
+    /// <summary>Baut eine Label-Name→Zeilen-Index-Map fuer ein File. Wird
+    /// von <see cref="CollectChoiceBodyDeltas"/> gebraucht, um <c>jump X</c>
+    /// zum Label-Body zu folgen.</summary>
+    private static Dictionary<string, int> BuildLabelMap(string[] lines)
+    {
+        var map = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (int i = 0; i < lines.Length; i++)
+        {
+            var m = LabelPattern.Match(lines[i]);
+            if (m.Success) map[m.Groups[1].Value] = i;
+        }
+        return map;
     }
 
     private static bool LooksLikeNumericLiteral(string s)

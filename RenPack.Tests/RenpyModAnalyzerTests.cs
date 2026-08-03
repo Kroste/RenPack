@@ -428,6 +428,79 @@ public sealed class RenpyModAnalyzerTests : IDisposable
     }
 
     [Fact]
+    public void Choice_body_jump_follows_into_target_label_body()
+    {
+        // Typischer Boundaries-of-Morality-Fall: Choice-Body enthaelt NUR
+        // `jump target`, die eigentlichen $-Statements stehen im
+        // gejumpten Label. Ohne Jump-Follow bleiben Deltas leer und
+        // der Info-Popup meldet „no impact".
+        Write("game/prologue.rpy", """
+            label prologue:
+                menu:
+                    "Change quickly!" if fcs.desire < 4:
+                        jump prologue_house_changing
+                    "Nothing happened":
+                        jump prologue_house_changing_skip
+
+            label prologue_house_changing:
+                $ fcs.update("morality", 1)
+                $ love += 2
+                return
+
+            label prologue_house_changing_skip:
+                $ fcs.update("morality", -1)
+                return
+            """);
+        var result = _analyzer.Analyze(_tmp);
+        result.Choices.Should().HaveCount(2);
+
+        var change = result.Choices[0];
+        change.Text.Should().Be("Change quickly!");
+        change.Deltas.Should().HaveCount(2);
+        change.Deltas.Should().Contain(new VarDelta("fcs.morality", "+=", "1"));
+        change.Deltas.Should().Contain(new VarDelta("love", "+=", "2"));
+
+        var skip = result.Choices[1];
+        skip.Text.Should().Be("Nothing happened");
+        skip.Deltas.Should().ContainSingle();
+        skip.Deltas[0].Should().Be(new VarDelta("fcs.morality", "+=", "-1"));
+    }
+
+    [Fact]
+    public void Jump_follow_stops_at_cycles_and_unknown_targets()
+    {
+        // Sicherstellen: (1) Zyklen A→B→A haengen nicht,
+        // (2) Sprung zu einem Label das nicht im selben File existiert
+        //     wird still ignoriert.
+        Write("game/script.rpy", """
+            label start:
+                menu:
+                    "Loop":
+                        jump loop_a
+                    "Unknown":
+                        jump external_label
+
+            label loop_a:
+                $ x += 1
+                jump loop_b
+
+            label loop_b:
+                $ y += 1
+                jump loop_a
+            """);
+        var result = _analyzer.Analyze(_tmp);
+        var loop = result.Choices.Single(c => c.Text == "Loop");
+        // Beide Labels genau einmal besucht: x+=1 und y+=1 gesammelt,
+        // dann wird loop_a nicht erneut betreten (visited-Guard).
+        loop.Deltas.Should().HaveCount(2);
+        loop.Deltas.Should().Contain(new VarDelta("x", "+=", "1"));
+        loop.Deltas.Should().Contain(new VarDelta("y", "+=", "1"));
+
+        var unknown = result.Choices.Single(c => c.Text == "Unknown");
+        unknown.Deltas.Should().BeEmpty();
+    }
+
+    [Fact]
     public void Menus_without_var_changing_choices_are_excluded_from_locations()
     {
         // Ein reines Dialog-Menu (keine $-Statements) ist fuer den Hint
