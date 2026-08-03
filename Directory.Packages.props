@@ -4,9 +4,9 @@
   <ItemGroup>
     <!-- Avalonia — CHECK: neueste stabile 12.x.
          DiagnosticsSupport folgt NICHT der Avalonia-Version (eigene 2.x-Reihe)! -->
-    <PackageVersion Include="Avalonia" Version="12.1.0" />
+    <PackageVersion Include="Avalonia" Version="12.1.1" />
     <PackageVersion Include="Avalonia.Desktop" Version="12.1.0" />
-    <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.0" />
+    <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.1" />
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="12.1.0" />
     <PackageVersion Include="Avalonia.Controls.DataGrid" Version="12.1.0" />
     <!-- Nur Debug-Builds referenzieren dieses Paket (DevTools) -->
