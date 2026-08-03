@@ -388,9 +388,13 @@ public sealed class KrosteCheatGenerator
         sb.AppendLine("    def krostemod_set_cheat_filter(new_text):");
         sb.AppendLine("        store.krostemod_cheat_filter = new_text or ''");
         sb.AppendLine();
-        sb.AppendLine("    def krostemod_cheat_filter_group(entries):");
+        sb.AppendLine("    def krostemod_cheat_filter_group(entries, group_label):");
+        sb.AppendLine("        # Filter-Match: entweder gegen Group-Label (dann ganze Gruppe");
+        sb.AppendLine("        # zeigen — 'fcs' zeigt alle fcs.*-Vars auch wenn keiner der");
+        sb.AppendLine("        # Var-Namen den Filter exakt so enthaelt) ODER pro Var-Name.");
         sb.AppendLine("        f = (store.krostemod_cheat_filter or '').lower()");
         sb.AppendLine("        if not f: return entries");
+        sb.AppendLine("        if group_label and f in group_label.lower(): return entries");
         sb.AppendLine("        return [e for e in entries if f in e[0].lower()]");
         sb.AppendLine();
         sb.AppendLine("screen krostemod_cheat():");
@@ -430,7 +434,7 @@ public sealed class KrosteCheatGenerator
         sb.AppendLine("                vbox:");
         sb.AppendLine("                    spacing 4");
         sb.AppendLine("                    for group_label, group_entries in krostemod_cheat_groups:");
-        sb.AppendLine("                        $ ce_visible = krostemod_cheat_filter_group(group_entries)");
+        sb.AppendLine("                        $ ce_visible = krostemod_cheat_filter_group(group_entries, group_label)");
         sb.AppendLine("                        if ce_visible:");
         if (showGroupHeaders)
         {
