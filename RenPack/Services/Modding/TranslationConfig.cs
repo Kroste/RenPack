@@ -77,6 +77,30 @@ public static class TargetLanguageMap
         TargetLanguage.Arabic => "العربية",
         _ => lang.ToString(),
     };
+
+    /// <summary>Unicode-Flag-Emoji per Regional-Indicator-Symbol-Paar
+    /// (2 Zeichen ab U+1F1E6). Fuer Sprachen mit mehreren Laendern nehmen
+    /// wir das Ursprungs-/Standardland: English → GB, Portuguese → PT,
+    /// Spanish → ES, Chinese Simplified → CN, Arabic → SA.</summary>
+    public static string ToFlagEmoji(this TargetLanguage lang) => lang switch
+    {
+        TargetLanguage.English => "🇬🇧",
+        TargetLanguage.German => "🇩🇪",
+        TargetLanguage.French => "🇫🇷",
+        TargetLanguage.Spanish => "🇪🇸",
+        TargetLanguage.Italian => "🇮🇹",
+        TargetLanguage.Portuguese => "🇵🇹",
+        TargetLanguage.Polish => "🇵🇱",
+        TargetLanguage.Russian => "🇷🇺",
+        TargetLanguage.Ukrainian => "🇺🇦",
+        TargetLanguage.Czech => "🇨🇿",
+        TargetLanguage.ChineseSimplified => "🇨🇳",
+        TargetLanguage.Japanese => "🇯🇵",
+        TargetLanguage.Korean => "🇰🇷",
+        TargetLanguage.Turkish => "🇹🇷",
+        TargetLanguage.Arabic => "🇸🇦",
+        _ => "🏳️",
+    };
 }
 
 /// <summary>Konfiguration fuer den Translation-Mod (E6). Der User waehlt

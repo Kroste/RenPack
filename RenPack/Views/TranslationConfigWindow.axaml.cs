@@ -32,7 +32,7 @@ public partial class TranslationConfigWindow : ChromeWindow
             {
                 var cb = new CheckBox
                 {
-                    Content = $"{choice.Language.ToNativeName()} ({choice.Language.ToPromptName()})",
+                    Content = $"{choice.Language.ToFlagEmoji()}  {choice.Language.ToNativeName()} ({choice.Language.ToPromptName()})",
                     Margin = new Avalonia.Thickness(0, 2, 0, 2),
                 };
                 cb.Bind(CheckBox.IsCheckedProperty,
@@ -45,10 +45,10 @@ public partial class TranslationConfigWindow : ChromeWindow
             },
             supportsRecycling: true);
 
-        // Quellsprache: erst "Auto-Detect" + dann alle Sprachen.
+        // Quellsprache: erst "Auto-Detect" + dann alle Sprachen mit Flagge.
         SourceLanguageBox.Items.Add(L.T("Translate_Source_Auto"));
         foreach (var lang in Enum.GetValues<TargetLanguage>())
-            SourceLanguageBox.Items.Add($"{lang.ToNativeName()} ({lang.ToPromptName()})");
+            SourceLanguageBox.Items.Add($"{lang.ToFlagEmoji()}  {lang.ToNativeName()} ({lang.ToPromptName()})");
         SourceLanguageBox.SelectedIndex = 0;
 
         OkButton.Click += (_, _) => ApplyAndClose();
