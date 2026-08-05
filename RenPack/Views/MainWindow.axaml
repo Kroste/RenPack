@@ -72,7 +72,7 @@
 
             <!-- Aktions-Karte -->
             <Border Grid.Row="1" Classes="card" Margin="0,0,0,12">
-                <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto" HorizontalAlignment="Left">
+                <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" HorizontalAlignment="Left">
                     <StackPanel Grid.Column="0" Spacing="8">
                         <TextBlock Text="{loc:Tr Section_Archive}" Classes="section-label" />
                         <StackPanel Orientation="Horizontal" Spacing="0">
@@ -151,6 +151,36 @@
                         <TextBlock Text="{loc:Tr Section_Configuration}" Classes="section-label" />
                         <Button x:Name="SettingsButton" Content="{loc:Tr Main_Settings}"
                                 ToolTip.Tip="{loc:Tr Main_Settings_Tip}" />
+                    </StackPanel>
+
+                    <!-- v0.10: Plugin-Sektion. Nur sichtbar wenn Plugins
+                         geladene Menu-Items registriert haben. Buttons werden
+                         dynamisch aus PluginItems gerendert. -->
+                    <Rectangle Grid.Column="5" Classes="divider-v" Margin="16,4"
+                               IsVisible="{Binding HasPluginItems}" />
+                    <StackPanel Grid.Column="6" Spacing="8"
+                                IsVisible="{Binding HasPluginItems}">
+                        <TextBlock Text="{loc:Tr Section_Plugins}" Classes="section-label" />
+                        <ItemsControl ItemsSource="{Binding PluginItems}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="8" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Command="{Binding $parent[views:ChromeWindow].DataContext.InvokePluginItemCommand}"
+                                            CommandParameter="{Binding}"
+                                            ToolTip.Tip="{Binding PluginName}">
+                                        <TextBlock>
+                                            <Run Text="{Binding Icon}" />
+                                            <Run Text=" " />
+                                            <Run Text="{Binding Label}" />
+                                        </TextBlock>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
                 </Grid>
             </Border>

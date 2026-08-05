@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NLog;
 using RenPack.Localization;
+using RenPack.Plugins;
 using RenPack.Services;
 
 namespace RenPack.ViewModels;
@@ -20,17 +21,47 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public IUiInteractions? Ui { get; set; }
 
     public MainWindowViewModel(IRenpyArchiveService archiveService, RecentFilesService recent,
-        MediaPlaybackService media)
+        MediaPlaybackService media, PluginMenuRegistry? plugins = null)
     {
         _archiveService = archiveService;
         _recent = recent;
+        _plugins = plugins;
         Preview = new PreviewViewModel(archiveService, media);
         RecentArchives = new(_recent.Archives);
         _recent.Changed += (_, _) => RefreshRecent();
+        RefreshPluginItems();
+        if (_plugins is not null) _plugins.Changed += (_, _) => RefreshPluginItems();
     }
 
     // Designer-Konstruktor
     public MainWindowViewModel() : this(new RenpyArchiveService(), new RecentFilesService(), new MediaPlaybackService()) { }
+
+    // ---- Plugins ----------------------------------------------------------
+
+    private readonly PluginMenuRegistry? _plugins;
+
+    /// <summary>Menu-Items die von geladenen Plugins registriert wurden.
+    /// Werden im MainWindow als Buttons in der PLUGINS-Sektion gerendert
+    /// (nur sichtbar wenn Count > 0).</summary>
+    public ObservableCollection<PluginMenuItem> PluginItems { get; } = [];
+
+    public bool HasPluginItems => PluginItems.Count > 0;
+
+    private void RefreshPluginItems()
+    {
+        PluginItems.Clear();
+        if (_plugins is null) return;
+        foreach (var item in _plugins.Items) PluginItems.Add(item);
+        OnPropertyChanged(nameof(HasPluginItems));
+    }
+
+    [RelayCommand]
+    private async Task InvokePluginItemAsync(PluginMenuItem? item)
+    {
+        if (item is null) return;
+        try { await item.OnClick(); }
+        catch (Exception ex) { Log.Warn(ex, "Plugin-Menu-Item {label} fehlgeschlagen", item.Label); }
+    }
 
     /// <summary>MRU-Liste der zuletzt geoeffneten Archive — im Dropdown
     /// neben dem "Oeffnen"-Button gebunden.</summary>

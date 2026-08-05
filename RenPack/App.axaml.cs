@@ -5,6 +5,7 @@ using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using NLog;
 using RenPack.Localization;
+using RenPack.Plugins;
 using RenPack.Services;
 using RenPack.ViewModels;
 using RenPack.Views;
@@ -27,6 +28,7 @@ public partial class App : Application
     // GC-Referenz halten — sonst wird das Tray-Icon nach einer Weile eingesammelt.
     private TrayController? _tray;
     private SingleInstanceGuard? _guard;
+    private PluginLoader? _plugins;
 
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
@@ -66,6 +68,17 @@ public partial class App : Application
                     Dispatcher.UIThread.Post(() => _tray?.Restore());
             }
             desktop.Exit += (_, _) => _guard?.Dispose();
+
+            // Plugin-Loader (v0.10): scannt plugins/-Ordner nach IRenpackPlugin-
+            // Implementierungen. HostServices bekommen das MainWindow als
+            // Owner fuer Modal-Dialoge, den PluginMenuRegistry fuer Menu-
+            // Item-Registration. Fehler beim Load blockieren nicht den App-Start.
+            _plugins = new PluginLoader();
+            var registry = Services.GetRequiredService<PluginMenuRegistry>();
+            var secrets = Services.GetRequiredService<ISecretProtection>();
+            _plugins.LoadAll(pluginName =>
+                new HostServices(pluginName, mainWindow, secrets, registry));
+            desktop.Exit += (_, _) => _plugins?.Dispose();
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -87,6 +100,11 @@ public partial class App : Application
         services.AddSingleton<RecentFilesService>();
         services.AddSingleton<FavoriteVarsService>();
         services.AddSingleton<MediaPlaybackService>();
+
+        // Plugin-Registry (Menu-Items die Plugins registrieren) +
+        // ISecretProtection-Facade um die static SecretProtection-Klasse.
+        services.AddSingleton<PluginMenuRegistry>();
+        services.AddSingleton<ISecretProtection, SecretProtectionAdapter>();
 
         // KI-Services (v0.4b — Multi-Provider)
         services.AddSingleton<AiSettingsService>();

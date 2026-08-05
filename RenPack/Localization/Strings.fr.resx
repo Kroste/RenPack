@@ -15,6 +15,7 @@
   <data name="Section_Archive" xml:space="preserve"><value>ARCHIVE</value></data>
   <data name="Section_Tools" xml:space="preserve"><value>OUTILS</value></data>
   <data name="Section_Configuration" xml:space="preserve"><value>CONFIGURATION</value></data>
+  <data name="Section_Plugins" xml:space="preserve"><value>EXTENSIONS</value></data>
   <data name="Main_OpenArchive" xml:space="preserve"><value>📂 Ouvrir</value></data>
   <data name="Main_OpenArchive_Tip" xml:space="preserve"><value>Ouvrir une archive Ren'Py (.rpa) — aussi par glisser-déposer</value></data>
   <data name="Main_CreateArchive" xml:space="preserve"><value>📦 Empaqueter …</value></data>
