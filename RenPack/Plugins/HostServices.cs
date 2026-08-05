@@ -5,17 +5,19 @@ namespace RenPack.Plugins;
 
 /// <summary>Konkrete <see cref="IHostServices"/>-Impl die vom
 /// <see cref="PluginLoader"/> pro Plugin erzeugt wird. Registriert
-/// Menu-Items in einem gemeinsamen <see cref="PluginMenuRegistry"/>,
-/// den das MainWindow beobachtet.</summary>
+/// Menu-Items in einem gemeinsamen <see cref="PluginMenuRegistry"/>
+/// und Tabs im <see cref="PluginTabRegistry"/>, die das MainWindow
+/// beobachtet.</summary>
 internal sealed class HostServices : IHostServices
 {
     public HostServices(string pluginName, Window mainWindow,
-        ISecretProtection secrets, PluginMenuRegistry registry)
+        ISecretProtection secrets, PluginMenuRegistry menus, PluginTabRegistry tabs)
     {
         Logger = LogManager.GetLogger($"Plugin.{pluginName}");
         Secrets = secrets;
         MainWindow = mainWindow;
-        _registry = registry;
+        _menus = menus;
+        _tabs = tabs;
         _pluginName = pluginName;
 
         string userConfig = OperatingSystem.IsWindows()
@@ -27,7 +29,8 @@ internal sealed class HostServices : IHostServices
         Directory.CreateDirectory(PluginDataDir);
     }
 
-    private readonly PluginMenuRegistry _registry;
+    private readonly PluginMenuRegistry _menus;
+    private readonly PluginTabRegistry _tabs;
     private readonly string _pluginName;
 
     public Logger Logger { get; }
@@ -36,7 +39,10 @@ internal sealed class HostServices : IHostServices
     public Window MainWindow { get; }
 
     public void RegisterToolMenuItem(string icon, string label, Func<Task> onClick)
-        => _registry.Register(new PluginMenuItem(_pluginName, icon, label, onClick));
+        => _menus.Register(new PluginMenuItem(_pluginName, icon, label, onClick));
+
+    public void RegisterTab(string icon, string label, Func<Control> contentFactory)
+        => _tabs.Register(new PluginTab(_pluginName, icon, label, contentFactory));
 
     /// <summary>Path-safe Version des Plugin-Namens (Leerzeichen weg,
     /// nur ASCII-Buchstaben/Ziffern/Underscore).</summary>
@@ -72,3 +78,29 @@ public sealed record PluginMenuItem(
     string Icon,
     string Label,
     Func<Task> OnClick);
+
+/// <summary>Zentrale Registry aller Plugin-Tabs. Analog zu
+/// <see cref="PluginMenuRegistry"/>: von HostServices befuellt, vom
+/// MainWindow ueber Changed-Event beobachtet.</summary>
+public sealed class PluginTabRegistry
+{
+    private readonly List<PluginTab> _items = new();
+    public IReadOnlyList<PluginTab> Items => _items;
+
+    public event EventHandler? Changed;
+
+    public void Register(PluginTab tab)
+    {
+        _items.Add(tab);
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+}
+
+/// <summary>Ein vom Plugin registrierter Tab im MainWindow.
+/// <see cref="ContentFactory"/> wird lazy beim ersten Tab-Selektieren
+/// aufgerufen und liefert das Root-Control der Plugin-UI.</summary>
+public sealed record PluginTab(
+    string PluginName,
+    string Icon,
+    string Label,
+    Func<Control> ContentFactory);

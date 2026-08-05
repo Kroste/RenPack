@@ -61,7 +61,7 @@
             </Grid>
         </Border>
 
-        <Grid Margin="18" RowDefinitions="Auto,Auto,Auto,Auto,*">
+        <Grid Margin="18" RowDefinitions="Auto,Auto,Auto,Auto,Auto,*">
 
             <!-- Header -->
             <StackPanel Grid.Row="0" Margin="0,0,0,16">
@@ -70,8 +70,37 @@
                            Classes="muted" FontSize="12" Margin="0,2,0,0" />
             </StackPanel>
 
+            <!-- Tab-Strip (v0.10): nur sichtbar wenn Plugins Tabs
+                 registriert haben. „Archiv" ist immer der erste Tab
+                 (Default). ToggleButtons mit :checked-Style haetten
+                 den gruenen Kroste-Look; für v1 nutzen wir gedrueckte
+                 Buttons per accent-Class-Toggle. -->
+            <ItemsControl Grid.Row="1" ItemsSource="{Binding Tabs}"
+                          IsVisible="{Binding HasPluginTabs}"
+                          Margin="0,0,0,16">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="4" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="vm:TabItemViewModel">
+                        <Button Command="{Binding $parent[views:ChromeWindow].DataContext.SelectTabCommand}"
+                                CommandParameter="{Binding}"
+                                Padding="16,8" MinWidth="120">
+                            <TextBlock>
+                                <Run Text="{Binding Icon}" />
+                                <Run Text=" " />
+                                <Run Text="{Binding Label}" />
+                            </TextBlock>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
             <!-- Aktions-Karte -->
-            <Border Grid.Row="1" Classes="card" Margin="0,0,0,12">
+            <Border Grid.Row="2" Classes="card" Margin="0,0,0,12"
+                    IsVisible="{Binding IsArchiveTab}">
                 <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" HorizontalAlignment="Left">
                     <StackPanel Grid.Column="0" Spacing="8">
                         <TextBlock Text="{loc:Tr Section_Archive}" Classes="section-label" />
@@ -186,7 +215,8 @@
             </Border>
 
             <!-- Extraktions-Aktionen + Archiv-Info -->
-            <Border Grid.Row="2" Classes="card" Padding="14,10" Margin="0,0,0,12">
+            <Border Grid.Row="3" Classes="card" Padding="14,10" Margin="0,0,0,12"
+                    IsVisible="{Binding IsArchiveTab}">
                 <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto">
                     <TextBlock Grid.Column="0" Text="{Binding ArchiveSummary}"
                                Classes="muted" VerticalAlignment="Center"
@@ -213,7 +243,8 @@
             </Border>
 
             <!-- Filter-Zeile — x:Name fuer Ctrl+F-Fokus im Code-behind. -->
-            <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,0,12">
+            <Grid Grid.Row="4" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,0,12"
+                  IsVisible="{Binding IsArchiveTab}">
                 <TextBox Grid.Column="0" x:Name="FilterBox"
                          PlaceholderText="{loc:Tr Main_Filter_Placeholder}"
                          Text="{Binding FilterText}" />
@@ -225,7 +256,8 @@
             </Grid>
 
             <!-- Dateiliste + Preview-Pane, mit GridSplitter zwischen beiden. -->
-            <Grid Grid.Row="4" ColumnDefinitions="*,Auto,2*">
+            <Grid Grid.Row="5" ColumnDefinitions="*,Auto,2*"
+                  IsVisible="{Binding IsArchiveTab}">
                 <Border Grid.Column="0" Classes="card-flat" ClipToBounds="True">
                     <DataGrid ItemsSource="{Binding Entries}"
                               SelectedItem="{Binding HighlightedEntry, Mode=TwoWay}"
@@ -408,6 +440,13 @@
                     </DockPanel>
                 </Border>
             </Grid>
+
+            <!-- Plugin-Content: gerendert wenn ein Plugin-Tab aktiv ist.
+                 ContentControl bindet auf SelectedPluginContent (lazy per
+                 TabItemViewModel.EnsureContent gebaut). -->
+            <ContentControl Grid.Row="5"
+                            Content="{Binding SelectedPluginContent}"
+                            IsVisible="{Binding !IsArchiveTab}" />
         </Grid>
     </DockPanel>
 

@@ -21,16 +21,21 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public IUiInteractions? Ui { get; set; }
 
     public MainWindowViewModel(IRenpyArchiveService archiveService, RecentFilesService recent,
-        MediaPlaybackService media, PluginMenuRegistry? plugins = null)
+        MediaPlaybackService media, PluginMenuRegistry? plugins = null,
+        PluginTabRegistry? pluginTabs = null)
     {
         _archiveService = archiveService;
         _recent = recent;
         _plugins = plugins;
+        _pluginTabs = pluginTabs;
         Preview = new PreviewViewModel(archiveService, media);
         RecentArchives = new(_recent.Archives);
         _recent.Changed += (_, _) => RefreshRecent();
         RefreshPluginItems();
+        RefreshTabs();
         if (_plugins is not null) _plugins.Changed += (_, _) => RefreshPluginItems();
+        if (_pluginTabs is not null) _pluginTabs.Changed += (_, _) =>
+            Avalonia.Threading.Dispatcher.UIThread.Post(RefreshTabs);
     }
 
     // Designer-Konstruktor
@@ -61,6 +66,49 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (item is null) return;
         try { await item.OnClick(); }
         catch (Exception ex) { Log.Warn(ex, "Plugin-Menu-Item {label} fehlgeschlagen", item.Label); }
+    }
+
+    // ---- Tabs (Plugin-Integration ins MainWindow) -------------------------
+
+    private readonly PluginTabRegistry? _pluginTabs;
+
+    /// <summary>Tabs im MainWindow: erster Eintrag ist immer der
+    /// „Archiv"-Tab (der Default-Content), weitere kommen von
+    /// Plugins ueber <c>IHostServices.RegisterTab</c>. Wird bei
+    /// Registry-Aenderungen neu befuellt.</summary>
+    public ObservableCollection<TabItemViewModel> Tabs { get; } = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsArchiveTab))]
+    [NotifyPropertyChangedFor(nameof(SelectedPluginContent))]
+    private TabItemViewModel? _selectedTab;
+
+    public bool IsArchiveTab => SelectedTab?.IsArchiveTab ?? true;
+    public Avalonia.Controls.Control? SelectedPluginContent =>
+        SelectedTab is { IsArchiveTab: false } t ? t.EnsureContent() : null;
+
+    public bool HasPluginTabs => Tabs.Count > 1;
+
+    private void RefreshTabs()
+    {
+        // Selektion behalten wenn moeglich (bei Plugin-Reload/Registry-Change)
+        var currentLabel = SelectedTab?.Label;
+        Tabs.Clear();
+        Tabs.Add(new TabItemViewModel(icon: "📦", label: "Archiv", isArchiveTab: true, factory: null));
+        if (_pluginTabs is not null)
+        {
+            foreach (var t in _pluginTabs.Items)
+                Tabs.Add(new TabItemViewModel(icon: t.Icon, label: t.Label,
+                    isArchiveTab: false, factory: t.ContentFactory));
+        }
+        SelectedTab = Tabs.FirstOrDefault(t => t.Label == currentLabel) ?? Tabs[0];
+        OnPropertyChanged(nameof(HasPluginTabs));
+    }
+
+    [RelayCommand]
+    private void SelectTab(TabItemViewModel? tab)
+    {
+        if (tab is not null) SelectedTab = tab;
     }
 
     /// <summary>MRU-Liste der zuletzt geoeffneten Archive — im Dropdown

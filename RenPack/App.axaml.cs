@@ -74,10 +74,11 @@ public partial class App : Application
             // Owner fuer Modal-Dialoge, den PluginMenuRegistry fuer Menu-
             // Item-Registration. Fehler beim Load blockieren nicht den App-Start.
             _plugins = new PluginLoader();
-            var registry = Services.GetRequiredService<PluginMenuRegistry>();
+            var menus = Services.GetRequiredService<PluginMenuRegistry>();
+            var tabs = Services.GetRequiredService<PluginTabRegistry>();
             var secrets = Services.GetRequiredService<ISecretProtection>();
             _plugins.LoadAll(pluginName =>
-                new HostServices(pluginName, mainWindow, secrets, registry));
+                new HostServices(pluginName, mainWindow, secrets, menus, tabs));
             desktop.Exit += (_, _) => _plugins?.Dispose();
         }
 
@@ -101,9 +102,10 @@ public partial class App : Application
         services.AddSingleton<FavoriteVarsService>();
         services.AddSingleton<MediaPlaybackService>();
 
-        // Plugin-Registry (Menu-Items die Plugins registrieren) +
-        // ISecretProtection-Facade um die static SecretProtection-Klasse.
+        // Plugin-Registries (Menu-Items + Tabs) + ISecretProtection-Facade
+        // um die static SecretProtection-Klasse.
         services.AddSingleton<PluginMenuRegistry>();
+        services.AddSingleton<PluginTabRegistry>();
         services.AddSingleton<ISecretProtection, SecretProtectionAdapter>();
 
         // KI-Services (v0.4b — Multi-Provider)

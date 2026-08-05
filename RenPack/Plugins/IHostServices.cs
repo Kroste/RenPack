@@ -32,4 +32,15 @@ public interface IHostServices
     /// label lokalisierbar durch Plugin selbst. onClick laeuft auf dem
     /// UI-Thread und kann Dialoge oeffnen, Files lesen etc.</summary>
     void RegisterToolMenuItem(string icon, string label, Func<Task> onClick);
+
+    /// <summary>Registriert einen Tab im MainWindow-TabControl. Neben
+    /// dem Default-„Archiv"-Tab bekommt jedes Plugin seinen eigenen Tab.
+    /// <paramref name="contentFactory"/> wird lazy beim ersten Zugriff
+    /// aufgerufen und liefert das Root-Control der Plugin-UI (typisch
+    /// ein <c>UserControl</c> oder <c>Grid</c>). Das Control wird
+    /// gecached — die Factory laeuft nur einmal pro Session.
+    ///
+    /// **Warum lazy?** Wenn der User das Plugin nie oeffnet, muss die
+    /// UI nicht gebaut werden. Spart Startup-Zeit.</summary>
+    void RegisterTab(string icon, string label, Func<Avalonia.Controls.Control> contentFactory);
 }
