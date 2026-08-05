@@ -64,7 +64,6 @@
 ## Roadmap
 
 - **Decompiler v0.6:** kein konkreter Bedarf offen. v0.5-Coverage (Screens via `RenpySlWriter`, ATL via `RenpyAtlWriter`, `EmitStyle`, `EmitTransform`) ist umgesetzt — Boundaries of Morality dekompiliert `screens.rpyc`/`gui.rpyc`/`options.rpyc`/`locals.rpyc`/`var.rpyc` mit 0 `# <unsupported>`-Markierungen (3021+327+105+5609+2155 Zeilen). Nächste Ausbaustufe erst wenn ein Real-World-Game im Modding-Workflow einen konkreten Statement/Widget-Typ als unsupported meldet.
-- **Save-Editor v0.5:** Neue Store-Variablen anlegen (nicht nur bestehende ändern), Typ-Wechsel (int → str), Listen/Dict-Editing. Braucht echten Pickle-Roundtrip mit Custom-Picklers für die Opaque-Klassen — deutlich riskanter als Value-Splice.
 
 ## Referenz
 
