@@ -48,6 +48,6 @@
     <!-- Headless-UI-Tests: manuelles Avalonia.Headless-Setup, KEIN
          Avalonia.Headless.XUnit-Wrapper (der ist an xunit v2 gebunden;
          xunit.v3 hat andere Test-Framework-Signaturen). -->
-    <PackageVersion Include="Avalonia.Headless" Version="12.1.0" />
+    <PackageVersion Include="Avalonia.Headless" Version="12.1.1" />
   </ItemGroup>
 </Project>
