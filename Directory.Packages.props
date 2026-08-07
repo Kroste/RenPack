@@ -8,7 +8,7 @@
     <PackageVersion Include="Avalonia.Desktop" Version="12.1.0" />
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.0" />
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="12.1.0" />
-    <PackageVersion Include="Avalonia.Controls.DataGrid" Version="12.1.0" />
+    <PackageVersion Include="Avalonia.Controls.DataGrid" Version="12.1.2" />
     <!-- Nur Debug-Builds referenzieren dieses Paket (DevTools) -->
     <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3" />
     <!-- Pinnen passend zur Avalonia-Version (Linux DBus/Tray) — CHECK -->
